@@ -1,0 +1,36 @@
+# Build output
+/build/
+/out/
+/.vs/
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.dll
+
+# Locally bootstrapped, not meant to be committed
+/.tools/vcpkg/
+
+# Logs
+*.log
+
+# Secrets / connection info
+connection_detail.txt
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node (mobile/, web tooling)
+node_modules/
+.expo/
+dist/
+
+# OS cruft
+Thumbs.db
+.DS_Store
+.claude/scheduled_tasks.lock
