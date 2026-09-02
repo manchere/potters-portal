@@ -1,4 +1,4 @@
-# Potter's Inventory — Mobile
+# Potters Inventory — Mobile
 
 React Native (Expo) app for iOS/Android. It talks to `PottersInventoryServer`
 over HTTP — the same REST API the `web/` frontend uses — so it shares one
