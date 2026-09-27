@@ -7,6 +7,7 @@ class QLabel;
 class QPushButton;
 class NonAvailabilityRequestController;
 class AssignmentController;
+class RoleTypeController;
 class UserController;
 
 // "Non-Availability Requests" tab (Admin-only,
@@ -22,6 +23,7 @@ public:
     NonAvailabilityRequestsView(
         NonAvailabilityRequestController *requestController,
         AssignmentController *assignmentController,
+        RoleTypeController *roleTypeController,
         UserController *userController,
         QWidget *parent = nullptr);
 
@@ -44,6 +46,7 @@ private:
 
     NonAvailabilityRequestController *m_requestController = nullptr;
     AssignmentController *m_assignmentController = nullptr;
+    RoleTypeController *m_roleTypeController = nullptr;
     UserController *m_userController = nullptr;
     bool m_isAdmin = false;
     int m_adminUserId = -1;

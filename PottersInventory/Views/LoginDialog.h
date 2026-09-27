@@ -4,6 +4,8 @@
 
 #include "Models/User.h"
 
+class QCheckBox;
+class QLabel;
 class QLineEdit;
 class UserController;
 
@@ -24,9 +26,12 @@ public:
 
 private slots:
     void attemptLogin();
+    void toggleShowPassword(bool show);
 
 private:
     UserController *m_userController = nullptr;
     QLineEdit *m_passwordEdit = nullptr;
+    QCheckBox *m_showPasswordCheck = nullptr;
+    QLabel *m_errorLabel = nullptr;
     User m_user;
 };

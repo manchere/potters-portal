@@ -12,8 +12,6 @@ namespace Database
     // exactly what Neon gives you on the project's Connection Details page).
     bool connect(const QString &uri, QString *errorMessage);
 
-    bool isConnected();
-
     // Re-opens the connection if it has been dropped (e.g. Neon suspending
     // an idle compute). Cheap no-op when already open; call at the start of
     // every Controller method that's about to run a query, since a

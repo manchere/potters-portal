@@ -2,6 +2,7 @@
 
 #include <QMouseEvent>
 #include <QScreen>
+#include <QVBoxLayout>
 #include <QWindow>
 
 FramelessDialog::FramelessDialog(QWidget *parent)
@@ -9,7 +10,20 @@ FramelessDialog::FramelessDialog(QWidget *parent)
 {
     setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
-    setObjectName(QStringLiteral("dialogCard"));
+    // Overridden to "background: transparent" in Style.cpp -- without this
+    // name, the app's generic "QDialog { background: #f7f8fb; }" rule
+    // would paint this (translucent) top-level widget opaque and defeat
+    // the whole effect.
+    setObjectName(QStringLiteral("framelessDialogRoot"));
+
+    m_card = new QWidget(this);
+    m_card->setObjectName(QStringLiteral("dialogCard"));
+    m_card->setAttribute(Qt::WA_StyledBackground, true);
+    m_cardLayout = new QVBoxLayout(m_card);
+
+    auto *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_card);
 }
 
 void FramelessDialog::showEvent(QShowEvent *event)

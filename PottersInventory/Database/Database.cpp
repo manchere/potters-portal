@@ -41,11 +41,6 @@ namespace Database
         return true;
     }
 
-    bool isConnected()
-    {
-        return QSqlDatabase::database().isOpen();
-    }
-
     bool ensureConnected()
     {
         QSqlDatabase db = QSqlDatabase::database();

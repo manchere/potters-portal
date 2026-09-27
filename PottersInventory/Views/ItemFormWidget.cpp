@@ -60,10 +60,15 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     }
     m_categoryCombo = new QComboBox(this);
 
+    connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
+    m_nameError = new QLabel(this);
+    m_nameError->setObjectName(QStringLiteral("fieldError"));
+
     auto *detailsForm = new QFormLayout;
     detailsForm->setSpacing(10);
     detailsForm->setLabelAlignment(Qt::AlignRight);
     detailsForm->addRow(QStringLiteral("Name"), m_nameEdit);
+    detailsForm->addRow(QString(), m_nameError);
     detailsForm->addRow(QStringLiteral("Description"), m_descriptionEdit);
     detailsForm->addRow(QStringLiteral("Quantity"), m_quantitySpin);
     detailsForm->addRow(QStringLiteral("Location"), m_locationEdit);
@@ -259,6 +264,15 @@ void ItemFormWidget::setExistingImage(const QByteArray &data, const QString &mim
     m_imageChanged = false;
     m_autofillButton->setEnabled(!data.isEmpty());
     updatePreview();
+}
+
+bool ItemFormWidget::validate()
+{
+    if (m_nameEdit->text().trimmed().isEmpty()) {
+        m_nameError->setText(QStringLiteral("Name is required."));
+        return false;
+    }
+    return true;
 }
 
 Item ItemFormWidget::toItem() const

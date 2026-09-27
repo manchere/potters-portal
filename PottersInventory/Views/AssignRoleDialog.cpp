@@ -7,12 +7,14 @@
 #include <QPlainTextEdit>
 #include <QVBoxLayout>
 
-#include "RoleDisplay.h"
+#include "Controllers/RoleTypeController.h"
+#include "Models/RoleType.h"
 
 AssignRoleDialog::AssignRoleDialog(
     const Assignment &assignment,
     const QDate &serviceDate,
     const QVector<User> &members,
+    RoleTypeController *roleTypeController,
     QWidget *parent)
     : FramelessDialog(parent)
     , m_id(assignment.id())
@@ -28,10 +30,11 @@ AssignRoleDialog::AssignRoleDialog(
     dateLabel->setObjectName(QStringLiteral("pageSubtitle"));
 
     m_roleCombo = new QComboBox(this);
-    for (AssignmentRole role : allAssignmentRoles()) {
-        m_roleCombo->addItem(RoleDisplay::iconAndLabel(role), static_cast<int>(role));
+    for (const RoleType &roleType : roleTypeController->allRoleTypes()) {
+        m_roleCombo->addItem(roleType.iconAndName(), roleType.id());
     }
-    m_roleCombo->setCurrentIndex(m_roleCombo->findData(static_cast<int>(assignment.role())));
+    const int roleIdx = m_roleCombo->findData(assignment.roleId());
+    m_roleCombo->setCurrentIndex(roleIdx >= 0 ? roleIdx : 0);
 
     m_memberCombo = new QComboBox(this);
     m_supportMemberCombo = new QComboBox(this);
@@ -61,7 +64,7 @@ AssignRoleDialog::AssignRoleDialog(
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *layout = contentLayout();
     layout->addWidget(heading);
     layout->addWidget(dateLabel);
     layout->addLayout(form);
@@ -72,7 +75,7 @@ Assignment AssignRoleDialog::assignment() const
 {
     return Assignment(
         m_id,
-        static_cast<AssignmentRole>(m_roleCombo->currentData().toInt()),
+        m_roleCombo->currentData().toInt(),
         m_serviceDate,
         m_memberCombo->currentData().toInt(),
         m_supportMemberCombo->currentData().toInt(),

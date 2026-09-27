@@ -37,6 +37,10 @@ public:
     void setItem(const Item &item);
     void clear();
 
+    // Validates Name (the only required field), showing/clearing its
+    // inline error label. Returns true when the form is valid to save.
+    bool validate();
+
     // Preloads an existing item's photo (e.g. when opening the edit dialog)
     // without marking the image as "changed" — see imageChanged().
     void setExistingImage(const QByteArray &data, const QString &mime);
@@ -66,6 +70,7 @@ private:
 
     int m_editingId = -1;
     QLineEdit *m_nameEdit = nullptr;
+    QLabel *m_nameError = nullptr;
     QPlainTextEdit *m_descriptionEdit = nullptr;
     QSpinBox *m_quantitySpin = nullptr;
     QLineEdit *m_locationEdit = nullptr;

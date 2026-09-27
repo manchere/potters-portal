@@ -1,39 +1,36 @@
-#include "CategoryEditDialog.h"
+#include "RoleTypeEditDialog.h"
 
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
-#include <QPlainTextEdit>
 #include <QVBoxLayout>
 
-CategoryEditDialog::CategoryEditDialog(const Category &category, QWidget *parent)
+RoleTypeEditDialog::RoleTypeEditDialog(const RoleType &roleType, QWidget *parent)
     : FramelessDialog(parent)
-    , m_id(category.id())
+    , m_id(roleType.id())
 {
-    const QString title = category.id() < 0 ? QStringLiteral("Add Category") : QStringLiteral("Rename Category");
+    const QString title = roleType.id() < 0 ? QStringLiteral("Add Assignment Type") : QStringLiteral("Edit Assignment Type");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
 
-    m_nameEdit = new QLineEdit(category.name(), this);
-    m_nameEdit->setPlaceholderText(QStringLiteral("e.g. Furniture"));
+    m_nameEdit = new QLineEdit(roleType.name(), this);
+    m_nameEdit->setPlaceholderText(QStringLiteral("e.g. Ushering"));
     connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
     m_nameError = new QLabel(this);
     m_nameError->setObjectName(QStringLiteral("fieldError"));
 
-    m_descriptionEdit = new QPlainTextEdit(category.description(), this);
-    m_descriptionEdit->setFixedHeight(60);
-    m_descriptionEdit->setPlaceholderText(
-        QStringLiteral("Optional notes about what this category is for, e.g. \"Kitchen equipment used for hospitality events\""));
+    m_iconEdit = new QLineEdit(roleType.icon(), this);
+    m_iconEdit->setPlaceholderText(QStringLiteral("A single emoji, e.g. \U0001F6CE️"));
 
     auto *form = new QFormLayout;
     form->addRow(QStringLiteral("Name"), m_nameEdit);
     form->addRow(QString(), m_nameError);
-    form->addRow(QStringLiteral("Description"), m_descriptionEdit);
+    form->addRow(QStringLiteral("Icon"), m_iconEdit);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-    connect(buttons, &QDialogButtonBox::accepted, this, &CategoryEditDialog::saveClicked);
+    connect(buttons, &QDialogButtonBox::accepted, this, &RoleTypeEditDialog::saveClicked);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
     auto *layout = contentLayout();
@@ -42,7 +39,7 @@ CategoryEditDialog::CategoryEditDialog(const Category &category, QWidget *parent
     layout->addWidget(buttons);
 }
 
-void CategoryEditDialog::saveClicked()
+void RoleTypeEditDialog::saveClicked()
 {
     if (m_nameEdit->text().trimmed().isEmpty()) {
         m_nameError->setText(QStringLiteral("Name is required."));
@@ -51,7 +48,8 @@ void CategoryEditDialog::saveClicked()
     accept();
 }
 
-Category CategoryEditDialog::category() const
+RoleType RoleTypeEditDialog::roleType() const
 {
-    return Category(m_id, m_nameEdit->text().trimmed(), m_descriptionEdit->toPlainText().trimmed());
+    const QString icon = m_iconEdit->text().trimmed();
+    return RoleType(m_id, m_nameEdit->text().trimmed(), icon.isEmpty() ? QStringLiteral("\U0001F4CB") : icon);
 }

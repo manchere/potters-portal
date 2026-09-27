@@ -11,8 +11,9 @@ QWidget {
 
 /* MainWindow paints transparent so only #windowFrame's rounded background
    is visible -- gives the frameless window soft corners instead of a
-   square edge. Plain QDialog keeps an opaque fallback background;
-   FramelessDialog-based modals override it via #dialogCard below. */
+   square edge. Plain QDialog keeps an opaque fallback background (native
+   dialogs like QMessageBox/QColorDialog); FramelessDialog-based modals
+   override it via #framelessDialogRoot/#dialogCard below. */
 QMainWindow {
     background: transparent;
 }
@@ -28,9 +29,15 @@ QWidget#windowFrame {
 }
 
 /* --- Frameless modal dialogs (see Views/FramelessDialog) --------------- */
-QDialog#dialogCard {
-    background: #f7f8fb;
-    border: 1px solid #e0e3ea;
+/* The QDialog itself stays fully transparent -- only the inner #dialogCard
+   child widget paints the visible, translucent white card (see
+   FramelessDialog's class comment for why the split is necessary). */
+QDialog#framelessDialogRoot {
+    background: transparent;
+}
+QWidget#dialogCard {
+    background: rgba(255, 255, 255, 0.80);
+    border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 14px;
 }
 QWidget#titleBar {
@@ -176,6 +183,12 @@ QLabel#pageSubtitle {
     color: #6b7280;
 }
 
+/* --- Inline field validation errors (below the offending field) -------- */
+QLabel#fieldError {
+    color: #dc2626;
+    font-size: 9pt;
+}
+
 /* --- Photo tile (Add Item / Edit Item) ---------------------------------- */
 QLabel#photoTile {
     border: 2px dashed #cdd3e0;
@@ -268,56 +281,6 @@ QLabel#detailLabel {
 }
 QLabel#detailValue {
     color: #1f2430;
-}
-
-/* --- Date tab calendar (see Views/DateNavigationTab) -------------------- */
-/* Qt's internal object names for QCalendarWidget's chrome -- stable across
-   Qt5/6, the standard way to theme it to match the rest of the app instead
-   of the default OS-blue header. */
-QCalendarWidget {
-    border: 1px solid #e7e9f0;
-    border-radius: 10px;
-    background: white;
-}
-QCalendarWidget QWidget#qt_calendar_navigationbar {
-    background: #14335c;
-    border-top-left-radius: 9px;
-    border-top-right-radius: 9px;
-}
-QCalendarWidget QToolButton {
-    background: transparent;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    margin: 4px 2px;
-    padding: 4px 8px;
-    font-weight: 600;
-}
-QCalendarWidget QToolButton:hover {
-    background: rgba(255, 255, 255, 0.18);
-}
-QCalendarWidget QToolButton::menu-indicator {
-    image: none;
-}
-QCalendarWidget QMenu {
-    background: white;
-    border: 1px solid #e7e9f0;
-    border-radius: 8px;
-}
-QCalendarWidget QSpinBox {
-    background: white;
-    border-radius: 4px;
-    padding: 2px 6px;
-}
-QCalendarWidget QAbstractItemView:enabled {
-    background: white;
-    color: #262b3d;
-    selection-background-color: #e9edf5;
-    selection-color: #14335c;
-    outline: none;
-}
-QCalendarWidget QAbstractItemView:disabled {
-    color: #cdd3e0;
 }
 )");
 }

@@ -1,10 +1,10 @@
 #include "LoginDialog.h"
 
+#include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
-#include <QMessageBox>
 #include <QPushButton>
 #include <QVBoxLayout>
 
@@ -22,26 +22,41 @@ LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     m_passwordEdit = new QLineEdit(this);
     m_passwordEdit->setEchoMode(QLineEdit::Password);
     m_passwordEdit->setFocus();
+    connect(m_passwordEdit, &QLineEdit::textChanged, this, [this]() { m_errorLabel->clear(); });
+
+    m_showPasswordCheck = new QCheckBox(QStringLiteral("Show password"), this);
+    connect(m_showPasswordCheck, &QCheckBox::toggled, this, &LoginDialog::toggleShowPassword);
 
     auto *form = new QFormLayout;
     form->addRow(QStringLiteral("Password"), m_passwordEdit);
+    form->addRow(QString(), m_showPasswordCheck);
+
+    m_errorLabel = new QLabel(this);
+    m_errorLabel->setObjectName(QStringLiteral("fieldError"));
+    m_errorLabel->setWordWrap(true);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     buttons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("Log In"));
     connect(buttons, &QDialogButtonBox::accepted, this, &LoginDialog::attemptLogin);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *layout = contentLayout();
     layout->addWidget(heading);
     layout->addLayout(form);
+    layout->addWidget(m_errorLabel);
     layout->addWidget(buttons);
+}
+
+void LoginDialog::toggleShowPassword(bool show)
+{
+    m_passwordEdit->setEchoMode(show ? QLineEdit::Normal : QLineEdit::Password);
 }
 
 void LoginDialog::attemptLogin()
 {
     User user;
     if (!m_userController->verifyAdminPassword(m_passwordEdit->text(), user)) {
-        QMessageBox::warning(this, QStringLiteral("Log In"), QStringLiteral("Incorrect password."));
+        m_errorLabel->setText(QStringLiteral("Incorrect password."));
         return;
     }
     m_user = user;

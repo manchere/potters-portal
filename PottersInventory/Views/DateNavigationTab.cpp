@@ -1,6 +1,6 @@
 #include "DateNavigationTab.h"
 
-#include <QCalendarWidget>
+#include <QBrush>
 #include <QFont>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -9,26 +9,43 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSet>
-#include <QTextCharFormat>
 #include <QVBoxLayout>
 
 #include "AssignRoleDialog.h"
+#include "MemberEditDialog.h"
 #include "AvatarLoader.h"
 #include "Controllers/AssignmentController.h"
+#include "Controllers/RoleTypeController.h"
 #include "Controllers/UserController.h"
 #include "MemberStatsDialog.h"
 #include "Models/Assignment.h"
+#include "Models/RoleType.h"
 #include "Models/User.h"
-#include "RoleDisplay.h"
+
+namespace
+{
+    // A couple of months of history for context, plus a year of upcoming
+    // Sundays to schedule against.
+    constexpr int kPastWeeks = 8;
+    constexpr int kFutureWeeks = 52;
+
+    QString formatSunday(const QDate &date)
+    {
+        // e.g. "Sun 6 Sep 2026", per SCHEDULING_FUNCTIONAL_REQUIREMENTS.md.
+        return date.toString(QStringLiteral("ddd d MMM yyyy"));
+    }
+}
 
 DateNavigationTab::DateNavigationTab(
     AssignmentController *assignmentController,
     UserController *userController,
+    RoleTypeController *roleTypeController,
     QNetworkAccessManager *networkManager,
     QWidget *parent)
     : QWidget(parent)
     , m_assignmentController(assignmentController)
     , m_userController(userController)
+    , m_roleTypeController(roleTypeController)
     , m_networkManager(networkManager)
 {
     auto *title = new QLabel(QStringLiteral("Date"), this);
@@ -41,16 +58,23 @@ DateNavigationTab::DateNavigationTab(
 
     m_assignButton = new QPushButton(QStringLiteral("+  Assign Role"), this);
     connect(m_assignButton, &QPushButton::clicked, this, &DateNavigationTab::assignClicked);
+    m_addMemberButton = new QPushButton(QStringLiteral("+  Add Member"), this);
+    m_addMemberButton->setObjectName(QStringLiteral("secondaryButton"));
+    connect(m_addMemberButton, &QPushButton::clicked, this, &DateNavigationTab::addMemberClicked);
+    m_assignForMemberButton = new QPushButton(QStringLiteral("+  Assign Another Role"), this);
+    m_assignForMemberButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_assignForMemberButton->setToolTip(
+        QStringLiteral("Give the selected Member another role on this Sunday"));
+    connect(m_assignForMemberButton, &QPushButton::clicked, this, &DateNavigationTab::assignForSelectedMemberClicked);
     auto *topRow = new QHBoxLayout;
     topRow->addWidget(m_assignButton);
+    topRow->addWidget(m_addMemberButton);
     topRow->addStretch();
+    topRow->addWidget(m_assignForMemberButton);
 
-    m_calendar = new QCalendarWidget(this);
-    m_calendar->setGridVisible(false);
-    m_calendar->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
-    connect(m_calendar, &QCalendarWidget::clicked, this, &DateNavigationTab::dateSelected);
-    connect(m_calendar, &QCalendarWidget::selectionChanged, this,
-            [this]() { dateSelected(m_calendar->selectedDate()); });
+    m_sundayList = new QListWidget(this);
+    m_sundayList->setFixedWidth(200);
+    connect(m_sundayList, &QListWidget::currentItemChanged, this, &DateNavigationTab::sundaySelectionChanged);
 
     m_resultsList = new QListWidget(this);
     m_resultsList->setAlternatingRowColors(true);
@@ -59,6 +83,7 @@ DateNavigationTab::DateNavigationTab(
         m_selectedAssignmentId = item ? item->data(Qt::UserRole).toInt() : -1;
         m_editButton->setEnabled(m_isAdmin && m_selectedAssignmentId >= 0);
         m_deleteButton->setEnabled(m_isAdmin && m_selectedAssignmentId >= 0);
+        m_assignForMemberButton->setEnabled(m_isAdmin && m_selectedAssignmentId >= 0);
     });
     connect(m_resultsList, &QListWidget::itemDoubleClicked, this, &DateNavigationTab::memberDoubleClicked);
 
@@ -81,9 +106,14 @@ DateNavigationTab::DateNavigationTab(
     auto *resultsBox = new QGroupBox(QStringLiteral("Assignments"), this);
     resultsBox->setLayout(resultsLayout);
 
+    auto *sundayBox = new QGroupBox(QStringLiteral("Sundays"), this);
+    auto *sundayLayout = new QVBoxLayout;
+    sundayLayout->addWidget(m_sundayList);
+    sundayBox->setLayout(sundayLayout);
+
     auto *columns = new QHBoxLayout;
     columns->setSpacing(16);
-    columns->addWidget(m_calendar);
+    columns->addWidget(sundayBox);
     columns->addWidget(resultsBox, 1);
 
     auto *layout = new QVBoxLayout(this);
@@ -96,8 +126,8 @@ DateNavigationTab::DateNavigationTab(
     layout->addSpacing(8);
     layout->addLayout(columns);
 
-    updateCalendarHighlights();
-    rebuildResults();
+    populateSundayList();
+    selectSunday(nearestSunday(QDate::currentDate()));
 }
 
 QString DateNavigationTab::memberName(int userId) const
@@ -135,7 +165,8 @@ QWidget *DateNavigationTab::buildRow(const Assignment &assignment)
     }
     layout->addWidget(avatar);
 
-    auto *roleIcon = new QLabel(RoleDisplay::icon(assignment.role()), row);
+    const RoleType roleType = m_roleTypeController->roleTypeById(assignment.roleId());
+    auto *roleIcon = new QLabel(roleType.icon(), row);
     QFont iconFont = roleIcon->font();
     iconFont.setPointSize(16);
     roleIcon->setFont(iconFont);
@@ -145,7 +176,7 @@ QWidget *DateNavigationTab::buildRow(const Assignment &assignment)
     auto *textLayout = new QVBoxLayout(textContainer);
     textLayout->setContentsMargins(0, 0, 0, 0);
     textLayout->setSpacing(2);
-    auto *roleLabel = new QLabel(RoleDisplay::label(assignment.role()), textContainer);
+    auto *roleLabel = new QLabel(roleType.name(), textContainer);
     roleLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
 
     // Main member and support member on the same line, e.g.
@@ -168,39 +199,90 @@ void DateNavigationTab::setAdminMode(bool isAdmin)
 {
     m_isAdmin = isAdmin;
     m_assignButton->setVisible(isAdmin);
+    m_addMemberButton->setVisible(isAdmin);
+    m_assignForMemberButton->setVisible(isAdmin);
     m_editButton->setVisible(isAdmin);
     m_deleteButton->setVisible(isAdmin);
     m_editButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
     m_deleteButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
+    m_assignForMemberButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
 }
 
-void DateNavigationTab::updateCalendarHighlights()
+QDate DateNavigationTab::nearestSunday(const QDate &date)
 {
-    // Sunday is the day being scheduled -- call it out distinctly instead
-    // of Qt's default plain-red "weekend" styling, and tone Saturday back
-    // down to a normal weekday since it's not otherwise significant here.
-    QTextCharFormat sundayFormat;
-    sundayFormat.setForeground(QColor(0x14, 0x33, 0x5c));
-    sundayFormat.setFontWeight(QFont::Bold);
-    m_calendar->setWeekdayTextFormat(Qt::Sunday, sundayFormat);
-    m_calendar->setWeekdayTextFormat(Qt::Saturday, QTextCharFormat());
+    // QDate::dayOfWeek(): 1 = Monday ... 7 = Sunday.
+    return date.addDays(7 - date.dayOfWeek());
+}
 
-    // Reset any previously-marked dates (an edited/deleted assignment
-    // shouldn't leave a stale highlight behind), then mark every Sunday
-    // that currently has at least one assignment.
-    m_calendar->setDateTextFormat(QDate(), QTextCharFormat());
-    QTextCharFormat scheduledFormat;
-    scheduledFormat.setBackground(QColor(0xfa, 0xf3, 0xe0));
-    scheduledFormat.setForeground(QColor(0x8a, 0x6a, 0x1a));
-    scheduledFormat.setFontWeight(QFont::Bold);
-    QSet<QDate> markedDates;
+void DateNavigationTab::populateSundayList()
+{
+    m_sundayList->clear();
+
+    m_datesWithAssignments.clear();
     for (const Assignment &assignment : m_assignmentController->allAssignments()) {
-        if (markedDates.contains(assignment.serviceDate())) {
-            continue;
-        }
-        markedDates.insert(assignment.serviceDate());
-        m_calendar->setDateTextFormat(assignment.serviceDate(), scheduledFormat);
+        m_datesWithAssignments.insert(assignment.serviceDate());
     }
+
+    QDate sunday = nearestSunday(QDate::currentDate()).addDays(-7 * kPastWeeks);
+    for (int i = 0; i < kPastWeeks + kFutureWeeks; ++i) {
+        auto *item = new QListWidgetItem(formatSunday(sunday), m_sundayList);
+        item->setData(Qt::UserRole, sunday);
+        applySundayItemStyle(item, false);
+        sunday = sunday.addDays(7);
+    }
+}
+
+// Selection uses an explicit background/foreground override (applied in
+// sundaySelectionChanged) rather than relying on the list's normal
+// selection highlight, since a per-item color already set for the "has
+// assignments" tint would otherwise compete with -- and often hide --
+// the native selection styling.
+void DateNavigationTab::applySundayItemStyle(QListWidgetItem *item, bool isSelected) const
+{
+    const QDate date = item->data(Qt::UserRole).toDate();
+    const bool hasAssignments = m_datesWithAssignments.contains(date);
+
+    QFont font = item->font();
+    font.setBold(hasAssignments || isSelected);
+    item->setFont(font);
+
+    if (isSelected) {
+        item->setBackground(QColor(0x14, 0x33, 0x5c));
+        item->setForeground(QColor(Qt::white));
+    } else if (hasAssignments) {
+        item->setBackground(QColor(0xfa, 0xf3, 0xe0));
+        item->setForeground(QColor(0x8a, 0x6a, 0x1a));
+    } else {
+        item->setBackground(QBrush());
+        item->setForeground(QBrush());
+    }
+}
+
+void DateNavigationTab::selectSunday(const QDate &date)
+{
+    for (int i = 0; i < m_sundayList->count(); ++i) {
+        if (m_sundayList->item(i)->data(Qt::UserRole).toDate() == date) {
+            m_sundayList->setCurrentRow(i);
+            m_sundayList->scrollToItem(m_sundayList->item(i), QAbstractItemView::PositionAtCenter);
+            return;
+        }
+    }
+    if (m_sundayList->count() > 0) {
+        m_sundayList->setCurrentRow(0);
+    }
+}
+
+void DateNavigationTab::sundaySelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
+{
+    if (previous) {
+        applySundayItemStyle(previous, false);
+    }
+    if (!current) {
+        return;
+    }
+    applySundayItemStyle(current, true);
+    m_selectedDate = current->data(Qt::UserRole).toDate();
+    rebuildResults();
 }
 
 void DateNavigationTab::rebuildResults()
@@ -210,8 +292,7 @@ void DateNavigationTab::rebuildResults()
     m_editButton->setEnabled(false);
     m_deleteButton->setEnabled(false);
 
-    const QDate date = m_calendar->selectedDate();
-    const QVector<Assignment> assignments = m_assignmentController->assignmentsForDate(date);
+    const QVector<Assignment> assignments = m_assignmentController->assignmentsForDate(m_selectedDate);
     if (assignments.isEmpty()) {
         auto *item = new QListWidgetItem(m_resultsList);
         item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
@@ -228,17 +309,12 @@ void DateNavigationTab::rebuildResults()
     }
 }
 
-void DateNavigationTab::dateSelected(const QDate &)
-{
-    rebuildResults();
-}
-
 void DateNavigationTab::assignClicked()
 {
     if (!m_isAdmin) {
         return;
     }
-    AssignRoleDialog dialog(Assignment(), m_calendar->selectedDate(), m_userController->allUsers(), this);
+    AssignRoleDialog dialog(Assignment(), m_selectedDate, m_userController->allUsers(), m_roleTypeController, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -247,8 +323,44 @@ void DateNavigationTab::assignClicked()
         QMessageBox::critical(this, QStringLiteral("Assign Role"), m_assignmentController->lastError());
         return;
     }
-    updateCalendarHighlights();
-    rebuildResults();
+    populateSundayList();
+    selectSunday(m_selectedDate);
+}
+
+void DateNavigationTab::addMemberClicked()
+{
+    if (!m_isAdmin) {
+        return;
+    }
+    MemberEditDialog dialog(User(), m_userController, m_networkManager, this);
+    dialog.exec();
+}
+
+void DateNavigationTab::assignForSelectedMemberClicked()
+{
+    if (!m_isAdmin || m_selectedAssignmentId < 0) {
+        return;
+    }
+    const Assignment reference = m_assignmentController->assignmentById(m_selectedAssignmentId);
+    if (reference.id() < 0) {
+        return;
+    }
+    // Prefill just the Member -- role/support/notes start blank, since this
+    // is a brand-new assignment for the same person, not an edit of the
+    // one that's currently selected.
+    Assignment prefilled;
+    prefilled.setMemberId(reference.memberId());
+    AssignRoleDialog dialog(prefilled, m_selectedDate, m_userController->allUsers(), m_roleTypeController, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    Assignment newAssignment = dialog.assignment();
+    if (!m_assignmentController->addAssignment(newAssignment)) {
+        QMessageBox::critical(this, QStringLiteral("Assign Another Role"), m_assignmentController->lastError());
+        return;
+    }
+    populateSundayList();
+    selectSunday(m_selectedDate);
 }
 
 void DateNavigationTab::editClicked()
@@ -260,7 +372,7 @@ void DateNavigationTab::editClicked()
     if (existing.id() < 0) {
         return;
     }
-    AssignRoleDialog dialog(existing, existing.serviceDate(), m_userController->allUsers(), this);
+    AssignRoleDialog dialog(existing, existing.serviceDate(), m_userController->allUsers(), m_roleTypeController, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
@@ -269,8 +381,8 @@ void DateNavigationTab::editClicked()
         QMessageBox::critical(this, QStringLiteral("Edit Assignment"), m_assignmentController->lastError());
         return;
     }
-    updateCalendarHighlights();
-    rebuildResults();
+    populateSundayList();
+    selectSunday(m_selectedDate);
 }
 
 void DateNavigationTab::deleteClicked()
@@ -286,8 +398,8 @@ void DateNavigationTab::deleteClicked()
         QMessageBox::critical(this, QStringLiteral("Delete Assignment"), m_assignmentController->lastError());
         return;
     }
-    updateCalendarHighlights();
-    rebuildResults();
+    populateSundayList();
+    selectSunday(m_selectedDate);
 }
 
 void DateNavigationTab::memberDoubleClicked(QListWidgetItem *item)
@@ -304,12 +416,13 @@ void DateNavigationTab::memberDoubleClicked(QListWidgetItem *item)
     if (user.id() < 0) {
         return;
     }
-    MemberStatsDialog dialog(user, m_assignmentController->allAssignmentsForMember(user.id()), m_networkManager, this);
+    MemberStatsDialog dialog(user, m_assignmentController->allAssignmentsForMember(user.id()), m_roleTypeController, m_networkManager, this);
     dialog.exec();
 }
 
 void DateNavigationTab::refresh()
 {
-    updateCalendarHighlights();
-    rebuildResults();
+    const QDate previouslySelected = m_selectedDate;
+    populateSundayList();
+    selectSunday(previouslySelected);
 }

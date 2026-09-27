@@ -79,7 +79,7 @@ ItemDetailsDialog::ItemDetailsDialog(const Item &item, const QString &categoryNa
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *layout = contentLayout();
     layout->addWidget(photoLabel, 0, Qt::AlignHCenter);
     layout->addSpacing(10);
     layout->addWidget(nameLabel);

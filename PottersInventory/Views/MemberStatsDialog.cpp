@@ -11,11 +11,13 @@
 #include <QVBoxLayout>
 
 #include "AvatarLoader.h"
-#include "RoleDisplay.h"
+#include "Controllers/RoleTypeController.h"
+#include "Models/RoleType.h"
 
 MemberStatsDialog::MemberStatsDialog(
     const User &user,
     const QVector<Assignment> &assignments,
+    RoleTypeController *roleTypeController,
     QNetworkAccessManager *networkManager,
     QWidget *parent)
     : FramelessDialog(parent)
@@ -43,20 +45,20 @@ MemberStatsDialog::MemberStatsDialog(
     header->addLayout(headerText);
     header->addStretch();
 
-    QMap<AssignmentRole, int> counts;
+    QMap<int, int> counts;
     for (const Assignment &assignment : assignments) {
-        counts[assignment.role()]++;
+        counts[assignment.roleId()]++;
     }
     auto *breakdownLayout = new QHBoxLayout;
     bool anyCounted = false;
-    for (AssignmentRole role : allAssignmentRoles()) {
-        const int count = counts.value(role, 0);
+    for (const RoleType &roleType : roleTypeController->allRoleTypes()) {
+        const int count = counts.value(roleType.id(), 0);
         if (count == 0) {
             continue;
         }
         anyCounted = true;
-        auto *pill = new QLabel(QStringLiteral("%1 %2").arg(RoleDisplay::icon(role)).arg(count), this);
-        pill->setToolTip(RoleDisplay::label(role));
+        auto *pill = new QLabel(QStringLiteral("%1 %2").arg(roleType.icon()).arg(count), this);
+        pill->setToolTip(roleType.name());
         pill->setStyleSheet(QStringLiteral(
             "background: #eef0f4; border-radius: 9px; padding: 3px 10px; font-weight: 600;"));
         breakdownLayout->addWidget(pill);
@@ -75,10 +77,11 @@ MemberStatsDialog::MemberStatsDialog(
     auto *list = new QListWidget(this);
     for (const Assignment &assignment : sorted) {
         const bool isSupportOnly = assignment.memberId() != user.id() && assignment.supportMemberId() == user.id();
+        const RoleType roleType = roleTypeController->roleTypeById(assignment.roleId());
         const QString label = QStringLiteral("%1   %2 %3%4")
             .arg(assignment.serviceDate().toString(QStringLiteral("yyyy-MM-dd")))
-            .arg(RoleDisplay::icon(assignment.role()))
-            .arg(RoleDisplay::label(assignment.role()))
+            .arg(roleType.icon())
+            .arg(roleType.name())
             .arg(isSupportOnly ? QStringLiteral("  (support)") : QString());
         new QListWidgetItem(label, list);
     }
@@ -91,7 +94,7 @@ MemberStatsDialog::MemberStatsDialog(
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *layout = contentLayout();
     layout->addLayout(header);
     layout->addSpacing(8);
     layout->addWidget(breakdownBox);

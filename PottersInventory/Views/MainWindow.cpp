@@ -6,11 +6,10 @@
 #include <QVBoxLayout>
 #include <QWindow>
 
+#include "AdminOverviewView.h"
 #include "DateNavigationTab.h"
 #include "ItemListView.h"
 #include "LoginDialog.h"
-#include "NonAvailabilityRequestsView.h"
-#include "TagsCategoriesView.h"
 #include "TitleBar.h"
 
 namespace {
@@ -103,10 +102,10 @@ MainWindow::MainWindow(QWidget *parent)
     setMinimumSize(760, 480);
 
     m_itemListView = new ItemListView(&m_itemController, &m_tagController, &m_categoryController, this);
-    m_tagsCategoriesView = new TagsCategoriesView(&m_tagController, &m_categoryController, this);
-    m_dateNavigationTab = new DateNavigationTab(&m_assignmentController, &m_userController, &m_networkManager, this);
-    m_requestsView = new NonAvailabilityRequestsView(
-        &m_requestController, &m_assignmentController, &m_userController, this);
+    m_adminOverviewView = new AdminOverviewView(
+        &m_tagController, &m_categoryController, &m_roleTypeController, &m_userController, &m_networkManager, this);
+    m_dateNavigationTab = new DateNavigationTab(
+        &m_assignmentController, &m_userController, &m_roleTypeController, &m_networkManager, this);
 
     auto *frame = new ResizeFrame(this);
 
@@ -114,16 +113,16 @@ MainWindow::MainWindow(QWidget *parent)
     // Date is inserted first (leftmost) per FR-8.1; the rest keep their
     // existing left-to-right order. Assigning a role happens via a button
     // on the Date tab itself (see DateNavigationTab), not a separate tab.
+    // The former Non-Availability Requests tab has been removed (see
+    // MainWindow.h note).
     m_titleBar->tabBar()->insertTab(0, QStringLiteral("Date"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Items"));
-    m_titleBar->tabBar()->addTab(QStringLiteral("Tags && Categories"));
-    m_titleBar->tabBar()->addTab(QStringLiteral("Non-Availability Requests"));
+    m_titleBar->tabBar()->addTab(QStringLiteral("Taxonomy"));
 
     m_stack = new QStackedWidget(frame);
     m_stack->insertWidget(0, m_dateNavigationTab);
     m_stack->addWidget(m_itemListView);
-    m_stack->addWidget(m_tagsCategoriesView);
-    m_stack->addWidget(m_requestsView);
+    m_stack->addWidget(m_adminOverviewView);
 
     connect(m_titleBar->tabBar(), &QTabBar::currentChanged, m_stack, &QStackedWidget::setCurrentIndex);
     connect(m_titleBar, &TitleBar::minimizeClicked, this, &QWidget::showMinimized);
@@ -143,13 +142,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_tagController, &TagController::tagsChanged, m_itemListView, &ItemListView::refresh);
     connect(&m_categoryController, &CategoryController::categoriesChanged, m_itemListView, &ItemListView::refresh);
 
-    connect(&m_categoryController, &CategoryController::categoriesChanged, m_tagsCategoriesView, &TagsCategoriesView::refreshCategories);
-    connect(&m_tagController, &TagController::tagsChanged, m_tagsCategoriesView, &TagsCategoriesView::refreshTags);
+    connect(&m_categoryController, &CategoryController::categoriesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_tagController, &TagController::tagsChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_assignmentController, &AssignmentController::assignmentsChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_userController, &UserController::usersChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_roleTypeController, &RoleTypeController::roleTypesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
 
     connect(&m_assignmentController, &AssignmentController::assignmentsChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
     connect(&m_userController, &UserController::usersChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
-    connect(&m_requestController, &NonAvailabilityRequestController::requestsChanged, m_requestsView, &NonAvailabilityRequestsView::refresh);
-    connect(&m_requestController, &NonAvailabilityRequestController::requestsChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
+    connect(&m_roleTypeController, &RoleTypeController::roleTypesChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
 }
 
 void MainWindow::adminButtonClicked()
@@ -168,7 +169,7 @@ void MainWindow::adminButtonClicked()
     const bool isAdmin = m_currentUser.id() >= 0;
     m_titleBar->setAdminLoggedIn(isAdmin);
     m_dateNavigationTab->setAdminMode(isAdmin);
-    m_requestsView->setAdminMode(isAdmin, m_currentUser.id());
+    m_adminOverviewView->setAdminMode(isAdmin);
 }
 
 void MainWindow::toggleMaximizeRestore()

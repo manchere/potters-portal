@@ -9,7 +9,7 @@
 namespace
 {
     const QString kSelectColumns = QStringLiteral(
-        "id, role, service_date, member_id, support_member_id, notes");
+        "id, role_id, service_date, member_id, support_member_id, notes");
 }
 
 AssignmentController::AssignmentController(QObject *parent)
@@ -21,7 +21,7 @@ static Assignment assignmentFromQuery(const QSqlQuery &query)
 {
     Assignment assignment;
     assignment.setId(query.value(QStringLiteral("id")).toInt());
-    assignment.setRole(assignmentRoleFromString(query.value(QStringLiteral("role")).toString()));
+    assignment.setRoleId(query.value(QStringLiteral("role_id")).toInt());
     assignment.setServiceDate(query.value(QStringLiteral("service_date")).toDate());
     const QVariant memberId = query.value(QStringLiteral("member_id"));
     assignment.setMemberId(memberId.isNull() ? -1 : memberId.toInt());
@@ -106,7 +106,7 @@ QVector<Assignment> AssignmentController::assignmentsForDate(const QDate &date) 
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT %1 FROM assignments WHERE service_date = :service_date ORDER BY role").arg(kSelectColumns));
+        "SELECT %1 FROM assignments WHERE service_date = :service_date ORDER BY role_id").arg(kSelectColumns));
     query.bindValue(QStringLiteral(":service_date"), date);
     if (!query.exec()) {
         m_lastError = query.lastError().text();
@@ -123,9 +123,9 @@ bool AssignmentController::addAssignment(Assignment &assignment)
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "INSERT INTO assignments (role, service_date, member_id, support_member_id, notes) "
-        "VALUES (:role, :service_date, :member_id, :support_member_id, :notes) RETURNING id"));
-    query.bindValue(QStringLiteral(":role"), assignmentRoleToString(assignment.role()));
+        "INSERT INTO assignments (role_id, service_date, member_id, support_member_id, notes) "
+        "VALUES (:role_id, :service_date, :member_id, :support_member_id, :notes) RETURNING id"));
+    query.bindValue(QStringLiteral(":role_id"), assignment.roleId());
     query.bindValue(QStringLiteral(":service_date"), assignment.serviceDate());
     query.bindValue(QStringLiteral(":member_id"),
         assignment.memberId() > 0 ? QVariant(assignment.memberId()) : QVariant());
@@ -146,9 +146,9 @@ bool AssignmentController::updateAssignment(const Assignment &assignment)
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "UPDATE assignments SET role = :role, service_date = :service_date, member_id = :member_id, "
+        "UPDATE assignments SET role_id = :role_id, service_date = :service_date, member_id = :member_id, "
         "support_member_id = :support_member_id, notes = :notes, updated_at = now() WHERE id = :id"));
-    query.bindValue(QStringLiteral(":role"), assignmentRoleToString(assignment.role()));
+    query.bindValue(QStringLiteral(":role_id"), assignment.roleId());
     query.bindValue(QStringLiteral(":service_date"), assignment.serviceDate());
     query.bindValue(QStringLiteral(":member_id"),
         assignment.memberId() > 0 ? QVariant(assignment.memberId()) : QVariant());

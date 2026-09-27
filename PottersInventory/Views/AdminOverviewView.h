@@ -1,0 +1,105 @@
+#pragma once
+
+#include <QVector>
+#include <QWidget>
+
+#include "Models/Category.h"
+#include "Models/RoleType.h"
+#include "Models/Tag.h"
+#include "Models/User.h"
+
+class QListWidget;
+class QListWidgetItem;
+class QLineEdit;
+class QPushButton;
+class QButtonGroup;
+class QNetworkAccessManager;
+class TagController;
+class CategoryController;
+class RoleTypeController;
+class UserController;
+
+// "Taxonomy" tab -- a single unified list that shows exactly one of
+// Members / Tags / Categories / Assignment Types at a time (toggled via
+// the buttons at the top), with a search-by-name filter, four "+ Add"
+// buttons, double-click to edit, and one generic Delete button that acts
+// on whichever kind is currently shown. Tag rows are colored with the
+// tag's own color; Member rows show their avatar at the side.
+//
+// "+ Add Assignment" creates an assignment *type* (a duty name + icon,
+// e.g. "Ushering" + an emoji) -- it does NOT schedule a Member against a
+// role for a specific Sunday. Scheduling a Member happens exclusively on
+// the Date tab ("+ Assign Role" / "+ Assign Another Role").
+//
+// Adding/editing a Member is Admin-only (gated the same way the Date tab
+// is); Tags, Categories, and Assignment Types stay open to everyone, as
+// before.
+class AdminOverviewView : public QWidget
+{
+    Q_OBJECT
+
+public:
+    AdminOverviewView(
+        TagController *tagController,
+        CategoryController *categoryController,
+        RoleTypeController *roleTypeController,
+        UserController *userController,
+        QNetworkAccessManager *networkManager,
+        QWidget *parent = nullptr);
+
+public slots:
+    // Reloads Members/Tags/Categories/Assignment Types from their
+    // controllers and rebuilds whichever list is currently shown.
+    void refresh();
+
+    // Gates the Member add button and double-click-to-edit on Member rows
+    // -- Tags/Categories/Assignment Types management stays open to
+    // everyone.
+    void setAdminMode(bool isAdmin);
+
+private slots:
+    void kindButtonClicked();
+    void searchTextChanged(const QString &text);
+    void addMemberClicked();
+    void addTagClicked();
+    void addCategoryClicked();
+    void addAssignmentTypeClicked();
+    void deleteClicked();
+    void rowDoubleClicked(QListWidgetItem *item);
+
+private:
+    enum class Kind { Members, Tags, Categories, AssignmentTypes };
+
+    void setKind(Kind kind);
+    void rebuildList();
+    void updateAddButtonVisibility();
+
+    TagController *m_tagController = nullptr;
+    CategoryController *m_categoryController = nullptr;
+    RoleTypeController *m_roleTypeController = nullptr;
+    UserController *m_userController = nullptr;
+    QNetworkAccessManager *m_networkManager = nullptr;
+    bool m_isAdmin = false;
+    Kind m_kind = Kind::Members;
+
+    QVector<User> m_users;
+    QVector<Tag> m_tags;
+    QVector<Category> m_categories;
+    QVector<RoleType> m_roleTypes;
+
+    QPushButton *m_membersToggle = nullptr;
+    QPushButton *m_tagsToggle = nullptr;
+    QPushButton *m_categoriesToggle = nullptr;
+    QPushButton *m_assignmentTypesToggle = nullptr;
+    QButtonGroup *m_kindGroup = nullptr;
+
+    QLineEdit *m_searchEdit = nullptr;
+
+    QPushButton *m_addMemberButton = nullptr;
+    QPushButton *m_addTagButton = nullptr;
+    QPushButton *m_addCategoryButton = nullptr;
+    QPushButton *m_addAssignmentButton = nullptr;
+    QPushButton *m_deleteButton = nullptr;
+
+    QListWidget *m_list = nullptr;
+};

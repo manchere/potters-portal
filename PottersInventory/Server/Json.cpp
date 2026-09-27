@@ -87,22 +87,13 @@ namespace Json
         return json;
     }
 
-    User userFromJson(const QJsonObject &json)
-    {
-        User user;
-        user.setId(json.value(QStringLiteral("id")).toInt(-1));
-        user.setName(json.value(QStringLiteral("name")).toString());
-        user.setEmail(json.value(QStringLiteral("email")).toString());
-        user.setIsAdmin(json.value(QStringLiteral("is_admin")).toBool());
-        user.setAvatarSeed(json.value(QStringLiteral("avatar_seed")).toString());
-        return user;
-    }
-
-    QJsonObject assignmentToJson(const Assignment &assignment)
+    QJsonObject assignmentToJson(const Assignment &assignment, const RoleType &role)
     {
         QJsonObject json;
         json[QStringLiteral("id")] = assignment.id();
-        json[QStringLiteral("role")] = assignmentRoleToString(assignment.role());
+        json[QStringLiteral("role_id")] = assignment.roleId();
+        json[QStringLiteral("role_name")] = role.name();
+        json[QStringLiteral("role_icon")] = role.icon();
         json[QStringLiteral("service_date")] = assignment.serviceDate().toString(Qt::ISODate);
         json[QStringLiteral("member_id")] = assignment.memberId() > 0 ? QJsonValue(assignment.memberId()) : QJsonValue();
         json[QStringLiteral("support_member_id")] = assignment.supportMemberId() > 0
@@ -110,18 +101,6 @@ namespace Json
             : QJsonValue();
         json[QStringLiteral("notes")] = assignment.notes();
         return json;
-    }
-
-    Assignment assignmentFromJson(const QJsonObject &json)
-    {
-        Assignment assignment;
-        assignment.setId(json.value(QStringLiteral("id")).toInt(-1));
-        assignment.setRole(assignmentRoleFromString(json.value(QStringLiteral("role")).toString()));
-        assignment.setServiceDate(QDate::fromString(json.value(QStringLiteral("service_date")).toString(), Qt::ISODate));
-        assignment.setMemberId(json.value(QStringLiteral("member_id")).toInt(-1));
-        assignment.setSupportMemberId(json.value(QStringLiteral("support_member_id")).toInt(-1));
-        assignment.setNotes(json.value(QStringLiteral("notes")).toString());
-        return assignment;
     }
 
     QJsonObject availabilityMarkToJson(const AvailabilityMark &mark)

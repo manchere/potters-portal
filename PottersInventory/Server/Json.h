@@ -8,6 +8,7 @@
 #include "Models/Category.h"
 #include "Models/Item.h"
 #include "Models/NonAvailabilityRequest.h"
+#include "Models/RoleType.h"
 #include "Models/Tag.h"
 #include "Models/User.h"
 
@@ -29,10 +30,11 @@ namespace Json
     // Never includes password_hash/password_salt -- those never leave the
     // server (see UserController).
     QJsonObject userToJson(const User &user);
-    User userFromJson(const QJsonObject &json);
 
-    QJsonObject assignmentToJson(const Assignment &assignment);
-    Assignment assignmentFromJson(const QJsonObject &json);
+    // Embeds role_name/role_icon (resolved from the given RoleType)
+    // alongside role_id, so mobile can render a role's icon/name without a
+    // separate lookup endpoint.
+    QJsonObject assignmentToJson(const Assignment &assignment, const RoleType &role);
 
     QJsonObject availabilityMarkToJson(const AvailabilityMark &mark);
 

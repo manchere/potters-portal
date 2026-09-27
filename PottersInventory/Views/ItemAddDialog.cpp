@@ -25,7 +25,7 @@ ItemAddDialog::ItemAddDialog(ItemController *itemController, TagController *tagC
     connect(buttons, &QDialogButtonBox::accepted, this, &ItemAddDialog::saveClicked);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *layout = contentLayout();
     layout->addWidget(heading);
     layout->addWidget(m_form);
     layout->addWidget(buttons);
@@ -33,11 +33,10 @@ ItemAddDialog::ItemAddDialog(ItemController *itemController, TagController *tagC
 
 void ItemAddDialog::saveClicked()
 {
-    Item item = m_form->toItem();
-    if (item.name().isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("Add Item"), QStringLiteral("Name is required."));
+    if (!m_form->validate()) {
         return;
     }
+    Item item = m_form->toItem();
     if (!m_itemController->addItem(item)) {
         QMessageBox::critical(this, QStringLiteral("Add Item"), m_itemController->lastError());
         return;

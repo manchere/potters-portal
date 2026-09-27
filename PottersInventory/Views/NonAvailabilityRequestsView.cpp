@@ -10,20 +10,23 @@
 
 #include "Controllers/AssignmentController.h"
 #include "Controllers/NonAvailabilityRequestController.h"
+#include "Controllers/RoleTypeController.h"
 #include "Controllers/UserController.h"
 #include "Models/Assignment.h"
 #include "Models/NonAvailabilityRequest.h"
+#include "Models/RoleType.h"
 #include "Models/User.h"
-#include "RoleDisplay.h"
 
 NonAvailabilityRequestsView::NonAvailabilityRequestsView(
     NonAvailabilityRequestController *requestController,
     AssignmentController *assignmentController,
+    RoleTypeController *roleTypeController,
     UserController *userController,
     QWidget *parent)
     : QWidget(parent)
     , m_requestController(requestController)
     , m_assignmentController(assignmentController)
+    , m_roleTypeController(roleTypeController)
     , m_userController(userController)
 {
     auto *title = new QLabel(QStringLiteral("Non-Availability Requests"), this);
@@ -93,9 +96,12 @@ void NonAvailabilityRequestsView::refresh()
     for (const NonAvailabilityRequest &request : m_requestController->listPending()) {
         const Assignment assignment = m_assignmentController->assignmentById(request.assignmentId());
         const User user = m_userController->userById(request.userId());
+        const QString roleLabel = assignment.id() >= 0
+            ? m_roleTypeController->roleTypeById(assignment.roleId()).iconAndName()
+            : QStringLiteral("(deleted assignment)");
         const QString label = QStringLiteral("%1 — %2 — %3")
             .arg(assignment.serviceDate().toString(QStringLiteral("yyyy-MM-dd")))
-            .arg(assignment.id() >= 0 ? RoleDisplay::iconAndLabel(assignment.role()) : QStringLiteral("(deleted assignment)"))
+            .arg(roleLabel)
             .arg(user.id() >= 0 ? user.name() : QStringLiteral("(deleted member)"));
         auto *item = new QListWidgetItem(label, m_list);
         item->setData(Qt::UserRole, request.id());

@@ -32,7 +32,7 @@ ItemEditDialog::ItemEditDialog(const Item &item, ItemController *itemController,
     connect(buttons, &QDialogButtonBox::accepted, this, &ItemEditDialog::saveClicked);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *layout = contentLayout();
     layout->addWidget(heading);
     layout->addWidget(m_form);
     layout->addWidget(buttons);
@@ -40,11 +40,10 @@ ItemEditDialog::ItemEditDialog(const Item &item, ItemController *itemController,
 
 void ItemEditDialog::saveClicked()
 {
-    Item item = m_form->toItem();
-    if (item.name().isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("Edit Item"), QStringLiteral("Name is required."));
+    if (!m_form->validate()) {
         return;
     }
+    Item item = m_form->toItem();
     if (!m_itemController->updateItem(item)) {
         QMessageBox::critical(this, QStringLiteral("Edit Item"), m_itemController->lastError());
         return;

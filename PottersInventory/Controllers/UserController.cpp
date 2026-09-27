@@ -119,15 +119,22 @@ bool UserController::addUser(User &user)
 
 bool UserController::updateUser(const User &user)
 {
+    // Also writes password_hash/password_salt -- callers that don't want
+    // to change the password must carry the existing hash/salt through
+    // unchanged (e.g. fetch via userById() first), since this always
+    // writes whatever is on the User object.
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
         "UPDATE users SET name = :name, email = :email, is_admin = :is_admin, "
-        "avatar_seed = :avatar_seed, updated_at = now() WHERE id = :id"));
+        "avatar_seed = :avatar_seed, password_hash = :password_hash, password_salt = :password_salt, "
+        "updated_at = now() WHERE id = :id"));
     query.bindValue(QStringLiteral(":name"), user.name());
     query.bindValue(QStringLiteral(":email"), user.email());
     query.bindValue(QStringLiteral(":is_admin"), user.isAdmin());
     query.bindValue(QStringLiteral(":avatar_seed"), user.avatarSeed());
+    query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
+    query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
     query.bindValue(QStringLiteral(":id"), user.id());
     if (!query.exec()) {
         m_lastError = query.lastError().text();

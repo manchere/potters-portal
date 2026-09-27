@@ -15,6 +15,7 @@
 
 #include "Auth/PasswordAuth.h"
 #include "Controllers/AssignmentController.h"
+#include "Controllers/RoleTypeController.h"
 #include "Controllers/AvailabilityController.h"
 #include "Controllers/CategoryController.h"
 #include "Controllers/ItemController.h"
@@ -93,6 +94,7 @@ int main(int argc, char **argv)
     UserController userController;
     SessionController sessionController;
     AssignmentController assignmentController;
+    RoleTypeController roleTypeController;
     AvailabilityController availabilityController;
     NonAvailabilityRequestController requestController;
     QNetworkAccessManager networkManager;
@@ -440,15 +442,15 @@ int main(int argc, char **argv)
     // stays in-process on the desktop app via AssignmentController directly,
     // same as Items/Tags/Categories) -----------------------------------------
     server.route("/api/assignments/me", QHttpServerRequest::Method::Get,
-                 [&sessionController, &userController, &assignmentController, &availabilityController,
-                  &requestController](const QHttpServerRequest &request) {
+                 [&sessionController, &userController, &assignmentController, &roleTypeController,
+                  &availabilityController, &requestController](const QHttpServerRequest &request) {
         User currentUser;
         if (!requireAuth(request, sessionController, userController, currentUser)) {
             return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
         }
         QJsonArray assignments;
         for (const Assignment &assignment : assignmentController.assignmentsForMember(currentUser.id())) {
-            QJsonObject json = Json::assignmentToJson(assignment);
+            QJsonObject json = Json::assignmentToJson(assignment, roleTypeController.roleTypeById(assignment.roleId()));
             // FR-4.2: flag when this assignment's date collides with a mark
             // the member already made on their general calendar, so the
             // mobile client can prompt them to file a formal request.
