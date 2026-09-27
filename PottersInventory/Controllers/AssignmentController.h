@@ -6,6 +6,7 @@
 #include <QVector>
 
 #include "Models/Assignment.h"
+#include "Models/ScheduleReportRow.h"
 
 // Backed by Postgres (assignments table). See ItemController for the
 // query pattern.
@@ -37,6 +38,13 @@ public:
     // also marked that date unavailable on their general calendar (FR-3.1)
     // -- surfaced after pasting a schedule so the Admin can swap them out.
     QStringList membersMarkedUnavailable(const QDate &date) const;
+
+    // Every assignment from fromDate to toDate inclusive, newest Sunday
+    // first (then by role name), with role/member names and request /
+    // availability flags resolved -- for the desktop Reports tab. With
+    // memberId > 0, only assignments where that member is primary or
+    // support.
+    QVector<ScheduleReportRow> scheduleReport(const QDate &fromDate, const QDate &toDate, int memberId = -1) const;
 
     QString lastError() const { return m_lastError; }
 

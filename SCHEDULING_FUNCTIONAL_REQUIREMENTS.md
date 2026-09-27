@@ -146,6 +146,21 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   time-off requests filed against them). After pasting, the Admin is told
   which pasted Members marked themselves unavailable that day (FR-3.1).
 
+## 9a. Desktop UI — Reports Tab
+
+- **FR-8a.1** A Reports tab shall let anyone look up past Sunday schedules
+  by date range (presets: last month, last 3 months, last year), optionally
+  filtered to one Member.
+- **FR-8a.2** Selecting a Sunday shall show a report of that day: each
+  role, who served, the support Member, notes, and whether the Member had
+  requested time off (pending/approved/denied) or marked themselves
+  unavailable. The reason given in a time-off request is never shown.
+- **FR-8a.3** A Summary entry shall show the whole range: Sundays covered,
+  assignments, Members serving, unfilled slots, time-off totals, and how
+  often each Member and role served.
+- **FR-8a.4** The current report shall be savable as HTML (printable) or
+  CSV (one row per assignment).
+
 ## 10. Desktop UI — Tags, Categories & Assignments Tab
 
 - **FR-9.1** The interface shall provide one tab for managing inventory

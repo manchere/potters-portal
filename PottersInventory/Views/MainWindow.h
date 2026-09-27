@@ -16,6 +16,7 @@ class ItemListView;
 class AdminOverviewView;
 class DateNavigationTab;
 class SongsView;
+class ReportsView;
 class TitleBar;
 class QStackedWidget;
 
@@ -71,6 +72,7 @@ private:
     AdminOverviewView *m_adminOverviewView = nullptr;
     DateNavigationTab *m_dateNavigationTab = nullptr;
     SongsView *m_songsView = nullptr;
+    ReportsView *m_reportsView = nullptr;
 
     TitleBar *m_titleBar = nullptr;
     QStackedWidget *m_stack = nullptr;

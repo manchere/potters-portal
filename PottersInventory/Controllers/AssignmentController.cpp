@@ -275,3 +275,56 @@ bool AssignmentController::copySchedule(
     emit assignmentsChanged();
     return true;
 }
+
+QVector<ScheduleReportRow> AssignmentController::scheduleReport(const QDate &fromDate, const QDate &toDate, int memberId) const
+{
+    QVector<ScheduleReportRow> rows;
+    Database::ensureConnected();
+    QString sql = QStringLiteral(
+        "SELECT a.id, a.service_date, r.name AS role_name, r.icon AS role_icon, "
+        "a.member_id, m.name AS member_name, a.support_member_id, s.name AS support_name, a.notes, "
+        "(SELECT n.status FROM non_availability_requests n "
+        " WHERE n.assignment_id = a.id AND n.user_id = a.member_id "
+        " ORDER BY n.created_at DESC LIMIT 1) AS request_status, "
+        "EXISTS (SELECT 1 FROM availability_marks am "
+        " WHERE am.user_id = a.member_id AND am.date = a.service_date) AS member_unavailable "
+        "FROM assignments a "
+        "JOIN assignment_roles r ON r.id = a.role_id "
+        "LEFT JOIN users m ON m.id = a.member_id "
+        "LEFT JOIN users s ON s.id = a.support_member_id "
+        "WHERE a.service_date BETWEEN :from_date AND :to_date ");
+    if (memberId > 0) {
+        sql += QStringLiteral("AND (a.member_id = :member_id OR a.support_member_id = :member_id) ");
+    }
+    sql += QStringLiteral("ORDER BY a.service_date DESC, LOWER(r.name), a.id");
+
+    QSqlQuery query;
+    query.prepare(sql);
+    query.bindValue(QStringLiteral(":from_date"), fromDate);
+    query.bindValue(QStringLiteral(":to_date"), toDate);
+    if (memberId > 0) {
+        query.bindValue(QStringLiteral(":member_id"), memberId);
+    }
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return rows;
+    }
+    while (query.next()) {
+        ScheduleReportRow row;
+        row.assignmentId = query.value(QStringLiteral("id")).toInt();
+        row.serviceDate = query.value(QStringLiteral("service_date")).toDate();
+        row.roleName = query.value(QStringLiteral("role_name")).toString();
+        row.roleIcon = query.value(QStringLiteral("role_icon")).toString();
+        const QVariant member = query.value(QStringLiteral("member_id"));
+        row.memberId = member.isNull() ? -1 : member.toInt();
+        row.memberName = query.value(QStringLiteral("member_name")).toString();
+        const QVariant support = query.value(QStringLiteral("support_member_id"));
+        row.supportMemberId = support.isNull() ? -1 : support.toInt();
+        row.supportMemberName = query.value(QStringLiteral("support_name")).toString();
+        row.notes = query.value(QStringLiteral("notes")).toString();
+        row.requestStatus = query.value(QStringLiteral("request_status")).toString();
+        row.memberMarkedUnavailable = query.value(QStringLiteral("member_unavailable")).toBool();
+        rows.append(row);
+    }
+    return rows;
+}
