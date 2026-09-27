@@ -33,7 +33,9 @@ class UserController;
 //
 // Adding/editing a Member is Admin-only (gated the same way the Date tab
 // is); Tags, Categories, and Assignment Types stay open to everyone, as
-// before.
+// before. So is changing a Member's role: the "Make Admin" / "Remove
+// Admin" button only exists in Admin mode, and UserController::setAdminRole
+// re-checks that the acting account is still an Admin.
 class AdminOverviewView : public QWidget
 {
     Q_OBJECT
@@ -52,10 +54,11 @@ public slots:
     // controllers and rebuilds whichever list is currently shown.
     void refresh();
 
-    // Gates the Member add button and double-click-to-edit on Member rows
-    // -- Tags/Categories/Assignment Types management stays open to
-    // everyone.
-    void setAdminMode(bool isAdmin);
+    // Gates the Member add button, double-click-to-edit on Member rows, and
+    // the Admin role toggle -- Tags/Categories/Assignment Types management
+    // stays open to everyone. adminUserId is the logged-in Admin (-1 when
+    // logged out), passed to UserController::setAdminRole for the check.
+    void setAdminMode(bool isAdmin, int adminUserId);
 
 private slots:
     void kindButtonClicked();
@@ -66,6 +69,7 @@ private slots:
     void addAssignmentTypeClicked();
     void deleteClicked();
     void rowDoubleClicked(QListWidgetItem *item);
+    void toggleAdminRoleClicked();
 
 private:
     enum class Kind { Members, Tags, Categories, AssignmentTypes };
@@ -73,6 +77,9 @@ private:
     void setKind(Kind kind);
     void rebuildList();
     void updateAddButtonVisibility();
+    // Shows the role button only for Members in Admin mode, labelled for
+    // the selected Member's current role.
+    void updateRoleButton();
 
     TagController *m_tagController = nullptr;
     CategoryController *m_categoryController = nullptr;
@@ -80,6 +87,7 @@ private:
     UserController *m_userController = nullptr;
     QNetworkAccessManager *m_networkManager = nullptr;
     bool m_isAdmin = false;
+    int m_adminUserId = -1;
     Kind m_kind = Kind::Members;
 
     QVector<User> m_users;
@@ -100,6 +108,7 @@ private:
     QPushButton *m_addCategoryButton = nullptr;
     QPushButton *m_addAssignmentButton = nullptr;
     QPushButton *m_deleteButton = nullptr;
+    QPushButton *m_roleButton = nullptr;
 
     QListWidget *m_list = nullptr;
 };

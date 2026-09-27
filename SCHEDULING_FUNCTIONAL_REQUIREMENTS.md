@@ -46,6 +46,14 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   profile, appear in scheduling, and be assignable to assignments the same
   as any other Member.
 
+- **FR-1.4** Only a current Admin shall be able to change a Member's role
+  (Member ↔ Admin), from the Members list on the Taxonomy tab ("Make
+  Admin" / "Remove Admin", shown only in Admin mode). The acting account's
+  Admin status is re-checked in the database at the moment of the change.
+  An Admin cannot remove their own Admin role or delete their own account,
+  and the last remaining Admin can never be removed or deleted. Editing a
+  Member's profile never changes their role.
+
 ## 3. Member — Assignment Visibility
 
 - **FR-2.1** A Member shall be able to view their own assignments for

@@ -40,8 +40,20 @@ public slots:
     // PasswordAuth) before calling this -- the controller only persists
     // them, it doesn't hash.
     bool addUser(User &user);
+    // Updates profile fields and password only -- never is_admin, so a
+    // stale User object can't silently grant or revoke Admin. Use
+    // setAdminRole() for that.
     bool updateUser(const User &user);
+    // Refuses to delete the last remaining Admin.
     bool removeUser(int id);
+
+    // Grants (makeAdmin) or revokes Admin for targetUserId. Only an account
+    // that is an Admin *right now* -- re-checked in the database, not
+    // trusted from the caller's cached login -- may do this. An Admin can't
+    // revoke their own Admin role (another Admin has to), and the last
+    // remaining Admin can never be revoked, so the church can't lock itself
+    // out of Admin mode. On refusal, lastError() is a user-facing reason.
+    bool setAdminRole(int actingUserId, int targetUserId, bool makeAdmin);
 
 signals:
     void usersChanged();

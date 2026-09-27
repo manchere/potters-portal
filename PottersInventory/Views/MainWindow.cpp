@@ -173,7 +173,7 @@ void MainWindow::adminButtonClicked()
     const bool isAdmin = m_currentUser.id() >= 0;
     m_titleBar->setAdminLoggedIn(isAdmin);
     m_dateNavigationTab->setAdminMode(isAdmin);
-    m_adminOverviewView->setAdminMode(isAdmin);
+    m_adminOverviewView->setAdminMode(isAdmin, m_currentUser.id());
     m_songsView->setAdminMode(isAdmin);
 }
 

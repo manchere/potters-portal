@@ -95,12 +95,17 @@ AdminOverviewView::AdminOverviewView(
     m_list = new QListWidget(this);
     m_list->setAlternatingRowColors(true);
     connect(m_list, &QListWidget::itemDoubleClicked, this, &AdminOverviewView::rowDoubleClicked);
+    connect(m_list, &QListWidget::currentItemChanged, this, &AdminOverviewView::updateRoleButton);
 
     m_deleteButton = new QPushButton(QStringLiteral("Delete"), this);
     m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
     connect(m_deleteButton, &QPushButton::clicked, this, &AdminOverviewView::deleteClicked);
+    m_roleButton = new QPushButton(QStringLiteral("Make Admin"), this);
+    m_roleButton->setObjectName(QStringLiteral("secondaryButton"));
+    connect(m_roleButton, &QPushButton::clicked, this, &AdminOverviewView::toggleAdminRoleClicked);
     auto *bottomRow = new QHBoxLayout;
     bottomRow->addWidget(m_deleteButton);
+    bottomRow->addWidget(m_roleButton);
     bottomRow->addStretch();
 
     auto *layout = new QVBoxLayout(this);
@@ -119,10 +124,63 @@ AdminOverviewView::AdminOverviewView(
     refresh();
 }
 
-void AdminOverviewView::setAdminMode(bool isAdmin)
+void AdminOverviewView::setAdminMode(bool isAdmin, int adminUserId)
 {
     m_isAdmin = isAdmin;
+    m_adminUserId = isAdmin ? adminUserId : -1;
     updateAddButtonVisibility();
+    updateRoleButton();
+}
+
+void AdminOverviewView::updateRoleButton()
+{
+    const bool showForKind = m_isAdmin && m_kind == Kind::Members;
+    m_roleButton->setVisible(showForKind);
+    if (!showForKind) {
+        return;
+    }
+    const QListWidgetItem *selected = m_list->currentItem();
+    const int id = selected ? selected->data(Qt::UserRole).toInt() : -1;
+    for (const User &user : m_users) {
+        if (user.id() == id) {
+            m_roleButton->setEnabled(true);
+            m_roleButton->setText(user.isAdmin() ? QStringLiteral("Remove Admin") : QStringLiteral("Make Admin"));
+            return;
+        }
+    }
+    m_roleButton->setEnabled(false);
+    m_roleButton->setText(QStringLiteral("Make Admin"));
+}
+
+void AdminOverviewView::toggleAdminRoleClicked()
+{
+    if (!m_isAdmin || m_kind != Kind::Members) {
+        return;
+    }
+    const QListWidgetItem *selected = m_list->currentItem();
+    if (!selected) {
+        return;
+    }
+    const User target = m_userController->userById(selected->data(Qt::UserRole).toInt());
+    if (target.id() < 0) {
+        refresh();
+        return;
+    }
+    const bool makeAdmin = !target.isAdmin();
+    const QString title = makeAdmin ? QStringLiteral("Make Admin") : QStringLiteral("Remove Admin");
+    const QString question = makeAdmin
+        ? QStringLiteral("Make %1 an Admin?\n\nAdmins can unlock Admin mode on the desktop app with their "
+                         "password and manage members, schedules, and songs.").arg(target.name())
+        : QStringLiteral("Remove Admin from %1?\n\nThey'll stay a Member and keep their assignments, "
+                         "but can no longer unlock Admin mode.").arg(target.name());
+    if (QMessageBox::question(this, title, question) != QMessageBox::Yes) {
+        return;
+    }
+    if (!m_userController->setAdminRole(m_adminUserId, target.id(), makeAdmin)) {
+        QMessageBox::warning(this, title, m_userController->lastError());
+        return;
+    }
+    refresh();
 }
 
 void AdminOverviewView::updateAddButtonVisibility()
@@ -149,6 +207,7 @@ void AdminOverviewView::setKind(Kind kind)
 {
     m_kind = kind;
     rebuildList();
+    updateRoleButton();
 }
 
 void AdminOverviewView::searchTextChanged(const QString &)
@@ -167,6 +226,8 @@ void AdminOverviewView::refresh()
 
 void AdminOverviewView::rebuildList()
 {
+    const QListWidgetItem *previous = m_list->currentItem();
+    const int previousId = previous ? previous->data(Qt::UserRole).toInt() : -1;
     m_list->clear();
     const QString search = m_searchEdit->text().trimmed();
 
@@ -242,6 +303,14 @@ void AdminOverviewView::rebuildList()
             item->setData(Qt::UserRole, roleType.id());
         }
     }
+
+    for (int i = 0; i < m_list->count(); ++i) {
+        if (previousId >= 0 && m_list->item(i)->data(Qt::UserRole).toInt() == previousId) {
+            m_list->setCurrentRow(i);
+            break;
+        }
+    }
+    updateRoleButton();
 }
 
 void AdminOverviewView::addMemberClicked()
@@ -308,6 +377,11 @@ void AdminOverviewView::deleteClicked()
 
     if (m_kind == Kind::Members) {
         if (!m_isAdmin) {
+            return;
+        }
+        if (id == m_adminUserId) {
+            QMessageBox::information(this, QStringLiteral("Delete Member"),
+                QStringLiteral("You can't delete your own account while logged in as it."));
             return;
         }
         if (QMessageBox::question(this, QStringLiteral("Delete Member"), QStringLiteral("Delete this member?"))

@@ -126,12 +126,11 @@ bool UserController::updateUser(const User &user)
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "UPDATE users SET name = :name, email = :email, is_admin = :is_admin, "
+        "UPDATE users SET name = :name, email = :email, "
         "avatar_seed = :avatar_seed, password_hash = :password_hash, password_salt = :password_salt, "
         "updated_at = now() WHERE id = :id"));
     query.bindValue(QStringLiteral(":name"), user.name());
     query.bindValue(QStringLiteral(":email"), user.email());
-    query.bindValue(QStringLiteral(":is_admin"), user.isAdmin());
     query.bindValue(QStringLiteral(":avatar_seed"), user.avatarSeed());
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
     query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
@@ -148,10 +147,56 @@ bool UserController::removeUser(int id)
 {
     Database::ensureConnected();
     QSqlQuery query;
-    query.prepare(QStringLiteral("DELETE FROM users WHERE id = :id"));
+    // The EXISTS guard keeps the check and the delete atomic:
+    // an Admin row is only deleted while at least one other Admin remains.
+    query.prepare(QStringLiteral(
+        "DELETE FROM users WHERE id = :id "
+        "AND (NOT is_admin OR EXISTS (SELECT 1 FROM users other WHERE other.is_admin AND other.id <> :id))"));
     query.bindValue(QStringLiteral(":id"), id);
     if (!query.exec()) {
         m_lastError = query.lastError().text();
+        return false;
+    }
+    if (query.numRowsAffected() == 0) {
+        m_lastError = userById(id).id() < 0
+            ? QStringLiteral("This member no longer exists.")
+            : QStringLiteral("This is the last Admin account and can't be deleted. Make someone else an Admin first.");
+        return false;
+    }
+    emit usersChanged();
+    return true;
+}
+
+bool UserController::setAdminRole(int actingUserId, int targetUserId, bool makeAdmin)
+{
+    if (!makeAdmin && actingUserId == targetUserId) {
+        m_lastError = QStringLiteral("You can't remove your own Admin role. Ask another Admin to do it.");
+        return false;
+    }
+    const User actingUser = userById(actingUserId);
+    if (actingUser.id() < 0 || !actingUser.isAdmin()) {
+        m_lastError = QStringLiteral("Only a current Admin can change member roles.");
+        return false;
+    }
+
+    Database::ensureConnected();
+    QSqlQuery query;
+    if (makeAdmin) {
+        query.prepare(QStringLiteral("UPDATE users SET is_admin = true, updated_at = now() WHERE id = :id"));
+    } else {
+        query.prepare(QStringLiteral(
+            "UPDATE users SET is_admin = false, updated_at = now() WHERE id = :id "
+            "AND EXISTS (SELECT 1 FROM users other WHERE other.is_admin AND other.id <> :id)"));
+    }
+    query.bindValue(QStringLiteral(":id"), targetUserId);
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return false;
+    }
+    if (query.numRowsAffected() == 0) {
+        m_lastError = userById(targetUserId).id() < 0
+            ? QStringLiteral("This member no longer exists.")
+            : QStringLiteral("There must always be at least one Admin.");
         return false;
     }
     emit usersChanged();
