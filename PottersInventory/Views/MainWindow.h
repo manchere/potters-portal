@@ -7,6 +7,7 @@
 #include "Controllers/CategoryController.h"
 #include "Controllers/ItemController.h"
 #include "Controllers/RoleTypeController.h"
+#include "Controllers/SongController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
 #include "Models/User.h"
@@ -14,6 +15,7 @@
 class ItemListView;
 class AdminOverviewView;
 class DateNavigationTab;
+class SongsView;
 class TitleBar;
 class QStackedWidget;
 
@@ -60,6 +62,7 @@ private:
     UserController m_userController;
     AssignmentController m_assignmentController;
     RoleTypeController m_roleTypeController;
+    SongController m_songController;
     // Shared by DateNavigationTab for fetching Member avatars (DiceBear)
     // without blocking the UI thread.
     QNetworkAccessManager m_networkManager;
@@ -67,6 +70,7 @@ private:
     ItemListView *m_itemListView = nullptr;
     AdminOverviewView *m_adminOverviewView = nullptr;
     DateNavigationTab *m_dateNavigationTab = nullptr;
+    SongsView *m_songsView = nullptr;
 
     TitleBar *m_titleBar = nullptr;
     QStackedWidget *m_stack = nullptr;

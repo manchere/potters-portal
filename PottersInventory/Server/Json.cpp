@@ -126,4 +126,16 @@ namespace Json
             : QJsonValue();
         return json;
     }
+
+    QJsonObject songToJson(const Song &song)
+    {
+        QJsonObject json;
+        json[QStringLiteral("id")] = song.id();
+        json[QStringLiteral("title")] = song.title();
+        json[QStringLiteral("artist")] = song.artist();
+        json[QStringLiteral("song_key")] = song.songKey();
+        json[QStringLiteral("link")] = song.link();
+        json[QStringLiteral("lyrics")] = song.lyrics();
+        return json;
+    }
 }

@@ -10,6 +10,7 @@
 #include "DateNavigationTab.h"
 #include "ItemListView.h"
 #include "LoginDialog.h"
+#include "SongsView.h"
 #include "TitleBar.h"
 
 namespace {
@@ -106,6 +107,7 @@ MainWindow::MainWindow(QWidget *parent)
         &m_tagController, &m_categoryController, &m_roleTypeController, &m_userController, &m_networkManager, this);
     m_dateNavigationTab = new DateNavigationTab(
         &m_assignmentController, &m_userController, &m_roleTypeController, &m_networkManager, this);
+    m_songsView = new SongsView(&m_songController, this);
 
     auto *frame = new ResizeFrame(this);
 
@@ -116,11 +118,13 @@ MainWindow::MainWindow(QWidget *parent)
     // The former Non-Availability Requests tab has been removed (see
     // MainWindow.h note).
     m_titleBar->tabBar()->insertTab(0, QStringLiteral("Date"));
+    m_titleBar->tabBar()->addTab(QStringLiteral("Songs"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Items"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Taxonomy"));
 
     m_stack = new QStackedWidget(frame);
     m_stack->insertWidget(0, m_dateNavigationTab);
+    m_stack->addWidget(m_songsView);
     m_stack->addWidget(m_itemListView);
     m_stack->addWidget(m_adminOverviewView);
 
@@ -170,6 +174,7 @@ void MainWindow::adminButtonClicked()
     m_titleBar->setAdminLoggedIn(isAdmin);
     m_dateNavigationTab->setAdminMode(isAdmin);
     m_adminOverviewView->setAdminMode(isAdmin);
+    m_songsView->setAdminMode(isAdmin);
 }
 
 void MainWindow::toggleMaximizeRestore()

@@ -9,6 +9,7 @@
 #include "Models/Item.h"
 #include "Models/NonAvailabilityRequest.h"
 #include "Models/RoleType.h"
+#include "Models/Song.h"
 #include "Models/Tag.h"
 #include "Models/User.h"
 
@@ -39,4 +40,6 @@ namespace Json
     QJsonObject availabilityMarkToJson(const AvailabilityMark &mark);
 
     QJsonObject nonAvailabilityRequestToJson(const NonAvailabilityRequest &request);
+
+    QJsonObject songToJson(const Song &song);
 }

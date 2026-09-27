@@ -21,6 +21,7 @@
 #include "Controllers/ItemController.h"
 #include "Controllers/NonAvailabilityRequestController.h"
 #include "Controllers/SessionController.h"
+#include "Controllers/SongController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
 #include "Database/Database.h"
@@ -97,6 +98,7 @@ int main(int argc, char **argv)
     RoleTypeController roleTypeController;
     AvailabilityController availabilityController;
     NonAvailabilityRequestController requestController;
+    SongController songController;
     QNetworkAccessManager networkManager;
 
     QHttpServer server;
@@ -365,6 +367,16 @@ int main(int argc, char **argv)
             return errorResponse(categoryController.lastError(), StatusCode::InternalServerError);
         }
         return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
+    });
+
+    // --- Songs (read-only; the library is managed from the desktop Songs
+    // tab) -----------------------------------------------------------------
+    server.route("/api/songs", QHttpServerRequest::Method::Get, [&songController] {
+        QJsonArray songs;
+        for (const Song &song : songController.allSongs()) {
+            songs.append(Json::songToJson(song));
+        }
+        return QHttpServerResponse(songs);
     });
 
     // --- Auth ----------------------------------------------------------------

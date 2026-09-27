@@ -31,4 +31,12 @@ non-availability requests). See
 [SCHEDULING_FUNCTIONAL_REQUIREMENTS.md](SCHEDULING_FUNCTIONAL_REQUIREMENTS.md)
 for the full spec.
 
+### Songs
+
+- Desktop **Songs** tab: a searchable song library (title, artist, key,
+  play link, lyrics). Selecting a song shows its details; **Play** opens the
+  link in the browser.
+- Anyone can view songs; adding, editing, and deleting are Admin-only.
+- `GET /api/songs` exposes the library read-only for the mobile app.
+
 <!-- Add more UI requirements here. -->
