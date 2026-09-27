@@ -4,6 +4,7 @@
 #include <QSet>
 #include <QWidget>
 
+class QLabel;
 class QListWidget;
 class QListWidgetItem;
 class QNetworkAccessManager;
@@ -19,6 +20,10 @@ class Assignment;
 // create/edit/delete assignments right here via the "Assign Role" button
 // -- there is no separate Assignments tab. "+ Add Member" creates a new
 // Member profile without leaving this tab either.
+//
+// "Copy Schedule" / "Paste Schedule" (or Ctrl+C / Ctrl+V) copy one
+// Sunday's whole schedule onto another -- e.g. reuse last month's
+// Communion Sunday line-up -- via AssignmentController::copySchedule.
 class DateNavigationTab : public QWidget
 {
     Q_OBJECT
@@ -48,6 +53,8 @@ private slots:
     void editClicked();
     void deleteClicked();
     void memberDoubleClicked(QListWidgetItem *item);
+    void copyScheduleClicked();
+    void pasteScheduleClicked();
 
 private:
     void rebuildResults();
@@ -63,6 +70,9 @@ private:
     // Assignments only ever happen on Sundays -- rounds forward to the
     // Sunday of date's week (or date itself, if it's already Sunday).
     static QDate nearestSunday(const QDate &date);
+    // Enables Copy/Paste for the selected Sunday and updates the
+    // "Copied: ..." label.
+    void updateCopyPasteState();
 
     AssignmentController *m_assignmentController = nullptr;
     UserController *m_userController = nullptr;
@@ -79,10 +89,17 @@ private:
     QPushButton *m_assignForMemberButton = nullptr;
     QPushButton *m_editButton = nullptr;
     QPushButton *m_deleteButton = nullptr;
+    QPushButton *m_copyButton = nullptr;
+    QPushButton *m_pasteButton = nullptr;
+    QLabel *m_copiedLabel = nullptr;
 
     bool m_isAdmin = false;
     QDate m_selectedDate;
     QSet<QDate> m_datesWithAssignments;
     // -1 when no row is selected.
     int m_selectedAssignmentId = -1;
+    // The Sunday whose schedule was last copied; invalid until Copy is
+    // used. Only the date is kept -- the paste reads whatever is on that
+    // Sunday at paste time.
+    QDate m_copiedDate;
 };

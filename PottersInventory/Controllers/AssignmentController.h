@@ -2,6 +2,7 @@
 
 #include <QDate>
 #include <QObject>
+#include <QStringList>
 #include <QVector>
 
 #include "Models/Assignment.h"
@@ -32,12 +33,26 @@ public:
     // (FR-8.1/8.2).
     QVector<Assignment> assignmentsForDate(const QDate &date) const;
 
+    // Names of Members assigned on date (as primary or support) who have
+    // also marked that date unavailable on their general calendar (FR-3.1)
+    // -- surfaced after pasting a schedule so the Admin can swap them out.
+    QStringList membersMarkedUnavailable(const QDate &date) const;
+
     QString lastError() const { return m_lastError; }
 
 public slots:
     bool addAssignment(Assignment &assignment);
     bool updateAssignment(const Assignment &assignment);
     bool removeAssignment(int id);
+
+    // Copies every assignment on fromDate (role, member, support member,
+    // notes) onto toDate, in one transaction. With replaceExisting, toDate's
+    // current assignments are deleted first (along with any
+    // non-availability requests filed against them, via ON DELETE
+    // CASCADE); otherwise they're kept, and a source assignment is skipped
+    // when toDate already has the same role for the same member. copied
+    // and skipped (either may be null) report what happened.
+    bool copySchedule(const QDate &fromDate, const QDate &toDate, bool replaceExisting, int *copied, int *skipped);
 
 signals:
     void assignmentsChanged();

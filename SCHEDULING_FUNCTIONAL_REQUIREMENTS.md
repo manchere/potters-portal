@@ -137,6 +137,14 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 - **FR-8.5** A "+ Add Member" button on this same tab shall let an Admin
   create a new Member profile (FR-1.1b) without leaving the Date tab.
 - **FR-8.6** FR-8.4 and FR-8.5's buttons are Admin-only (FR-0.4).
+- **FR-8.7** An Admin shall be able to copy one Sunday's whole schedule
+  ("Copy Schedule" / Ctrl+C) and paste it onto another Sunday ("Paste
+  Schedule" / Ctrl+V). Role, Member, support Member, and notes are copied.
+  If the target Sunday already has assignments, the Admin chooses to
+  **add to them** (a role the same Member already holds that day is
+  skipped) or **replace them** (deleting the existing assignments and any
+  time-off requests filed against them). After pasting, the Admin is told
+  which pasted Members marked themselves unavailable that day (FR-3.1).
 
 ## 10. Desktop UI — Tags, Categories & Assignments Tab
 

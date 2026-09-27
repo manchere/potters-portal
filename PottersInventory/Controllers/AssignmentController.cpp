@@ -1,5 +1,6 @@
 #include "AssignmentController.h"
 
+#include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QVariant>
@@ -173,6 +174,103 @@ bool AssignmentController::removeAssignment(int id)
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return false;
+    }
+    emit assignmentsChanged();
+    return true;
+}
+
+QStringList AssignmentController::membersMarkedUnavailable(const QDate &date) const
+{
+    QStringList names;
+    Database::ensureConnected();
+    QSqlQuery query;
+    query.prepare(QStringLiteral(
+        "SELECT DISTINCT u.name FROM assignments a "
+        "JOIN users u ON u.id = a.member_id OR u.id = a.support_member_id "
+        "JOIN availability_marks m ON m.user_id = u.id AND m.date = a.service_date "
+        "WHERE a.service_date = :service_date ORDER BY u.name"));
+    query.bindValue(QStringLiteral(":service_date"), date);
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return names;
+    }
+    while (query.next()) {
+        names.append(query.value(0).toString());
+    }
+    return names;
+}
+
+bool AssignmentController::copySchedule(
+    const QDate &fromDate, const QDate &toDate, bool replaceExisting, int *copied, int *skipped)
+{
+    if (copied) {
+        *copied = 0;
+    }
+    if (skipped) {
+        *skipped = 0;
+    }
+    if (fromDate == toDate) {
+        m_lastError = QStringLiteral("Pick a different Sunday to paste onto.");
+        return false;
+    }
+
+    Database::ensureConnected();
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.transaction()) {
+        m_lastError = db.lastError().text();
+        return false;
+    }
+    auto fail = [this, &db](const QSqlQuery &query) {
+        m_lastError = query.lastError().text();
+        db.rollback();
+        return false;
+    };
+
+    QSqlQuery countSource;
+    countSource.prepare(QStringLiteral("SELECT COUNT(*) FROM assignments WHERE service_date = :from_date"));
+    countSource.bindValue(QStringLiteral(":from_date"), fromDate);
+    if (!countSource.exec() || !countSource.next()) {
+        return fail(countSource);
+    }
+    const int sourceCount = countSource.value(0).toInt();
+
+    if (replaceExisting) {
+        QSqlQuery clear;
+        clear.prepare(QStringLiteral("DELETE FROM assignments WHERE service_date = :to_date"));
+        clear.bindValue(QStringLiteral(":to_date"), toDate);
+        if (!clear.exec()) {
+            return fail(clear);
+        }
+    }
+
+    // IS NOT DISTINCT FROM so an unassigned (NULL member) slot for a role
+    // also counts as "already there" and isn't duplicated.
+    QSqlQuery insert;
+    insert.prepare(QStringLiteral(
+        "INSERT INTO assignments (role_id, service_date, member_id, support_member_id, notes) "
+        "SELECT src.role_id, CAST(:to_date AS DATE), src.member_id, src.support_member_id, src.notes "
+        "FROM assignments src "
+        "WHERE src.service_date = :from_date "
+        "AND NOT EXISTS (SELECT 1 FROM assignments dst WHERE dst.service_date = :to_date "
+        "AND dst.role_id = src.role_id AND dst.member_id IS NOT DISTINCT FROM src.member_id) "
+        "ORDER BY src.id"));
+    insert.bindValue(QStringLiteral(":to_date"), toDate);
+    insert.bindValue(QStringLiteral(":from_date"), fromDate);
+    if (!insert.exec()) {
+        return fail(insert);
+    }
+    const int inserted = insert.numRowsAffected();
+
+    if (!db.commit()) {
+        m_lastError = db.lastError().text();
+        db.rollback();
+        return false;
+    }
+    if (copied) {
+        *copied = inserted;
+    }
+    if (skipped) {
+        *skipped = sourceCount - inserted;
     }
     emit assignmentsChanged();
     return true;

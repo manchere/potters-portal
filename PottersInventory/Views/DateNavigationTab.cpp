@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSet>
+#include <QShortcut>
 #include <QVBoxLayout>
 
 #include "AssignRoleDialog.h"
@@ -66,9 +67,31 @@ DateNavigationTab::DateNavigationTab(
     m_assignForMemberButton->setToolTip(
         QStringLiteral("Give the selected Member another role on this Sunday"));
     connect(m_assignForMemberButton, &QPushButton::clicked, this, &DateNavigationTab::assignForSelectedMemberClicked);
+    m_copyButton = new QPushButton(QStringLiteral("Copy Schedule"), this);
+    m_copyButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_copyButton->setToolTip(QStringLiteral("Copy this Sunday's assignments (Ctrl+C)"));
+    connect(m_copyButton, &QPushButton::clicked, this, &DateNavigationTab::copyScheduleClicked);
+    m_pasteButton = new QPushButton(QStringLiteral("Paste Schedule"), this);
+    m_pasteButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_pasteButton->setToolTip(QStringLiteral("Paste the copied assignments onto this Sunday (Ctrl+V)"));
+    connect(m_pasteButton, &QPushButton::clicked, this, &DateNavigationTab::pasteScheduleClicked);
+    m_copiedLabel = new QLabel(this);
+    m_copiedLabel->setStyleSheet(QStringLiteral("color: #8a6a1a;"));
+
+    auto *copyShortcut = new QShortcut(QKeySequence::Copy, this);
+    copyShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(copyShortcut, &QShortcut::activated, this, &DateNavigationTab::copyScheduleClicked);
+    auto *pasteShortcut = new QShortcut(QKeySequence::Paste, this);
+    pasteShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(pasteShortcut, &QShortcut::activated, this, &DateNavigationTab::pasteScheduleClicked);
+
     auto *topRow = new QHBoxLayout;
     topRow->addWidget(m_assignButton);
     topRow->addWidget(m_addMemberButton);
+    topRow->addSpacing(12);
+    topRow->addWidget(m_copyButton);
+    topRow->addWidget(m_pasteButton);
+    topRow->addWidget(m_copiedLabel);
     topRow->addStretch();
     topRow->addWidget(m_assignForMemberButton);
 
@@ -206,6 +229,93 @@ void DateNavigationTab::setAdminMode(bool isAdmin)
     m_editButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
     m_deleteButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
     m_assignForMemberButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
+    m_copyButton->setVisible(isAdmin);
+    m_pasteButton->setVisible(isAdmin);
+    m_copiedLabel->setVisible(isAdmin);
+    updateCopyPasteState();
+}
+
+void DateNavigationTab::updateCopyPasteState()
+{
+    m_copyButton->setEnabled(m_isAdmin && m_datesWithAssignments.contains(m_selectedDate));
+    m_pasteButton->setEnabled(m_isAdmin && m_copiedDate.isValid() && m_copiedDate != m_selectedDate);
+    m_copiedLabel->setText(m_copiedDate.isValid()
+        ? QStringLiteral("Copied: %1").arg(formatSunday(m_copiedDate))
+        : QString());
+}
+
+void DateNavigationTab::copyScheduleClicked()
+{
+    if (!m_isAdmin || !m_datesWithAssignments.contains(m_selectedDate)) {
+        return;
+    }
+    m_copiedDate = m_selectedDate;
+    updateCopyPasteState();
+}
+
+void DateNavigationTab::pasteScheduleClicked()
+{
+    if (!m_isAdmin || !m_copiedDate.isValid() || m_copiedDate == m_selectedDate) {
+        return;
+    }
+    const QDate fromDate = m_copiedDate;
+    const QDate toDate = m_selectedDate;
+    const int sourceCount = m_assignmentController->assignmentsForDate(fromDate).size();
+    if (sourceCount == 0) {
+        QMessageBox::information(this, QStringLiteral("Paste Schedule"),
+            QStringLiteral("%1 no longer has any assignments to copy.").arg(formatSunday(fromDate)));
+        m_copiedDate = QDate();
+        updateCopyPasteState();
+        return;
+    }
+    const int existingCount = m_assignmentController->assignmentsForDate(toDate).size();
+
+    bool replaceExisting = false;
+    if (existingCount == 0) {
+        const QString question = QStringLiteral("Copy %1 assignment(s) from %2 onto %3?")
+            .arg(sourceCount).arg(formatSunday(fromDate), formatSunday(toDate));
+        if (QMessageBox::question(this, QStringLiteral("Paste Schedule"), question) != QMessageBox::Yes) {
+            return;
+        }
+    } else {
+        QMessageBox box(QMessageBox::Question, QStringLiteral("Paste Schedule"),
+            QStringLiteral("%1 already has %2 assignment(s).").arg(formatSunday(toDate)).arg(existingCount),
+            QMessageBox::NoButton, this);
+        box.setInformativeText(QStringLiteral(
+            "Add to them: keeps what's there and adds the copied roles (skipping any role the same "
+            "member already has).\n\nReplace them: deletes this Sunday's assignments, including any "
+            "time-off requests members sent for them, then pastes the copied schedule."));
+        QPushButton *addButton = box.addButton(QStringLiteral("Add to Them"), QMessageBox::AcceptRole);
+        QPushButton *replaceButton = box.addButton(QStringLiteral("Replace Them"), QMessageBox::DestructiveRole);
+        box.addButton(QMessageBox::Cancel);
+        box.setDefaultButton(addButton);
+        box.exec();
+        if (box.clickedButton() == replaceButton) {
+            replaceExisting = true;
+        } else if (box.clickedButton() != addButton) {
+            return;
+        }
+    }
+
+    int copied = 0;
+    int skipped = 0;
+    if (!m_assignmentController->copySchedule(fromDate, toDate, replaceExisting, &copied, &skipped)) {
+        QMessageBox::critical(this, QStringLiteral("Paste Schedule"), m_assignmentController->lastError());
+        return;
+    }
+    populateSundayList();
+    selectSunday(toDate);
+
+    QString summary = QStringLiteral("Pasted %1 assignment(s) onto %2.").arg(copied).arg(formatSunday(toDate));
+    if (skipped > 0) {
+        summary += QStringLiteral("\nSkipped %1 already on that Sunday.").arg(skipped);
+    }
+    const QStringList unavailable = m_assignmentController->membersMarkedUnavailable(toDate);
+    if (!unavailable.isEmpty()) {
+        summary += QStringLiteral("\n\nHeads up: these members marked themselves unavailable that day:\n  %1")
+            .arg(unavailable.join(QStringLiteral("\n  ")));
+    }
+    QMessageBox::information(this, QStringLiteral("Paste Schedule"), summary);
 }
 
 QDate DateNavigationTab::nearestSunday(const QDate &date)
@@ -283,6 +393,7 @@ void DateNavigationTab::sundaySelectionChanged(QListWidgetItem *current, QListWi
     applySundayItemStyle(current, true);
     m_selectedDate = current->data(Qt::UserRole).toDate();
     rebuildResults();
+    updateCopyPasteState();
 }
 
 void DateNavigationTab::rebuildResults()
@@ -425,4 +536,5 @@ void DateNavigationTab::refresh()
     const QDate previouslySelected = m_selectedDate;
     populateSundayList();
     selectSunday(previouslySelected);
+    updateCopyPasteState();
 }
