@@ -1,10 +1,13 @@
 #include "DateNavigationTab.h"
 
+#include <algorithm>
+
 #include <QBrush>
 #include <QFont>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
@@ -34,6 +37,19 @@ namespace
     {
         // e.g. "Sun 6 Sep 2026", per SCHEDULING_FUNCTIONAL_REQUIREMENTS.md.
         return date.toString(QStringLiteral("ddd d MMM yyyy"));
+    }
+
+    // Every way someone might type a Sunday into the search box: the list's
+    // own "Sun 6 Sep 2026", the spelled-out "Sunday 6 September 2026",
+    // "06/09/2026" and ISO "2026-09-06".
+    QString sundaySearchText(const QDate &date)
+    {
+        return QStringList{
+            formatSunday(date),
+            date.toString(QStringLiteral("dddd d MMMM yyyy")),
+            date.toString(QStringLiteral("dd/MM/yyyy")),
+            date.toString(Qt::ISODate),
+        }.join(QLatin1Char(' ')).toLower();
     }
 }
 
@@ -129,8 +145,22 @@ DateNavigationTab::DateNavigationTab(
     auto *resultsBox = new QGroupBox(QStringLiteral("Assignments"), this);
     resultsBox->setLayout(resultsLayout);
 
+    m_sundaySearch = new QLineEdit(this);
+    m_sundaySearch->setFixedWidth(200);
+    m_sundaySearch->setPlaceholderText(QStringLiteral("Search date, duty, name..."));
+    m_sundaySearch->setToolTip(QStringLiteral(
+        "Find Sundays by date (e.g. \"27 Sep\" or \"October\"), by duty, or by a member's first or last name"));
+    m_sundaySearch->setClearButtonEnabled(true);
+    connect(m_sundaySearch, &QLineEdit::textChanged, this, &DateNavigationTab::sundaySearchChanged);
+
+    m_noSundayMatchLabel = new QLabel(QStringLiteral("No Sundays match."), this);
+    m_noSundayMatchLabel->setStyleSheet(QStringLiteral("color: #666;"));
+    m_noSundayMatchLabel->hide();
+
     auto *sundayBox = new QGroupBox(QStringLiteral("Sundays"), this);
     auto *sundayLayout = new QVBoxLayout;
+    sundayLayout->addWidget(m_sundaySearch);
+    sundayLayout->addWidget(m_noSundayMatchLabel);
     sundayLayout->addWidget(m_sundayList);
     sundayBox->setLayout(sundayLayout);
 
@@ -328,9 +358,28 @@ void DateNavigationTab::populateSundayList()
 {
     m_sundayList->clear();
 
+    // One query each for members and duties up front, rather than a
+    // userById/roleTypeById round trip per assignment.
+    QHash<int, QString> memberNames;
+    for (const User &user : m_userController->allUsers()) {
+        memberNames.insert(user.id(), user.name());
+    }
+    QHash<int, QString> roleNames;
+    for (const RoleType &roleType : m_roleTypeController->allRoleTypes()) {
+        roleNames.insert(roleType.id(), roleType.name());
+    }
+
     m_datesWithAssignments.clear();
+    m_sundaySearchText.clear();
     for (const Assignment &assignment : m_assignmentController->allAssignments()) {
-        m_datesWithAssignments.insert(assignment.serviceDate());
+        const QDate date = assignment.serviceDate();
+        m_datesWithAssignments.insert(date);
+        m_sundaySearchText[date].append(QStringList{
+            sundaySearchText(date),
+            roleNames.value(assignment.roleId()),
+            memberNames.value(assignment.memberId()),
+            memberNames.value(assignment.supportMemberId()),
+        }.join(QLatin1Char(' ')).toLower());
     }
 
     QDate sunday = nearestSunday(QDate::currentDate()).addDays(-7 * kPastWeeks);
@@ -338,7 +387,51 @@ void DateNavigationTab::populateSundayList()
         auto *item = new QListWidgetItem(formatSunday(sunday), m_sundayList);
         item->setData(Qt::UserRole, sunday);
         applySundayItemStyle(item, false);
+        if (!m_sundaySearchText.contains(sunday)) {
+            m_sundaySearchText.insert(sunday, {sundaySearchText(sunday)});
+        }
         sunday = sunday.addDays(7);
+    }
+    applySundayFilter();
+}
+
+void DateNavigationTab::applySundayFilter()
+{
+    const QStringList terms = m_sundaySearch->text().toLower().split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    int visibleCount = 0;
+    for (int i = 0; i < m_sundayList->count(); ++i) {
+        QListWidgetItem *item = m_sundayList->item(i);
+        bool matches = terms.isEmpty();
+        for (const QString &text : m_sundaySearchText.value(item->data(Qt::UserRole).toDate())) {
+            matches = matches || std::all_of(terms.cbegin(), terms.cend(),
+                [&text](const QString &term) { return text.contains(term); });
+        }
+        item->setHidden(!matches);
+        if (matches) {
+            ++visibleCount;
+        }
+    }
+    m_noSundayMatchLabel->setVisible(visibleCount == 0);
+}
+
+void DateNavigationTab::sundaySearchChanged()
+{
+    applySundayFilter();
+
+    // Keep the Assignments panel in step with what's listed: if the selected
+    // Sunday just got filtered out, jump to the first one that matches.
+    QListWidgetItem *current = m_sundayList->currentItem();
+    if (!current || current->isHidden()) {
+        for (int i = 0; i < m_sundayList->count(); ++i) {
+            if (!m_sundayList->item(i)->isHidden()) {
+                m_sundayList->setCurrentRow(i);
+                current = m_sundayList->item(i);
+                break;
+            }
+        }
+    }
+    if (current && !current->isHidden()) {
+        m_sundayList->scrollToItem(current, QAbstractItemView::PositionAtCenter);
     }
 }
 

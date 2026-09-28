@@ -1,10 +1,12 @@
 #pragma once
 
 #include <QDate>
+#include <QHash>
 #include <QSet>
 #include <QWidget>
 
 class QLabel;
+class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
 class QNetworkAccessManager;
@@ -47,6 +49,7 @@ public slots:
 
 private slots:
     void sundaySelectionChanged(QListWidgetItem *current, QListWidgetItem *previous);
+    void sundaySearchChanged();
     void assignClicked();
     void assignForSelectedMemberClicked();
     void addMemberClicked();
@@ -59,6 +62,11 @@ private slots:
 private:
     void rebuildResults();
     void populateSundayList();
+    // Hides Sunday rows that don't match the search box. Every word typed
+    // must appear in the date or in one single assignment on that Sunday
+    // (its duty, member or support member), so "usher grace" finds the
+    // Sundays Grace ushers, not ones where she merely serves.
+    void applySundayFilter();
     void selectSunday(const QDate &date);
     // Applies the right look to a Sunday-list row: a distinct highlight
     // when it's the selected date, otherwise the gold "has assignments"
@@ -79,6 +87,8 @@ private:
     RoleTypeController *m_roleTypeController = nullptr;
     QNetworkAccessManager *m_networkManager = nullptr;
 
+    QLineEdit *m_sundaySearch = nullptr;
+    QLabel *m_noSundayMatchLabel = nullptr;
     QListWidget *m_sundayList = nullptr;
     QListWidget *m_resultsList = nullptr;
     QPushButton *m_assignButton = nullptr;
@@ -96,6 +106,11 @@ private:
     bool m_isAdmin = false;
     QDate m_selectedDate;
     QSet<QDate> m_datesWithAssignments;
+    // Lower-cased text the search box matches against, one entry per
+    // assignment on that Sunday (each includes the date's own spellings),
+    // or just the date text when it has none. Built in populateSundayList
+    // so typing doesn't hit the database.
+    QHash<QDate, QStringList> m_sundaySearchText;
     // -1 when no row is selected.
     int m_selectedAssignmentId = -1;
     // The Sunday whose schedule was last copied; invalid until Copy is
