@@ -17,7 +17,7 @@ namespace AvatarLoader
             return;
         }
         label->setFixedSize(sizePx, sizePx);
-        label->setStyleSheet(QStringLiteral("background: #e5e7eb; border-radius: 4px;"));
+        label->setObjectName(QStringLiteral("avatarPlaceholder"));
 
         QUrl url(QStringLiteral("https://api.dicebear.com/9.x/avataaars/png"));
         QUrlQuery query;

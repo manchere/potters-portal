@@ -52,6 +52,7 @@ protected:
 private slots:
     void toggleMaximizeRestore();
     void adminButtonClicked();
+    void themeButtonClicked();
 
 private:
     // Default-constructed (id() < 0, isAdmin() false) means logged out.

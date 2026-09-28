@@ -13,6 +13,7 @@
 #include "ReportsView.h"
 #include "SongsView.h"
 #include "TitleBar.h"
+#include "Style.h"
 
 namespace {
 
@@ -137,6 +138,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_titleBar, &TitleBar::closeClicked, this, &QWidget::close);
     connect(m_titleBar, &TitleBar::maximizeClicked, this, &MainWindow::toggleMaximizeRestore);
     connect(m_titleBar, &TitleBar::adminButtonClicked, this, &MainWindow::adminButtonClicked);
+    connect(m_titleBar, &TitleBar::themeButtonClicked, this, &MainWindow::themeButtonClicked);
+    m_titleBar->setBlackTheme(currentTheme() == Theme::Black);
 
     auto *frameLayout = new QVBoxLayout(frame);
     frameLayout->setContentsMargins(kResizeMargin, kResizeMargin, kResizeMargin, kResizeMargin);
@@ -183,6 +186,17 @@ void MainWindow::adminButtonClicked()
     m_dateNavigationTab->setAdminMode(isAdmin);
     m_adminOverviewView->setAdminMode(isAdmin, m_currentUser.id());
     m_songsView->setAdminMode(isAdmin);
+}
+
+void MainWindow::themeButtonClicked()
+{
+    const Theme theme = currentTheme() == Theme::Black ? Theme::Light : Theme::Black;
+    applyTheme(theme);
+    m_titleBar->setBlackTheme(theme == Theme::Black);
+    // The Sunday list's per-row colors and the report's HTML aren't
+    // reached by the stylesheet.
+    m_dateNavigationTab->restyleSundayItems();
+    m_reportsView->restyleReport();
 }
 
 void MainWindow::toggleMaximizeRestore()

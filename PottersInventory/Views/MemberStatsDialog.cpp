@@ -59,8 +59,7 @@ MemberStatsDialog::MemberStatsDialog(
         anyCounted = true;
         auto *pill = new QLabel(QStringLiteral("%1 %2").arg(roleType.icon()).arg(count), this);
         pill->setToolTip(roleType.name());
-        pill->setStyleSheet(QStringLiteral(
-            "background: #eef0f4; border-radius: 9px; padding: 3px 10px; font-weight: 600;"));
+        pill->setObjectName(QStringLiteral("statPill"));
         breakdownLayout->addWidget(pill);
     }
     if (!anyCounted) {

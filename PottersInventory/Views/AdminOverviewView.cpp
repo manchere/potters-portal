@@ -257,7 +257,7 @@ void AdminOverviewView::rebuildList()
             auto *nameLabel = new QLabel(user.name(), textContainer);
             nameLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
             auto *emailLabel = new QLabel(user.email(), textContainer);
-            emailLabel->setStyleSheet(QStringLiteral("color: #666;"));
+            emailLabel->setObjectName(QStringLiteral("mutedLabel"));
             textLayout->addWidget(nameLabel);
             textLayout->addWidget(emailLabel);
             rowLayout->addWidget(textContainer, 1);

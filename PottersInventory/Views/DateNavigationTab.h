@@ -47,6 +47,10 @@ public slots:
     // appear until an Admin unlocks via the title bar's lock icon.
     void setAdminMode(bool isAdmin);
 
+    // Recolors the Sunday rows for the current theme (see
+    // applySundayItemStyle); called after the theme is switched.
+    void restyleSundayItems();
+
 private slots:
     void sundaySelectionChanged(QListWidgetItem *current, QListWidgetItem *previous);
     void sundaySearchChanged();

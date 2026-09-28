@@ -75,7 +75,7 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     m_titleLabel->setStyleSheet(QStringLiteral("font-size: 20px; font-weight: 700;"));
     m_titleLabel->setWordWrap(true);
     m_metaLabel = new QLabel(m_detailPanel);
-    m_metaLabel->setStyleSheet(QStringLiteral("color: #666;"));
+    m_metaLabel->setObjectName(QStringLiteral("mutedLabel"));
     m_playButton = new QPushButton(QStringLiteral("▶  Play"), m_detailPanel);
     connect(m_playButton, &QPushButton::clicked, this, &SongsView::playClicked);
     m_lyricsView = new QPlainTextEdit(m_detailPanel);
@@ -107,7 +107,7 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
 
     m_emptyLabel = new QLabel(QStringLiteral("Select a song to see its details."), this);
     m_emptyLabel->setAlignment(Qt::AlignCenter);
-    m_emptyLabel->setStyleSheet(QStringLiteral("color: #888;"));
+    m_emptyLabel->setObjectName(QStringLiteral("mutedLabel"));
 
     auto *detailBox = new QGroupBox(QStringLiteral("Song"), this);
     auto *detailBoxLayout = new QVBoxLayout(detailBox);

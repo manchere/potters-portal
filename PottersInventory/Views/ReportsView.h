@@ -40,6 +40,10 @@ public slots:
     // users change).
     void refresh();
 
+    // Re-renders the on-screen report in the current theme's colors;
+    // called after the theme is switched.
+    void restyleReport();
+
 private slots:
     void reloadReport();
     void selectionChanged();
@@ -51,7 +55,9 @@ private:
     void populateSundayList();
     QString summaryHtml() const;
     QString sundayHtml(const QDate &date) const;
-    QString wrapHtml(const QString &title, const QString &body) const;
+    // darkColors is for the on-screen view in the black theme only; saved
+    // files always use the light colors so they print well.
+    QString wrapHtml(const QString &title, const QString &body, bool darkColors = false) const;
     // Rows the current view shows: the whole range for the summary, or
     // just the selected Sunday.
     QVector<ScheduleReportRow> visibleRows() const;

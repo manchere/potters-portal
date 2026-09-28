@@ -22,6 +22,7 @@
 
 #include "Controllers/AssignmentController.h"
 #include "Controllers/UserController.h"
+#include "Style.h"
 
 namespace
 {
@@ -135,7 +136,7 @@ ReportsView::ReportsView(AssignmentController *assignmentController, UserControl
     m_saveButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(m_saveButton, &QPushButton::clicked, this, &ReportsView::saveClicked);
     m_statusLabel = new QLabel(this);
-    m_statusLabel->setStyleSheet(QStringLiteral("color: #666;"));
+    m_statusLabel->setObjectName(QStringLiteral("mutedLabel"));
     auto *reportButtons = new QHBoxLayout;
     reportButtons->addWidget(m_statusLabel, 1);
     reportButtons->addWidget(m_saveButton);
@@ -285,7 +286,8 @@ void ReportsView::selectionChanged()
 {
     const QDate sunday = selectedSunday();
     const QString body = sunday.isValid() ? sundayHtml(sunday) : summaryHtml();
-    m_reportView->setHtml(wrapHtml(sunday.isValid() ? formatSunday(sunday) : QStringLiteral("Schedule summary"), body));
+    m_reportView->setHtml(wrapHtml(sunday.isValid() ? formatSunday(sunday) : QStringLiteral("Schedule summary"), body,
+                                   currentTheme() == Theme::Black));
 
     const int sundays = m_sundayList->count() - 1;
     m_statusLabel->setText(sundays == 0
@@ -294,24 +296,34 @@ void ReportsView::selectionChanged()
     m_saveButton->setEnabled(!m_rows.isEmpty());
 }
 
-QString ReportsView::wrapHtml(const QString &title, const QString &body) const
+void ReportsView::restyleReport()
+{
+    selectionChanged();
+}
+
+QString ReportsView::wrapHtml(const QString &title, const QString &body, bool darkColors) const
 {
     // Kept to the subset of CSS QTextBrowser understands, so the saved
     // file and the on-screen view look alike.
     return QStringLiteral(
         "<html><head><meta charset='utf-8'><title>%1</title>"
         "<style>"
-        "body { font-family: 'Segoe UI', sans-serif; color: #1f2430; }"
-        "h1 { font-size: 20px; margin-bottom: 2px; }"
-        "h2 { font-size: 15px; margin-top: 18px; margin-bottom: 6px; }"
-        ".muted { color: #888; }"
-        ".warn { color: #a8701c; }"
+        "body { font-family: 'Segoe UI', sans-serif; color: %4; }"
+        "h1 { font-size: 20px; margin-bottom: 2px; color: %4; }"
+        "h2 { font-size: 15px; margin-top: 18px; margin-bottom: 6px; color: %4; }"
+        ".muted { color: %5; }"
+        ".warn { color: %6; }"
         "table { border-collapse: collapse; }"
-        "th { text-align: left; background: #eef1f5; padding: 6px 10px; }"
-        "td { padding: 6px 10px; border-bottom: 1px solid #e3e6ea; }"
+        "th { text-align: left; background: %7; padding: 6px 10px; }"
+        "td { padding: 6px 10px; border-bottom: 1px solid %8; }"
         "</style></head><body>"
         "<h1>%1</h1><p class='muted'>%2</p>%3</body></html>")
-        .arg(esc(title), esc(filterDescription()), body);
+        .arg(esc(title), esc(filterDescription()), body)
+        .arg(darkColors ? QStringLiteral("#e6e6e6") : QStringLiteral("#1f2430"),
+             darkColors ? QStringLiteral("#9a9a9a") : QStringLiteral("#888"),
+             darkColors ? QStringLiteral("#e0b85a") : QStringLiteral("#a8701c"),
+             darkColors ? QStringLiteral("#1c1c1c") : QStringLiteral("#eef1f5"),
+             darkColors ? QStringLiteral("#2a2a2a") : QStringLiteral("#e3e6ea"));
 }
 
 QString ReportsView::sundayHtml(const QDate &date) const

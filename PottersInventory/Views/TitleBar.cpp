@@ -56,6 +56,11 @@ TitleBar::TitleBar(QWidget *parent)
     m_tabBar->setExpanding(false);
     m_tabBar->setDrawBase(false);
 
+    m_themeButton = new QToolButton(this);
+    m_themeButton->setObjectName(QStringLiteral("titleBarButton"));
+    connect(m_themeButton, &QToolButton::clicked, this, &TitleBar::themeButtonClicked);
+    setBlackTheme(false);
+
     m_adminButton = new QToolButton(this);
     m_adminButton->setObjectName(QStringLiteral("titleBarButton"));
     connect(m_adminButton, &QToolButton::clicked, this, &TitleBar::adminButtonClicked);
@@ -87,6 +92,7 @@ TitleBar::TitleBar(QWidget *parent)
     layout->addSpacing(20);
     layout->addWidget(m_tabBar);
     layout->addStretch();
+    layout->addWidget(m_themeButton);
     layout->addWidget(m_adminButton);
     layout->addWidget(m_minimizeButton);
     layout->addWidget(m_maximizeButton);
@@ -97,6 +103,12 @@ void TitleBar::setAdminLoggedIn(bool loggedIn)
 {
     m_adminButton->setText(loggedIn ? QStringLiteral("\U0001F513") : QStringLiteral("\U0001F512")); // 🔓 / 🔒
     m_adminButton->setToolTip(loggedIn ? QStringLiteral("Admin mode -- click to log out") : QStringLiteral("Admin Login"));
+}
+
+void TitleBar::setBlackTheme(bool isBlack)
+{
+    m_themeButton->setText(isBlack ? QStringLiteral("☀") : QStringLiteral("☾")); // ☀ / ☾
+    m_themeButton->setToolTip(isBlack ? QStringLiteral("Switch to light theme") : QStringLiteral("Switch to black theme"));
 }
 
 void TitleBar::setMaximized(bool maximized)

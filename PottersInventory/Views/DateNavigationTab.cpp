@@ -1,5 +1,7 @@
 #include "DateNavigationTab.h"
 
+#include "Style.h"
+
 #include <algorithm>
 
 #include <QBrush>
@@ -92,7 +94,7 @@ DateNavigationTab::DateNavigationTab(
     m_pasteButton->setToolTip(QStringLiteral("Paste the copied assignments onto this Sunday (Ctrl+V)"));
     connect(m_pasteButton, &QPushButton::clicked, this, &DateNavigationTab::pasteScheduleClicked);
     m_copiedLabel = new QLabel(this);
-    m_copiedLabel->setStyleSheet(QStringLiteral("color: #8a6a1a;"));
+    m_copiedLabel->setObjectName(QStringLiteral("accentLabel"));
 
     auto *copyShortcut = new QShortcut(QKeySequence::Copy, this);
     copyShortcut->setContext(Qt::WidgetWithChildrenShortcut);
@@ -154,7 +156,7 @@ DateNavigationTab::DateNavigationTab(
     connect(m_sundaySearch, &QLineEdit::textChanged, this, &DateNavigationTab::sundaySearchChanged);
 
     m_noSundayMatchLabel = new QLabel(QStringLiteral("No Sundays match."), this);
-    m_noSundayMatchLabel->setStyleSheet(QStringLiteral("color: #666;"));
+    m_noSundayMatchLabel->setObjectName(QStringLiteral("mutedLabel"));
     m_noSundayMatchLabel->hide();
 
     auto *sundayBox = new QGroupBox(QStringLiteral("Sundays"), this);
@@ -214,7 +216,7 @@ QWidget *DateNavigationTab::buildRow(const Assignment &assignment)
         AvatarLoader::loadInto(*m_networkManager, seed, avatar, 36);
     } else {
         avatar->setFixedSize(36, 36);
-        avatar->setStyleSheet(QStringLiteral("background: #e5e7eb; border-radius: 4px;"));
+        avatar->setObjectName(QStringLiteral("avatarPlaceholder"));
     }
     layout->addWidget(avatar);
 
@@ -239,7 +241,7 @@ QWidget *DateNavigationTab::buildRow(const Assignment &assignment)
         memberLine += QStringLiteral("   ·   Support: %1").arg(memberName(assignment.supportMemberId()));
     }
     auto *memberLabel = new QLabel(memberLine, textContainer);
-    memberLabel->setStyleSheet(QStringLiteral("color: #666;"));
+    memberLabel->setObjectName(QStringLiteral("mutedLabel"));
 
     textLayout->addWidget(roleLabel);
     textLayout->addWidget(memberLabel);
@@ -449,15 +451,24 @@ void DateNavigationTab::applySundayItemStyle(QListWidgetItem *item, bool isSelec
     font.setBold(hasAssignments || isSelected);
     item->setFont(font);
 
+    const bool isBlack = currentTheme() == Theme::Black;
     if (isSelected) {
-        item->setBackground(QColor(0x14, 0x33, 0x5c));
+        item->setBackground(isBlack ? QColor(0x1f, 0x4a, 0x85) : QColor(0x14, 0x33, 0x5c));
         item->setForeground(QColor(Qt::white));
     } else if (hasAssignments) {
-        item->setBackground(QColor(0xfa, 0xf3, 0xe0));
-        item->setForeground(QColor(0x8a, 0x6a, 0x1a));
+        item->setBackground(isBlack ? QColor(0x2a, 0x22, 0x10) : QColor(0xfa, 0xf3, 0xe0));
+        item->setForeground(isBlack ? QColor(0xe0, 0xb8, 0x5a) : QColor(0x8a, 0x6a, 0x1a));
     } else {
         item->setBackground(QBrush());
         item->setForeground(QBrush());
+    }
+}
+
+void DateNavigationTab::restyleSundayItems()
+{
+    for (int i = 0; i < m_sundayList->count(); ++i) {
+        QListWidgetItem *item = m_sundayList->item(i);
+        applySundayItemStyle(item, item->data(Qt::UserRole).toDate() == m_selectedDate);
     }
 }
 

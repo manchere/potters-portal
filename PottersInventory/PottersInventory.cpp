@@ -10,7 +10,7 @@
 int main(int argc, char **argv)
 {
 	QApplication app(argc, argv);
-	app.setStyleSheet(appStyleSheet());
+	applyTheme(savedTheme());
 
 	const QString databaseUrl = qEnvironmentVariable("DATABASE_URL");
 	QString connectError;
