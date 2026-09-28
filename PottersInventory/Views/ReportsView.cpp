@@ -41,27 +41,89 @@ namespace
         return text.toHtmlEscaped();
     }
 
-    QString memberOrUnfilled(const QString &name)
+    // The report's colors. QTextBrowser can't read the app stylesheet, so
+    // they're spelled out here: the light set matches the app's navy/gold
+    // brand, the dark set matches Style.cpp's black theme.
+    struct ReportColors
     {
-        return name.isEmpty() ? QStringLiteral("<span class='muted'>Unfilled</span>") : esc(name);
+        QString ink;
+        QString muted;
+        QString line;
+        QString tile;
+        QString accent;
+        QString track;
+        QString warn;
+        QString warnBg;
+    };
+
+    ReportColors reportColors(bool dark)
+    {
+        if (dark) {
+            return {QStringLiteral("#e6e6e6"), QStringLiteral("#9a9a9a"), QStringLiteral("#262626"),
+                    QStringLiteral("#161616"), QStringLiteral("#6f9be0"), QStringLiteral("#1f1f1f"),
+                    QStringLiteral("#e0b85a"), QStringLiteral("#2a2210")};
+        }
+        return {QStringLiteral("#1f2430"), QStringLiteral("#6b7280"), QStringLiteral("#e7e9f0"),
+                QStringLiteral("#f2f4f8"), QStringLiteral("#14335c"), QStringLiteral("#e9edf5"),
+                QStringLiteral("#8a6a1a"), QStringLiteral("#faf3e0")};
     }
 
-    // Human-readable status for the report's Status column.
-    QString statusText(const ScheduleReportRow &row)
+    // Shown next to the serving member's name only when their availability
+    // matters for that Sunday; empty for everyone else, which is most
+    // rows. A denied time-off request isn't flagged -- they were still
+    // expected to serve.
+    QString availabilityNote(const ScheduleReportRow &row)
     {
         if (row.requestStatus == QLatin1String("approved")) {
             return QStringLiteral("Time off approved");
         }
         if (row.requestStatus == QLatin1String("pending")) {
-            return QStringLiteral("Time off requested");
-        }
-        if (row.requestStatus == QLatin1String("denied")) {
-            return QStringLiteral("Time off denied");
+            return QStringLiteral("Asked for time off");
         }
         if (row.memberMarkedUnavailable) {
-            return QStringLiteral("Marked unavailable");
+            return QStringLiteral("Marked away");
         }
         return QString();
+    }
+
+    QString tag(const QString &text, const ReportColors &c)
+    {
+        return QStringLiteral("&nbsp;&nbsp;<span style='background-color:%1; color:%2; font-size:11px; font-weight:600;'>"
+                              "&nbsp;%3&nbsp;</span>")
+            .arg(c.warnBg, c.warn, esc(text));
+    }
+
+    // A row of big-number tiles, e.g. "4 roles | 3 people serving". The
+    // tile at warnIndex turns gold when its number is above zero.
+    QString tiles(const QList<QPair<int, QString>> &items, const ReportColors &c, int warnIndex = -1)
+    {
+        QString html = QStringLiteral("<table width='100%' cellspacing='8' cellpadding='12'><tr>");
+        for (int i = 0; i < items.size(); ++i) {
+            const bool warn = i == warnIndex && items[i].first > 0;
+            html += QStringLiteral("<td bgcolor='%1' width='%2%'>"
+                                   "<span style='font-size:24px; font-weight:700; color:%3;'>%4</span><br>"
+                                   "<span style='color:%5;'>%6</span></td>")
+                .arg(warn ? c.warnBg : c.tile)
+                .arg(100 / items.size())
+                .arg(warn ? c.warn : c.ink)
+                .arg(items[i].first)
+                .arg(warn ? c.warn : c.muted, esc(items[i].second));
+        }
+        return html + QStringLiteral("</tr></table>");
+    }
+
+    // A horizontal bar scaled against max, drawn as a two-cell table since
+    // QTextBrowser can't size inline elements.
+    QString bar(int value, int max, const ReportColors &c)
+    {
+        const int percent = max > 0 ? qBound(3, value * 100 / max, 100) : 0;
+        QString html = QStringLiteral("<table width='100%' cellspacing='0' cellpadding='0'><tr>"
+                                      "<td width='%1%' bgcolor='%2'><span style='font-size:8px;'>&nbsp;</span></td>")
+            .arg(percent).arg(c.accent);
+        if (percent < 100) {
+            html += QStringLiteral("<td bgcolor='%1'><span style='font-size:8px;'>&nbsp;</span></td>").arg(c.track);
+        }
+        return html + QStringLiteral("</tr></table>");
     }
 
     QString csvField(QString value)
@@ -132,6 +194,9 @@ ReportsView::ReportsView(AssignmentController *assignmentController, UserControl
 
     m_reportView = new QTextBrowser(this);
     m_reportView->setOpenLinks(false);
+    // Tables are sized to the view's width; the tiles' cell spacing can
+    // push them a few pixels past it, which isn't worth a scroll bar.
+    m_reportView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_saveButton = new QPushButton(QStringLiteral("Save Report..."), this);
     m_saveButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(m_saveButton, &QPushButton::clicked, this, &ReportsView::saveClicked);
@@ -284,10 +349,7 @@ QString ReportsView::filterDescription() const
 
 void ReportsView::selectionChanged()
 {
-    const QDate sunday = selectedSunday();
-    const QString body = sunday.isValid() ? sundayHtml(sunday) : summaryHtml();
-    m_reportView->setHtml(wrapHtml(sunday.isValid() ? formatSunday(sunday) : QStringLiteral("Schedule summary"), body,
-                                   currentTheme() == Theme::Black));
+    m_reportView->setHtml(currentReportHtml(currentTheme() == Theme::Black));
 
     const int sundays = m_sundayList->count() - 1;
     m_statusLabel->setText(sundays == 0
@@ -301,39 +363,53 @@ void ReportsView::restyleReport()
     selectionChanged();
 }
 
-QString ReportsView::wrapHtml(const QString &title, const QString &body, bool darkColors) const
+QString ReportsView::currentReportHtml(bool darkColors) const
 {
-    // Kept to the subset of CSS QTextBrowser understands, so the saved
-    // file and the on-screen view look alike.
-    return QStringLiteral(
-        "<html><head><meta charset='utf-8'><title>%1</title>"
-        "<style>"
-        "body { font-family: 'Segoe UI', sans-serif; color: %4; }"
-        "h1 { font-size: 20px; margin-bottom: 2px; color: %4; }"
-        "h2 { font-size: 15px; margin-top: 18px; margin-bottom: 6px; color: %4; }"
-        ".muted { color: %5; }"
-        ".warn { color: %6; }"
-        "table { border-collapse: collapse; }"
-        "th { text-align: left; background: %7; padding: 6px 10px; }"
-        "td { padding: 6px 10px; border-bottom: 1px solid %8; }"
-        "</style></head><body>"
-        "<h1>%1</h1><p class='muted'>%2</p>%3</body></html>")
-        .arg(esc(title), esc(filterDescription()), body)
-        .arg(darkColors ? QStringLiteral("#e6e6e6") : QStringLiteral("#1f2430"),
-             darkColors ? QStringLiteral("#9a9a9a") : QStringLiteral("#888"),
-             darkColors ? QStringLiteral("#e0b85a") : QStringLiteral("#a8701c"),
-             darkColors ? QStringLiteral("#1c1c1c") : QStringLiteral("#eef1f5"),
-             darkColors ? QStringLiteral("#2a2a2a") : QStringLiteral("#e3e6ea"));
+    const QDate sunday = selectedSunday();
+    if (!sunday.isValid()) {
+        return wrapHtml(QStringLiteral("Schedule summary"), filterDescription(), summaryHtml(darkColors), darkColors);
+    }
+    const QString subtitle = m_memberCombo->currentData().toInt() > 0
+        ? QStringLiteral("Only showing %1").arg(m_memberCombo->currentText())
+        : QStringLiteral("Sunday line-up");
+    return wrapHtml(formatSunday(sunday), subtitle, sundayHtml(sunday, darkColors), darkColors);
 }
 
-QString ReportsView::sundayHtml(const QDate &date) const
+QString ReportsView::wrapHtml(const QString &title, const QString &subtitle, const QString &body, bool darkColors) const
 {
+    const ReportColors c = reportColors(darkColors);
+    // Kept to the subset of CSS QTextBrowser understands, so the saved
+    // file and the on-screen view look alike. Row lines are set per cell
+    // (class "cell") so they don't leak into the tile and bar tables.
+    // Colors are filled in before the body is appended, so text in the
+    // body (e.g. a note containing "%1") is never treated as a placeholder.
+    const QString head = QStringLiteral(
+        "<html><head><meta charset='utf-8'><title>%1</title>"
+        "<style>"
+        "body { font-family: 'Segoe UI', sans-serif; font-size: 14px; color: %2; }"
+        "h1 { font-size: 22px; margin-bottom: 0px; color: %2; }"
+        "h2 { font-size: 15px; margin-top: 22px; margin-bottom: 4px; color: %2; }"
+        "th.cell { text-align: left; font-weight: 600; color: %3; padding: 8px 10px; border-bottom: 1px solid %4; }"
+        "td.cell { padding: 9px 10px; border-bottom: 1px solid %4; vertical-align: middle; }"
+        "</style></head><body>"
+        "<h1>%1</h1><p style='color:%3; margin-top:2px;'>%5</p>")
+        .arg(esc(title), c.ink, c.muted, c.line, esc(subtitle));
+    return head + body + QStringLiteral("</body></html>");
+}
+
+QString ReportsView::sundayHtml(const QDate &date, bool darkColors) const
+{
+    const ReportColors c = reportColors(darkColors);
     const QVector<ScheduleReportRow> rows = visibleRows();
     QSet<int> serving;
     int unfilled = 0;
+    int away = 0;
     for (const ScheduleReportRow &row : rows) {
         if (row.memberId > 0) {
             serving.insert(row.memberId);
+            if (!availabilityNote(row).isEmpty()) {
+                ++away;
+            }
         } else {
             ++unfilled;
         }
@@ -342,103 +418,112 @@ QString ReportsView::sundayHtml(const QDate &date) const
         }
     }
 
-    QString html = QStringLiteral("<p><b>%1</b> role(s) &nbsp;·&nbsp; <b>%2</b> member(s) serving")
-        .arg(rows.size()).arg(serving.size());
-    if (unfilled > 0) {
-        html += QStringLiteral(" &nbsp;·&nbsp; <span class='warn'><b>%1</b> unfilled</span>").arg(unfilled);
-    }
-    html += QStringLiteral("</p>");
+    QList<QPair<int, QString>> totals = {
+        {int(rows.size()), rows.size() == 1 ? QStringLiteral("role") : QStringLiteral("roles")},
+        {int(serving.size()), QStringLiteral("people serving")},
+        {unfilled, QStringLiteral("not filled")},
+    };
+    QString html = tiles(totals, c, 2);
     if (date > QDate::currentDate()) {
-        html += QStringLiteral("<p class='warn'>This Sunday hasn't happened yet, so this is the current plan.</p>");
+        html += QStringLiteral("<p style='color:%1;'>This Sunday is still ahead, so this is the current plan.</p>").arg(c.warn);
+    }
+    if (away > 0) {
+        html += QStringLiteral("<p style='color:%1;'>%2 of the people serving had asked for time off or marked "
+                               "themselves away. They're tagged below.</p>").arg(c.warn).arg(away);
     }
 
-    html += QStringLiteral("<table width='100%'><tr><th>Role</th><th>Serving</th><th>Support</th><th>Notes</th><th>Status</th></tr>");
+    html += QStringLiteral("<h2>Line-up</h2><table width='100%' cellspacing='0'>"
+                           "<tr><th class='cell'>Role</th><th class='cell'>Serving</th>"
+                           "<th class='cell'>Backup</th><th class='cell'>Notes</th></tr>");
     for (const ScheduleReportRow &row : rows) {
-        const QString status = statusText(row);
-        html += QStringLiteral("<tr><td>%1 %2</td><td>%3</td><td>%4</td><td>%5</td><td class='warn'>%6</td></tr>")
-            .arg(esc(row.roleIcon), esc(row.roleName), memberOrUnfilled(row.memberName),
-                 row.supportMemberId > 0 ? esc(row.supportMemberName) : QStringLiteral("<span class='muted'>—</span>"),
-                 esc(row.notes), esc(status));
+        QString servingCell;
+        if (row.memberId > 0) {
+            servingCell = esc(row.memberName);
+            const QString note = availabilityNote(row);
+            if (!note.isEmpty()) {
+                servingCell += tag(note, c);
+            }
+        } else {
+            servingCell = QStringLiteral("<span style='color:%1; font-weight:600;'>Nobody assigned</span>").arg(c.warn);
+        }
+        const QString backupCell = row.supportMemberId > 0
+            ? esc(row.supportMemberName)
+            : QStringLiteral("<span style='color:%1;'>&mdash;</span>").arg(c.muted);
+        html += QStringLiteral("<tr><td class='cell'><span style='font-size:16px;'>%1</span>&nbsp; <b>%2</b></td>"
+                               "<td class='cell'>%3</td><td class='cell'>%4</td>"
+                               "<td class='cell'><span style='color:%5;'>%6</span></td></tr>")
+            .arg(esc(row.roleIcon), esc(row.roleName), servingCell, backupCell, c.muted, esc(row.notes));
     }
     html += QStringLiteral("</table>");
     return html;
 }
 
-QString ReportsView::summaryHtml() const
+QString ReportsView::summaryHtml(bool darkColors) const
 {
+    const ReportColors c = reportColors(darkColors);
     if (m_rows.isEmpty()) {
-        return QStringLiteral("<p class='muted'>No Sunday schedules in this date range. "
-                              "Try a wider range with the buttons above.</p>");
+        return QStringLiteral("<p style='color:%1;'>No Sunday schedules in this date range. "
+                              "Try a wider range with the buttons above.</p>").arg(c.muted);
     }
 
     struct MemberTally { QString name; int primary = 0; int support = 0; };
+    struct SundayTally { int roles = 0; int filled = 0; QStringList unfilledRoles; int away = 0; };
     QMap<int, MemberTally> members;
     QMap<QString, int> roles;
-    QSet<QDate> sundays;
+    QMap<QDate, SundayTally> sundays;
     int unfilled = 0;
-    int pending = 0;
-    int approved = 0;
-    int denied = 0;
-    int markedUnavailable = 0;
+    int timeOff = 0;
     for (const ScheduleReportRow &row : m_rows) {
-        sundays.insert(row.serviceDate);
-        ++roles[row.roleIcon + QStringLiteral(" ") + row.roleName];
+        SundayTally &sunday = sundays[row.serviceDate];
+        ++sunday.roles;
+        ++roles[row.roleIcon + QStringLiteral("  ") + row.roleName];
         if (row.memberId > 0) {
+            ++sunday.filled;
             members[row.memberId].name = row.memberName;
             ++members[row.memberId].primary;
+            if (!availabilityNote(row).isEmpty()) {
+                ++sunday.away;
+                ++timeOff;
+            }
         } else {
             ++unfilled;
+            sunday.unfilledRoles << row.roleName;
         }
         if (row.supportMemberId > 0) {
             members[row.supportMemberId].name = row.supportMemberName;
             ++members[row.supportMemberId].support;
         }
-        if (row.requestStatus == QLatin1String("pending")) {
-            ++pending;
-        } else if (row.requestStatus == QLatin1String("approved")) {
-            ++approved;
-        } else if (row.requestStatus == QLatin1String("denied")) {
-            ++denied;
-        } else if (row.memberMarkedUnavailable) {
-            ++markedUnavailable;
-        }
     }
 
-    QString html = QStringLiteral(
-        "<table><tr><td><b>%1</b><br><span class='muted'>Sundays</span></td>"
-        "<td><b>%2</b><br><span class='muted'>assignments</span></td>"
-        "<td><b>%3</b><br><span class='muted'>members serving</span></td>"
-        "<td><b>%4</b><br><span class='muted'>unfilled slots</span></td></tr></table>")
-        .arg(sundays.size()).arg(m_rows.size()).arg(members.size()).arg(unfilled);
-
-    if (pending + approved + denied + markedUnavailable > 0) {
-        html += QStringLiteral("<h2>Availability</h2><p>");
-        QStringList parts;
-        if (approved > 0) {
-            parts << QStringLiteral("%1 time-off request(s) approved").arg(approved);
-        }
-        if (pending > 0) {
-            parts << QStringLiteral("%1 still pending").arg(pending);
-        }
-        if (denied > 0) {
-            parts << QStringLiteral("%1 denied").arg(denied);
-        }
-        if (markedUnavailable > 0) {
-            parts << QStringLiteral("%1 assigned on a day they marked unavailable").arg(markedUnavailable);
-        }
-        html += esc(parts.join(QStringLiteral(" · "))) + QStringLiteral("</p>");
+    QList<QPair<int, QString>> totals = {
+        {int(sundays.size()), sundays.size() == 1 ? QStringLiteral("Sunday") : QStringLiteral("Sundays")},
+        {int(m_rows.size()), QStringLiteral("roles scheduled")},
+        {int(members.size()), QStringLiteral("people serving")},
+        {unfilled, QStringLiteral("not filled")},
+    };
+    QString html = tiles(totals, c, 3);
+    if (timeOff > 0) {
+        html += QStringLiteral("<p style='color:%1;'>People asked for time off or marked themselves away "
+                               "%2 time(s) when they were scheduled. See Sunday by Sunday below.</p>").arg(c.warn).arg(timeOff);
     }
 
+    // Who served: most first, with a bar against the busiest person.
     QVector<MemberTally> tallies(members.begin(), members.end());
     std::sort(tallies.begin(), tallies.end(), [](const MemberTally &a, const MemberTally &b) {
         const int totalA = a.primary + a.support;
         const int totalB = b.primary + b.support;
         return totalA != totalB ? totalA > totalB : a.name.localeAwareCompare(b.name) < 0;
     });
-    html += QStringLiteral("<h2>Who served</h2><table width='100%'><tr><th>Member</th><th>Serving</th><th>Support</th><th>Total</th></tr>");
+    const int maxServed = tallies.isEmpty() ? 0 : tallies.first().primary + tallies.first().support;
+    html += QStringLiteral("<h2>Who served</h2><table width='100%' cellspacing='0'>");
     for (const MemberTally &tally : tallies) {
-        html += QStringLiteral("<tr><td>%1</td><td>%2</td><td>%3</td><td><b>%4</b></td></tr>")
-            .arg(esc(tally.name)).arg(tally.primary).arg(tally.support).arg(tally.primary + tally.support);
+        const int total = tally.primary + tally.support;
+        const QString detail = tally.support > 0
+            ? QStringLiteral("%1 <span style='color:%2;'>(%3 as backup)</span>").arg(total).arg(c.muted).arg(tally.support)
+            : QString::number(total);
+        html += QStringLiteral("<tr><td class='cell' width='28%'>%1</td><td class='cell' width='52%'>%2</td>"
+                               "<td class='cell'>%3</td></tr>")
+            .arg(esc(tally.name), bar(total, maxServed, c), detail);
     }
     html += QStringLiteral("</table>");
 
@@ -449,9 +534,36 @@ QString ReportsView::summaryHtml() const
     std::sort(roleCounts.begin(), roleCounts.end(), [](const auto &a, const auto &b) {
         return a.second != b.second ? a.second > b.second : a.first < b.first;
     });
-    html += QStringLiteral("<h2>Roles</h2><table width='100%'><tr><th>Role</th><th>Times scheduled</th></tr>");
+    const int maxRole = roleCounts.isEmpty() ? 0 : roleCounts.first().second;
+    html += QStringLiteral("<h2>Roles</h2><table width='100%' cellspacing='0'>");
     for (const auto &role : roleCounts) {
-        html += QStringLiteral("<tr><td>%1</td><td>%2</td></tr>").arg(esc(role.first)).arg(role.second);
+        html += QStringLiteral("<tr><td class='cell' width='28%'>%1</td><td class='cell' width='52%'>%2</td>"
+                               "<td class='cell'>%3 time(s)</td></tr>")
+            .arg(esc(role.first), bar(role.second, maxRole, c)).arg(role.second);
+    }
+    html += QStringLiteral("</table>");
+
+    // Sunday by Sunday, newest first.
+    html += QStringLiteral("<h2>Sunday by Sunday</h2><table width='100%' cellspacing='0'>"
+                           "<tr><th class='cell'>Sunday</th><th class='cell'>Roles filled</th>"
+                           "<th class='cell'>Needs attention</th></tr>");
+    for (auto it = sundays.cend(); it != sundays.cbegin();) {
+        --it;
+        const SundayTally &sunday = it.value();
+        QStringList attention;
+        if (!sunday.unfilledRoles.isEmpty()) {
+            attention << QStringLiteral("Not filled: %1").arg(sunday.unfilledRoles.join(QStringLiteral(", ")));
+        }
+        if (sunday.away > 0) {
+            attention << QStringLiteral("%1 away").arg(sunday.away);
+        }
+        html += QStringLiteral("<tr><td class='cell'>%1</td><td class='cell'>%2 of %3</td>"
+                               "<td class='cell'><span style='color:%4;'>%5</span></td></tr>")
+            .arg(esc(formatSunday(it.key())))
+            .arg(sunday.filled)
+            .arg(sunday.roles)
+            .arg(attention.isEmpty() ? c.muted : c.warn,
+                 attention.isEmpty() ? QStringLiteral("&mdash;") : esc(attention.join(QStringLiteral(" · "))));
     }
     html += QStringLiteral("</table>");
     return html;
@@ -484,18 +596,17 @@ void ReportsView::saveClicked()
     if (path.endsWith(QLatin1String(".csv"), Qt::CaseInsensitive) || selectedFilter.contains(QLatin1String("csv"))) {
         // One row per assignment, whichever view is showing, so the file
         // works as-is in a spreadsheet.
-        out << "Date,Role,Serving,Support,Notes,Status\n";
+        out << "Date,Role,Serving,Backup,Notes,Availability\n";
         for (const ScheduleReportRow &row : visibleRows()) {
             out << csvField(row.serviceDate.toString(Qt::ISODate)) << ','
                 << csvField(row.roleName) << ','
                 << csvField(row.memberName.isEmpty() ? QStringLiteral("Unfilled") : row.memberName) << ','
                 << csvField(row.supportMemberName) << ','
                 << csvField(row.notes) << ','
-                << csvField(statusText(row)) << '\n';
+                << csvField(availabilityNote(row)) << '\n';
         }
     } else {
-        const QString body = sunday.isValid() ? sundayHtml(sunday) : summaryHtml();
-        out << wrapHtml(sunday.isValid() ? formatSunday(sunday) : QStringLiteral("Schedule summary"), body);
+        out << currentReportHtml(false);
     }
     file.close();
     m_statusLabel->setText(QStringLiteral("Saved to %1").arg(QDir::toNativeSeparators(path)));

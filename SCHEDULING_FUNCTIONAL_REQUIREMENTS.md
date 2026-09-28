@@ -151,13 +151,14 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 - **FR-8a.1** A Reports tab shall let anyone look up past Sunday schedules
   by date range (presets: last month, last 3 months, last year), optionally
   filtered to one Member.
-- **FR-8a.2** Selecting a Sunday shall show a report of that day: each
-  role, who served, the support Member, notes, and whether the Member had
-  requested time off (pending/approved/denied) or marked themselves
-  unavailable. The reason given in a time-off request is never shown.
-- **FR-8a.3** A Summary entry shall show the whole range: Sundays covered,
-  assignments, Members serving, unfilled slots, time-off totals, and how
-  often each Member and role served.
+- **FR-8a.2** Selecting a Sunday shall show a report of that day: totals
+  (roles, people serving, roles not filled), then each role, who served,
+  the backup Member, and notes. A small tag appears next to a Member's
+  name only when they had asked for time off or marked themselves away
+  that day. The reason given in a time-off request is never shown.
+- **FR-8a.3** A Summary entry shall show the whole range: totals, how
+  often each Member and role served (as bars), and a Sunday-by-Sunday list
+  of roles filled and anything needing attention.
 - **FR-8a.4** The current report shall be savable as HTML (printable) or
   CSV (one row per assignment).
 
