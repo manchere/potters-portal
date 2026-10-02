@@ -6,13 +6,15 @@
 #include "Style.h"
 
 class QFrame;
+class QGroupBox;
 class QLabel;
 class QPushButton;
 class QRadioButton;
 
 // "Settings" page: the app's look (Light, Black, or Navy & Gold -- applied
-// as soon as one is picked) and changing the Admin password. Only reports
-// intent; MainWindow applies the theme and opens the password dialog.
+// as soon as one is picked) and, only while an Admin is logged in,
+// changing the Admin password. Only reports intent; MainWindow applies
+// the theme and opens the password dialog.
 class SettingsView : public QWidget
 {
     Q_OBJECT
@@ -23,7 +25,7 @@ public:
     // Ticks the card for `theme` without emitting themeChosen().
     void setCurrentTheme(Theme theme);
 
-    // The password button only works while an Admin is logged in.
+    // The Admin password section only appears while an Admin is logged in.
     void setAdminMode(bool isAdmin);
 
 signals:
@@ -42,6 +44,6 @@ private:
     };
     QList<ThemeOption> m_themeOptions;
 
-    QPushButton *m_passwordButton = nullptr;
-    QLabel *m_passwordHint = nullptr;
+    QLabel *m_subtitle = nullptr;
+    QGroupBox *m_passwordBox = nullptr;
 };

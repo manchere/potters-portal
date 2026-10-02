@@ -15,9 +15,9 @@ SettingsView::SettingsView(QWidget *parent)
 {
     auto *title = new QLabel(QStringLiteral("Settings"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
-    auto *subtitle = new QLabel(QStringLiteral("Choose how the app looks, and change the Admin password."), this);
-    subtitle->setObjectName(QStringLiteral("pageSubtitle"));
-    subtitle->setWordWrap(true);
+    m_subtitle = new QLabel(this);
+    m_subtitle->setObjectName(QStringLiteral("pageSubtitle"));
+    m_subtitle->setWordWrap(true);
 
     // --- Appearance -------------------------------------------------------
     auto *themeGroup = new QButtonGroup(this);
@@ -47,29 +47,30 @@ SettingsView::SettingsView(QWidget *parent)
     appearanceLayout->addLayout(themeRow);
 
     // --- Admin password ---------------------------------------------------
-    m_passwordButton = new QPushButton(QStringLiteral("Change Password..."), this);
-    m_passwordButton->setObjectName(QStringLiteral("secondaryButton"));
-    connect(m_passwordButton, &QPushButton::clicked, this, &SettingsView::changePasswordClicked);
-    m_passwordHint = new QLabel(this);
-    m_passwordHint->setObjectName(QStringLiteral("mutedLabel"));
-    m_passwordHint->setWordWrap(true);
+    auto *passwordButton = new QPushButton(QStringLiteral("Change Password..."), this);
+    passwordButton->setObjectName(QStringLiteral("secondaryButton"));
+    connect(passwordButton, &QPushButton::clicked, this, &SettingsView::changePasswordClicked);
+    auto *passwordHint = new QLabel(
+        QStringLiteral("Sets a new password for the Admin account you're logged in with."), this);
+    passwordHint->setObjectName(QStringLiteral("mutedLabel"));
+    passwordHint->setWordWrap(true);
 
     auto *passwordRow = new QHBoxLayout;
-    passwordRow->addWidget(m_passwordButton);
+    passwordRow->addWidget(passwordButton);
     passwordRow->addSpacing(8);
-    passwordRow->addWidget(m_passwordHint, 1);
-    auto *passwordBox = new QGroupBox(QStringLiteral("Admin password"), this);
-    auto *passwordLayout = new QVBoxLayout(passwordBox);
+    passwordRow->addWidget(passwordHint, 1);
+    m_passwordBox = new QGroupBox(QStringLiteral("Admin password"), this);
+    auto *passwordLayout = new QVBoxLayout(m_passwordBox);
     passwordLayout->addLayout(passwordRow);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(20, 20, 20, 20);
     layout->setSpacing(12);
     layout->addWidget(title);
-    layout->addWidget(subtitle);
+    layout->addWidget(m_subtitle);
     layout->addSpacing(6);
     layout->addWidget(appearanceBox);
-    layout->addWidget(passwordBox);
+    layout->addWidget(m_passwordBox);
     layout->addStretch();
 
     setAdminMode(false);
@@ -139,8 +140,8 @@ void SettingsView::updateCardHighlight()
 
 void SettingsView::setAdminMode(bool isAdmin)
 {
-    m_passwordButton->setEnabled(isAdmin);
-    m_passwordHint->setText(isAdmin
-        ? QStringLiteral("Sets a new password for the Admin account you're logged in with.")
-        : QStringLiteral("Log in as an Admin (the lock at the top right) to change the password."));
+    m_passwordBox->setVisible(isAdmin);
+    m_subtitle->setText(isAdmin
+        ? QStringLiteral("Choose how the app looks, and change the Admin password.")
+        : QStringLiteral("Choose how the app looks."));
 }
