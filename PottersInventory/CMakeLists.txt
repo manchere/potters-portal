@@ -1,4 +1,4 @@
-# CMakeList.txt : CMake project for PottersInventory, include source and define
+# CMakeList.txt : CMake project for PottersPortal, include source and define
 # project specific logic here.
 #
 
@@ -38,7 +38,7 @@ set(CORE_SOURCES
 )
 
 # --- Desktop app (Qt Widgets) ------------------------------------------------
-add_executable (PottersInventory
+add_executable (PottersPortal
   "PottersInventory.cpp" "PottersInventory.h"
   "Style.h" "Style.cpp"
   ${CORE_SOURCES}
@@ -70,38 +70,38 @@ add_executable (PottersInventory
   "Vision/GroqQueryClient.h" "Vision/GroqQueryClient.cpp"
   "Vision/LocationClient.h" "Vision/LocationClient.cpp"
 )
-target_include_directories(PottersInventory PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(PottersPortal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # --- REST API server (Qt HttpServer, no GUI) --------------------------------
 # Same Models/Controllers/Database as the desktop app; this is the piece the
 # mobile app (mobile/) talks to over HTTP instead of opening a direct
 # database connection.
-add_executable (PottersInventoryServer
+add_executable (PottersPortalServer
   ${CORE_SOURCES}
   "Server/Json.h" "Server/Json.cpp"
   "Server/AuthMiddleware.h" "Server/AuthMiddleware.cpp"
   "Server/ServerMain.cpp"
 )
-target_include_directories(PottersInventoryServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(PottersPortalServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET PottersInventory PROPERTY CXX_STANDARD 20)
-  set_property(TARGET PottersInventoryServer PROPERTY CXX_STANDARD 20)
+  set_property(TARGET PottersPortal PROPERTY CXX_STANDARD 20)
+  set_property(TARGET PottersPortalServer PROPERTY CXX_STANDARD 20)
 endif()
 
 # Find Qt6 Widgets + Sql (Postgres access via the QPSQL driver) + HttpServer +
 # Network (outbound HTTPS call to Groq for the photo auto-fill feature, used
 # by both the desktop app directly and the REST server's /api/vision route)
 find_package(Qt6 COMPONENTS Widgets Sql HttpServer Network REQUIRED)
-target_link_libraries(PottersInventory PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network)
-target_link_libraries(PottersInventoryServer PRIVATE Qt6::Sql Qt6::HttpServer Qt6::Network)
+target_link_libraries(PottersPortal PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network)
+target_link_libraries(PottersPortalServer PRIVATE Qt6::Sql Qt6::HttpServer Qt6::Network)
 
 # LocationClient (desktop-only) reads the device's actual position via the
 # WinRT Geolocation API (Windows Location Services) to pre-fill the Add Item
 # location field -- WindowsApp.lib supplies the WinRT activation factories
 # it calls into.
 if (WIN32)
-  target_link_libraries(PottersInventory PRIVATE WindowsApp.lib)
+  target_link_libraries(PottersPortal PRIVATE WindowsApp.lib)
 endif()
 
 # --- Runtime dependency deployment -----------------------------------------
@@ -118,12 +118,12 @@ find_program(WINDEPLOYQT_EXECUTABLE windeployqt
 # Small app-mark icon shown in the custom title bar (TitleBar.cpp loads it
 # from applicationDirPath() at runtime), deployed next to the desktop exe
 # only — the headless server has no title bar to show it in.
-add_custom_command(TARGET PottersInventory POST_BUILD
+add_custom_command(TARGET PottersPortal POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          "${CMAKE_CURRENT_SOURCE_DIR}/pottershouse.jpg" "$<TARGET_FILE_DIR:PottersInventory>"
+          "${CMAKE_CURRENT_SOURCE_DIR}/pottershouse.jpg" "$<TARGET_FILE_DIR:PottersPortal>"
 )
 
-foreach(_target PottersInventory PottersInventoryServer)
+foreach(_target PottersPortal PottersPortalServer)
   if (WIN32 AND EXISTS "${LIBPQ_RUNTIME_DIR}/libpq.dll")
     foreach(_dll libpq.dll libssl-3-x64.dll libcrypto-3-x64.dll lz4.dll z.dll)
       add_custom_command(TARGET ${_target} POST_BUILD
