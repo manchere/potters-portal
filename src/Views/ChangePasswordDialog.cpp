@@ -15,6 +15,7 @@
 #include "AdminContact.h"
 #include "Controllers/UserController.h"
 #include "Mail/SmtpMail.h"
+#include "MessageDialog.h"
 
 namespace
 {
@@ -121,11 +122,11 @@ void ChangePasswordDialog::submit()
     m_buttons->setEnabled(true);
 
     if (sent) {
-        QMessageBox::information(this, tr("Change Password"),
+        MessageDialog::information(this, tr("Change Password"),
             tr("Password changed. The new password was emailed to:\n  %1")
                 .arg(recipients.join(QStringLiteral("\n  "))));
     } else {
-        QMessageBox::warning(this, tr("Change Password"),
+        MessageDialog::warning(this, tr("Change Password"),
             tr("Password changed, but the email couldn't be sent:\n%1\n\n"
                            "Make a note of the new password now.").arg(sendError));
     }

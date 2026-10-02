@@ -26,6 +26,7 @@
 #include "ClickableLabel.h"
 #include "Vision/GroqVisionClient.h"
 #include "Vision/LocationClient.h"
+#include "MessageDialog.h"
 
 static QString capitalize(const QString &s)
 {
@@ -190,7 +191,7 @@ void ItemFormWidget::choosePhotoClicked()
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(this, tr("Choose Photo"), tr("Could not open that file."));
+        MessageDialog::warning(this, tr("Choose Photo"), tr("Could not open that file."));
         return;
     }
 
@@ -225,7 +226,7 @@ void ItemFormWidget::autofillFromPhotoClicked()
 
     if (suggestion.isEmpty()) {
         m_autofillStatus->hide();
-        QMessageBox::warning(this, tr("Fill In From Photo"), errorMessage);
+        MessageDialog::warning(this, tr("Fill In From Photo"), errorMessage);
     } else {
         if (suggestion.contains(QStringLiteral("name"))) {
             m_nameEdit->setText(suggestion.value(QStringLiteral("name")).toString());

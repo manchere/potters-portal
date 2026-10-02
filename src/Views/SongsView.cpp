@@ -15,7 +15,8 @@
 
 #include "ActionBar.h"
 #include "Controllers/SongController.h"
-#include "SongEditDialog.h"
+#include "SongEditDialog.h"
+#include "MessageDialog.h"
 
 namespace
 {
@@ -242,7 +243,7 @@ void SongsView::playClicked()
             continue;
         }
         if (!QDesktopServices::openUrl(QUrl(song.link()))) {
-            QMessageBox::warning(this, tr("Play"), tr("Couldn't open %1").arg(song.link()));
+            MessageDialog::warning(this, tr("Play"), tr("Couldn't open %1").arg(song.link()));
         }
         return;
     }
@@ -259,7 +260,7 @@ void SongsView::addClicked()
     }
     Song newSong = dialog.song();
     if (!m_songController->addSong(newSong)) {
-        QMessageBox::critical(this, tr("Add Song"), m_songController->lastError());
+        MessageDialog::critical(this, tr("Add Song"), m_songController->lastError());
         return;
     }
     // Clear any filter so the new song is visible, then select it.
@@ -284,7 +285,7 @@ void SongsView::editClicked()
         return;
     }
     if (!m_songController->updateSong(dialog.song())) {
-        QMessageBox::critical(this, tr("Edit Song"), m_songController->lastError());
+        MessageDialog::critical(this, tr("Edit Song"), m_songController->lastError());
         return;
     }
     refresh();
@@ -299,13 +300,13 @@ void SongsView::deleteClicked()
     if (existing.id() < 0) {
         return;
     }
-    if (QMessageBox::question(this, tr("Delete Song"),
+    if (MessageDialog::question(this, tr("Delete Song"),
             tr("Delete \"%1\" from the song library?").arg(existing.title()))
         != QMessageBox::Yes) {
         return;
     }
     if (!m_songController->removeSong(existing.id())) {
-        QMessageBox::critical(this, tr("Delete Song"), m_songController->lastError());
+        MessageDialog::critical(this, tr("Delete Song"), m_songController->lastError());
         return;
     }
     refresh();

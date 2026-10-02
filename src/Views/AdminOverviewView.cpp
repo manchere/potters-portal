@@ -22,7 +22,8 @@
 #include "MemberEditDialog.h"
 #include "DutyTypeEditDialog.h"
 #include "TagEditDialog.h"
-#include "TeamEditDialog.h"
+#include "TeamEditDialog.h"
+#include "MessageDialog.h"
 
 AdminOverviewView::AdminOverviewView(
     TagController *tagController,
@@ -152,7 +153,7 @@ bool AdminOverviewView::checkAllowed(AccessAction action)
     if (m_access.allows(action)) {
         return true;
     }
-    QMessageBox::information(this, tr("Taxonomy"),
+    MessageDialog::information(this, tr("Taxonomy"),
         tr("You don't have access to do that here. Ask an Admin if you need it."));
     return false;
 }
@@ -164,7 +165,7 @@ bool AdminOverviewView::canChangeMember(int memberId)
     }
     for (const User &user : std::as_const(m_users)) {
         if (user.id() == memberId && user.isAdmin()) {
-            QMessageBox::information(this, tr("Taxonomy"), tr("Only an Admin can change an Admin's profile."));
+            MessageDialog::information(this, tr("Taxonomy"), tr("Only an Admin can change an Admin's profile."));
             return false;
         }
     }
@@ -212,11 +213,11 @@ void AdminOverviewView::toggleAdminRoleClicked()
                          "password and manage members, schedules, and songs.").arg(target.name())
         : tr("Remove Admin from %1?\n\nThey'll stay a Member and keep their duties, "
                          "but can no longer unlock Admin mode.").arg(target.name());
-    if (QMessageBox::question(this, title, question) != QMessageBox::Yes) {
+    if (MessageDialog::question(this, title, question) != QMessageBox::Yes) {
         return;
     }
     if (!m_userController->setAdminRole(m_adminUserId, target.id(), makeAdmin)) {
-        QMessageBox::warning(this, title, m_userController->lastError());
+        MessageDialog::warning(this, title, m_userController->lastError());
         return;
     }
     refresh();
@@ -406,7 +407,7 @@ void AdminOverviewView::addTeamClicked()
     if (m_teamController->addTeam(newTeam)) {
         refresh();
     } else {
-        QMessageBox::critical(this, tr("Add Team"), m_teamController->lastError());
+        MessageDialog::critical(this, tr("Add Team"), m_teamController->lastError());
     }
 }
 
@@ -423,7 +424,7 @@ void AdminOverviewView::addTagClicked()
     if (m_tagController->addTag(newTag)) {
         refresh();
     } else {
-        QMessageBox::critical(this, tr("Add Tag"), m_tagController->lastError());
+        MessageDialog::critical(this, tr("Add Tag"), m_tagController->lastError());
     }
 }
 
@@ -440,7 +441,7 @@ void AdminOverviewView::addCategoryClicked()
     if (m_categoryController->addCategory(newCategory)) {
         refresh();
     } else {
-        QMessageBox::critical(this, tr("Add Category"), m_categoryController->lastError());
+        MessageDialog::critical(this, tr("Add Category"), m_categoryController->lastError());
     }
 }
 
@@ -457,7 +458,7 @@ void AdminOverviewView::addDutyTypeClicked()
     if (m_dutyTypeController->addDutyType(newDutyType)) {
         refresh();
     } else {
-        QMessageBox::critical(this, tr("Add Duty Type"), m_dutyTypeController->lastError());
+        MessageDialog::critical(this, tr("Add Duty Type"), m_dutyTypeController->lastError());
     }
 }
 
@@ -465,7 +466,7 @@ void AdminOverviewView::deleteClicked()
 {
     QListWidgetItem *selected = m_list->currentItem();
     if (!selected) {
-        QMessageBox::information(this, tr("Delete"), tr("Select an item first."));
+        MessageDialog::information(this, tr("Delete"), tr("Select an item first."));
         return;
     }
     const int id = selected->data(Qt::UserRole).toInt();
@@ -478,21 +479,21 @@ void AdminOverviewView::deleteClicked()
             return;
         }
         if (id == m_adminUserId) {
-            QMessageBox::information(this, tr("Delete Member"),
+            MessageDialog::information(this, tr("Delete Member"),
                 tr("You can't delete your own account while logged in as it."));
             return;
         }
-        if (QMessageBox::question(this, tr("Delete Member"), tr("Delete this member?"))
+        if (MessageDialog::question(this, tr("Delete Member"), tr("Delete this member?"))
             != QMessageBox::Yes) {
             return;
         }
         if (m_userController->removeUser(id)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Delete Member"), m_userController->lastError());
+            MessageDialog::critical(this, tr("Delete Member"), m_userController->lastError());
         }
     } else if (m_kind == Kind::Teams) {
-        if (QMessageBox::question(this, tr("Delete Team"),
+        if (MessageDialog::question(this, tr("Delete Team"),
                 tr("Delete this team? Its members stay, just without a team."))
             != QMessageBox::Yes) {
             return;
@@ -500,37 +501,37 @@ void AdminOverviewView::deleteClicked()
         if (m_teamController->removeTeam(id)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Delete Team"), m_teamController->lastError());
+            MessageDialog::critical(this, tr("Delete Team"), m_teamController->lastError());
         }
     } else if (m_kind == Kind::Tags) {
-        if (QMessageBox::question(this, tr("Delete Tag"), tr("Delete this tag?"))
+        if (MessageDialog::question(this, tr("Delete Tag"), tr("Delete this tag?"))
             != QMessageBox::Yes) {
             return;
         }
         if (m_tagController->removeTag(id)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Delete Tag"), m_tagController->lastError());
+            MessageDialog::critical(this, tr("Delete Tag"), m_tagController->lastError());
         }
     } else if (m_kind == Kind::Categories) {
-        if (QMessageBox::question(this, tr("Delete Category"), tr("Delete this category?"))
+        if (MessageDialog::question(this, tr("Delete Category"), tr("Delete this category?"))
             != QMessageBox::Yes) {
             return;
         }
         if (m_categoryController->removeCategory(id)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Delete Category"), m_categoryController->lastError());
+            MessageDialog::critical(this, tr("Delete Category"), m_categoryController->lastError());
         }
     } else {
-        if (QMessageBox::question(this, tr("Delete Duty Type"), tr("Delete this duty type?"))
+        if (MessageDialog::question(this, tr("Delete Duty Type"), tr("Delete this duty type?"))
             != QMessageBox::Yes) {
             return;
         }
         if (m_dutyTypeController->removeDutyType(id)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Delete Duty Type"),
+            MessageDialog::critical(this, tr("Delete Duty Type"),
                 tr("Couldn't delete -- it may still be used by one or more duties.\n\n%1")
                     .arg(m_dutyTypeController->lastError()));
         }
@@ -572,7 +573,7 @@ void AdminOverviewView::rowDoubleClicked(QListWidgetItem *item)
         if (m_teamController->updateTeam(updated)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Edit Team"), m_teamController->lastError());
+            MessageDialog::critical(this, tr("Edit Team"), m_teamController->lastError());
         }
     } else if (m_kind == Kind::Tags) {
         const Tag existing = m_tagController->tagById(id);
@@ -587,7 +588,7 @@ void AdminOverviewView::rowDoubleClicked(QListWidgetItem *item)
         if (m_tagController->updateTag(updated)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Edit Tag"), m_tagController->lastError());
+            MessageDialog::critical(this, tr("Edit Tag"), m_tagController->lastError());
         }
     } else if (m_kind == Kind::Categories) {
         const Category existing = m_categoryController->categoryById(id);
@@ -602,7 +603,7 @@ void AdminOverviewView::rowDoubleClicked(QListWidgetItem *item)
         if (m_categoryController->updateCategory(updated)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Edit Category"), m_categoryController->lastError());
+            MessageDialog::critical(this, tr("Edit Category"), m_categoryController->lastError());
         }
     } else {
         const DutyType existing = m_dutyTypeController->dutyTypeById(id);
@@ -617,7 +618,7 @@ void AdminOverviewView::rowDoubleClicked(QListWidgetItem *item)
         if (m_dutyTypeController->updateDutyType(updated)) {
             refresh();
         } else {
-            QMessageBox::critical(this, tr("Edit Duty Type"), m_dutyTypeController->lastError());
+            MessageDialog::critical(this, tr("Edit Duty Type"), m_dutyTypeController->lastError());
         }
     }
 }

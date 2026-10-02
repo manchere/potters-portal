@@ -35,7 +35,8 @@
 #include "MemberStatsDialog.h"
 #include "Models/Duty.h"
 #include "Models/DutyType.h"
-#include "Models/User.h"
+#include "Models/User.h"
+#include "MessageDialog.h"
 
 namespace
 {
@@ -521,7 +522,7 @@ void ScheduleTab::pasteScheduleClicked()
     const QDate toDate = m_selectedDate;
     const int sourceCount = m_dutyController->dutiesForDate(fromDate).size();
     if (sourceCount == 0) {
-        QMessageBox::information(this, tr("Paste Schedule"),
+        MessageDialog::information(this, tr("Paste Schedule"),
             tr("%1 no longer has any duties to copy.").arg(formatSunday(fromDate)));
         m_copiedDate = QDate();
         updateCopyPasteState();
@@ -533,19 +534,18 @@ void ScheduleTab::pasteScheduleClicked()
     if (existingCount == 0) {
         const QString question = tr("Copy %1 duties from %2 onto %3?")
             .arg(sourceCount).arg(formatSunday(fromDate), formatSunday(toDate));
-        if (QMessageBox::question(this, tr("Paste Schedule"), question) != QMessageBox::Yes) {
+        if (MessageDialog::question(this, tr("Paste Schedule"), question) != QMessageBox::Yes) {
             return;
         }
     } else {
-        QMessageBox box(QMessageBox::Question, tr("Paste Schedule"),
-            tr("%1 already has %2 duties.").arg(formatSunday(toDate)).arg(existingCount),
-            QMessageBox::NoButton, this);
+        MessageDialog box(MessageDialog::Kind::Question, tr("Paste Schedule"),
+            tr("%1 already has %2 duties.").arg(formatSunday(toDate)).arg(existingCount), this);
         box.setInformativeText(tr("Add to them: keeps what's there and adds the copied duties (skipping any duty the same "
             "member already has).\n\nReplace them: deletes this Sunday's duties, including any "
             "time-off requests members sent for them, then pastes the copied schedule."));
-        QPushButton *addButton = box.addButton(tr("Add to Them"), QMessageBox::AcceptRole);
-        QPushButton *replaceButton = box.addButton(tr("Replace Them"), QMessageBox::DestructiveRole);
-        box.addButton(QMessageBox::Cancel);
+        QPushButton *addButton = box.addButton(tr("Add to Them"), QDialogButtonBox::AcceptRole);
+        QPushButton *replaceButton = box.addButton(tr("Replace Them"), QDialogButtonBox::DestructiveRole);
+        box.addButton(QDialogButtonBox::Cancel);
         box.setDefaultButton(addButton);
         box.exec();
         if (box.clickedButton() == replaceButton) {
@@ -558,7 +558,7 @@ void ScheduleTab::pasteScheduleClicked()
     int copied = 0;
     int skipped = 0;
     if (!m_dutyController->copySchedule(fromDate, toDate, replaceExisting, &copied, &skipped)) {
-        QMessageBox::critical(this, tr("Paste Schedule"), m_dutyController->lastError());
+        MessageDialog::critical(this, tr("Paste Schedule"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -573,7 +573,7 @@ void ScheduleTab::pasteScheduleClicked()
         summary += tr("\n\nHeads up: these members marked themselves unavailable that day:\n  %1")
             .arg(unavailable.join(QStringLiteral("\n  ")));
     }
-    QMessageBox::information(this, tr("Paste Schedule"), summary);
+    MessageDialog::information(this, tr("Paste Schedule"), summary);
 }
 
 QDate ScheduleTab::nearestSunday(const QDate &date)
@@ -859,7 +859,7 @@ void ScheduleTab::assignClicked()
     }
     Duty newDuty = dialog.duty();
     if (!m_dutyController->addDuty(newDuty)) {
-        QMessageBox::critical(this, tr("Assign Duty"), m_dutyController->lastError());
+        MessageDialog::critical(this, tr("Assign Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -893,7 +893,7 @@ void ScheduleTab::editDuty(int dutyId)
     }
     Duty updated = dialog.duty();
     if (!m_dutyController->updateDuty(updated)) {
-        QMessageBox::critical(this, tr("Edit Duty"), m_dutyController->lastError());
+        MessageDialog::critical(this, tr("Edit Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -915,12 +915,12 @@ void ScheduleTab::deleteClicked()
         const QString name = m_userController->userById(m_selectedMemberId).name();
         const QString question = tr("Remove %1 from this Sunday? This deletes their %2 duties.")
             .arg(name).arg(dutyIds.size());
-        if (QMessageBox::question(this, tr("Remove Member"), question) != QMessageBox::Yes) {
+        if (MessageDialog::question(this, tr("Remove Member"), question) != QMessageBox::Yes) {
             return;
         }
         for (int dutyId : std::as_const(dutyIds)) {
             if (!m_dutyController->removeDuty(dutyId)) {
-                QMessageBox::critical(this, tr("Remove Member"), m_dutyController->lastError());
+                MessageDialog::critical(this, tr("Remove Member"), m_dutyController->lastError());
                 break;
             }
         }
@@ -928,12 +928,12 @@ void ScheduleTab::deleteClicked()
         selectSunday(m_selectedDate);
         return;
     }
-    if (QMessageBox::question(this, tr("Delete Duty"), tr("Delete this duty?"))
+    if (MessageDialog::question(this, tr("Delete Duty"), tr("Delete this duty?"))
         != QMessageBox::Yes) {
         return;
     }
     if (!m_dutyController->removeDuty(m_selectedDutyId)) {
-        QMessageBox::critical(this, tr("Delete Duty"), m_dutyController->lastError());
+        MessageDialog::critical(this, tr("Delete Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -1048,7 +1048,7 @@ void ScheduleTab::editMemberOnSchedule(int memberId)
         }
     }
     if (!ok) {
-        QMessageBox::critical(this, tr("Edit Member"), m_dutyController->lastError());
+        MessageDialog::critical(this, tr("Edit Member"), m_dutyController->lastError());
     }
     populateSundayList();
     selectSunday(m_selectedDate);

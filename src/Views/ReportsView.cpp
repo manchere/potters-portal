@@ -26,7 +26,8 @@
 #include "MemberPickerField.h"
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/TeamController.h"
-#include "Style.h"
+#include "Style.h"
+#include "MessageDialog.h"
 
 namespace
 {
@@ -513,7 +514,7 @@ void ReportsView::saveClicked()
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        QMessageBox::critical(this, tr("Save Report"), file.errorString());
+        MessageDialog::critical(this, tr("Save Report"), file.errorString());
         return;
     }
     QTextStream out(&file);

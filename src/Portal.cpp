@@ -8,6 +8,7 @@
 #include "Language.h"
 #include "Style.h"
 #include "Views/MainWindow.h"
+#include "Views/MessageDialog.h"
 
 int main(int argc, char **argv)
 {
@@ -26,7 +27,7 @@ int main(int argc, char **argv)
 	}
 
 	if (!connectError.isEmpty()) {
-		QMessageBox::warning(nullptr, QCoreApplication::translate("Portal", "Database Connection"), connectError);
+		MessageDialog::warning(nullptr, QCoreApplication::translate("Portal", "Database Connection"), connectError);
 	}
 
 	// No login gate at startup -- the app is usable read-only right away.

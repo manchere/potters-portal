@@ -7,6 +7,7 @@
 
 #include "Controllers/ItemController.h"
 #include "ItemFormWidget.h"
+#include "MessageDialog.h"
 
 ItemEditDialog::ItemEditDialog(const Item &item, ItemController *itemController, TagController *tagController,
                                 CategoryController *categoryController, QWidget *parent)
@@ -45,11 +46,11 @@ void ItemEditDialog::saveClicked()
     }
     Item item = m_form->toItem();
     if (!m_itemController->updateItem(item)) {
-        QMessageBox::critical(this, tr("Edit Item"), m_itemController->lastError());
+        MessageDialog::critical(this, tr("Edit Item"), m_itemController->lastError());
         return;
     }
     if (m_form->imageChanged() && !m_itemController->setItemImage(item.id(), m_form->imageData(), m_form->imageMime())) {
-        QMessageBox::warning(this, tr("Edit Item"),
+        MessageDialog::warning(this, tr("Edit Item"),
                               tr("Item was saved, but the photo could not be updated: %1")
                                   .arg(m_itemController->lastError()));
     }

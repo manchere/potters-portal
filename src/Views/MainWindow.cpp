@@ -24,6 +24,7 @@
 #include "TitleBar.h"
 #include "Language.h"
 #include "Style.h"
+#include "MessageDialog.h"
 
 namespace {
 
@@ -294,14 +295,14 @@ void MainWindow::languageChosen(Language language)
     // Asked in the language being switched to, since that's the one the
     // person picked and can read.
     const bool french = language == Language::French;
-    QMessageBox box(QMessageBox::Question,
+    MessageDialog box(MessageDialog::Kind::Question,
         french ? QStringLiteral("Langue") : QStringLiteral("Language"),
         french ? QStringLiteral("Redémarrer Potters Portal en français maintenant ?")
                : QStringLiteral("Restart Potters Portal in English now?"),
-        QMessageBox::NoButton, this);
+        this);
     QPushButton *restartButton = box.addButton(
-        french ? QStringLiteral("Redémarrer") : QStringLiteral("Restart"), QMessageBox::AcceptRole);
-    box.addButton(french ? QStringLiteral("Plus tard") : QStringLiteral("Later"), QMessageBox::RejectRole);
+        french ? QStringLiteral("Redémarrer") : QStringLiteral("Restart"), QDialogButtonBox::AcceptRole);
+    box.addButton(french ? QStringLiteral("Plus tard") : QStringLiteral("Later"), QDialogButtonBox::RejectRole);
     box.setInformativeText(french
         ? QStringLiteral("Sinon, le changement s'appliquera au prochain démarrage.")
         : QStringLiteral("Otherwise it applies the next time the app starts."));

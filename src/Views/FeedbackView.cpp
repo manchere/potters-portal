@@ -18,7 +18,8 @@
 #include "ActionBar.h"
 #include "Controllers/FeedbackController.h"
 #include "Controllers/UserController.h"
-#include "SuggestLineEdit.h"
+#include "SuggestLineEdit.h"
+#include "MessageDialog.h"
 
 FeedbackView::FeedbackView(FeedbackController *feedbackController, UserController *userController, QWidget *parent)
     : QWidget(parent)
@@ -282,7 +283,7 @@ void FeedbackView::sendClicked()
     feedback.setSubject(subject);
     feedback.setDetails(m_detailsEdit->toPlainText().trimmed());
     if (!m_feedbackController->addFeedback(feedback)) {
-        QMessageBox::critical(this, tr("Send Request"), m_feedbackController->lastError());
+        MessageDialog::critical(this, tr("Send Request"), m_feedbackController->lastError());
         return;
     }
     m_subjectEdit->clear();
@@ -298,7 +299,7 @@ void FeedbackView::toggleDoneClicked()
         return;
     }
     if (!m_feedbackController->setDone(feedback->id(), !feedback->isDone())) {
-        QMessageBox::critical(this, tr("Feedback"), m_feedbackController->lastError());
+        MessageDialog::critical(this, tr("Feedback"), m_feedbackController->lastError());
         return;
     }
     refresh();
@@ -310,12 +311,12 @@ void FeedbackView::deleteClicked()
     if (!m_access.remove || !feedback) {
         return;
     }
-    if (QMessageBox::question(this, tr("Delete Request"), tr("Delete \"%1\"?").arg(feedback->subject()))
+    if (MessageDialog::question(this, tr("Delete Request"), tr("Delete \"%1\"?").arg(feedback->subject()))
         != QMessageBox::Yes) {
         return;
     }
     if (!m_feedbackController->removeFeedback(feedback->id())) {
-        QMessageBox::critical(this, tr("Delete Request"), m_feedbackController->lastError());
+        MessageDialog::critical(this, tr("Delete Request"), m_feedbackController->lastError());
         return;
     }
     refresh();

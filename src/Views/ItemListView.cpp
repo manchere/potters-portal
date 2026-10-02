@@ -31,6 +31,7 @@
 #include "ItemDetailsDialog.h"
 #include "ItemEditDialog.h"
 #include "Vision/GroqQueryClient.h"
+#include "MessageDialog.h"
 
 namespace {
 
@@ -639,7 +640,7 @@ void ItemListView::editClicked()
     }
     const int id = selectedItemId();
     if (id < 0) {
-        QMessageBox::information(this, tr("Edit Item"), tr("Select an item first."));
+        MessageDialog::information(this, tr("Edit Item"), tr("Select an item first."));
         return;
     }
     ItemEditDialog dialog(m_itemController->itemById(id), m_itemController, m_tagController, m_categoryController, this);
@@ -655,17 +656,17 @@ void ItemListView::deleteClicked()
     }
     const int id = selectedItemId();
     if (id < 0) {
-        QMessageBox::information(this, tr("Delete Item"), tr("Select an item first."));
+        MessageDialog::information(this, tr("Delete Item"), tr("Select an item first."));
         return;
     }
-    if (QMessageBox::question(this, tr("Delete Item"), tr("Delete this item?"))
+    if (MessageDialog::question(this, tr("Delete Item"), tr("Delete this item?"))
         != QMessageBox::Yes) {
         return;
     }
     if (m_itemController->removeItem(id)) {
         refresh();
     } else {
-        QMessageBox::critical(this, tr("Delete Item"), m_itemController->lastError());
+        MessageDialog::critical(this, tr("Delete Item"), m_itemController->lastError());
     }
 }
 
@@ -676,7 +677,7 @@ void ItemListView::addTagClicked()
     }
     const int id = selectedItemId();
     if (id < 0) {
-        QMessageBox::information(this, tr("Add Tag"), tr("Select an item first."));
+        MessageDialog::information(this, tr("Add Tag"), tr("Select an item first."));
         return;
     }
 
@@ -686,7 +687,7 @@ void ItemListView::addTagClicked()
         names << tag.name();
     }
     if (names.isEmpty()) {
-        QMessageBox::information(this, tr("Add Tag"),
+        MessageDialog::information(this, tr("Add Tag"),
                                   tr("No tags exist yet. Create one from the Tags & Categories tab."));
         return;
     }
@@ -701,7 +702,7 @@ void ItemListView::addTagClicked()
         return;
     }
     if (!m_itemController->addTagToItem(id, tags[index].id())) {
-        QMessageBox::critical(this, tr("Add Tag"), m_itemController->lastError());
+        MessageDialog::critical(this, tr("Add Tag"), m_itemController->lastError());
         return;
     }
     refresh();
@@ -714,7 +715,7 @@ void ItemListView::setStatusClicked()
     }
     const int id = selectedItemId();
     if (id < 0) {
-        QMessageBox::information(this, tr("Set Status"), tr("Select an item first."));
+        MessageDialog::information(this, tr("Set Status"), tr("Select an item first."));
         return;
     }
 
@@ -734,7 +735,7 @@ void ItemListView::setStatusClicked()
         return;
     }
     if (!m_itemController->setItemStatus(id, statuses[index])) {
-        QMessageBox::critical(this, tr("Set Status"), m_itemController->lastError());
+        MessageDialog::critical(this, tr("Set Status"), m_itemController->lastError());
         return;
     }
     refresh();
