@@ -64,6 +64,13 @@ MemberPickerField::MemberPickerField(QWidget *parent)
     rebuildChips();
 }
 
+void MemberPickerField::setPlaceholders(const QString &empty, const QString &more)
+{
+    m_emptyPlaceholder = empty;
+    m_morePlaceholder = more;
+    rebuildChips();
+}
+
 void MemberPickerField::setMembers(const QList<QPair<int, QString>> &members)
 {
     m_members = members;
@@ -196,9 +203,7 @@ void MemberPickerField::rebuildChips()
     }
     m_flow->addWidget(m_edit);
 
-    m_edit->setPlaceholderText(m_selected.isEmpty()
-        ? QStringLiteral("All members — type a name to add")
-        : QStringLiteral("Add another member..."));
+    m_edit->setPlaceholderText(m_selected.isEmpty() ? m_emptyPlaceholder : m_morePlaceholder);
     // The flow layout doesn't stretch the edit, so give it room for the
     // whole placeholder.
     m_edit->setMinimumWidth(qMax(160, m_edit->fontMetrics().horizontalAdvance(m_edit->placeholderText()) + 48));

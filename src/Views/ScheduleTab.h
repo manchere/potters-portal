@@ -19,8 +19,13 @@ class Duty;
 // a Sunday from a scrollable list (e.g. "Sun 6 Sep 2026"), see every
 // Member's duty (with color badge + duty icon) for it, and
 // create/edit/delete duties right here via the "Assign Duty" button
-// -- there is no separate Duties tab. "+ Add Member" creates a new
-// Member profile without leaving this tab either.
+// -- there is no separate Duties tab. "+ Add Member" puts a Member on the
+// open Sunday's schedule: their name, one or more duties, and a backup
+// (see AddToScheduleDialog). New Member profiles are made on Taxonomy.
+//
+// A Sunday that has passed is read-only: nothing on it can be assigned,
+// edited, deleted, or pasted over (DutyController enforces the same), though
+// it can still be copied onto an upcoming Sunday.
 //
 // "Copy Schedule" / "Paste Schedule" (or Ctrl+C / Ctrl+V) copy one
 // Sunday's whole schedule onto another -- e.g. reuse last month's
@@ -82,6 +87,10 @@ private:
     // Enables Copy/Paste for the selected Sunday and updates the
     // "Copied: ..." label.
     void updateCopyPasteState();
+    // Enables/disables every action for the current login, selected
+    // Sunday (past ones are read-only), and selected duty.
+    void updateActionState();
+    bool selectedSundayEditable() const;
 
     DutyController *m_dutyController = nullptr;
     UserController *m_userController = nullptr;
@@ -102,6 +111,7 @@ private:
     QPushButton *m_copyButton = nullptr;
     QPushButton *m_pasteButton = nullptr;
     QLabel *m_copiedLabel = nullptr;
+    QLabel *m_pastNotice = nullptr;
 
     bool m_isAdmin = false;
     QDate m_selectedDate;

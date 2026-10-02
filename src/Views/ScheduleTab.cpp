@@ -18,8 +18,8 @@
 #include <QVBoxLayout>
 
 #include "AssignDutyDialog.h"
-#include "MemberEditDialog.h"
 #include "ActionBar.h"
+#include "AddToScheduleDialog.h"
 #include "MemberBadge.h"
 #include "Controllers/DutyController.h"
 #include "Controllers/DutyTypeController.h"
@@ -81,6 +81,8 @@ ScheduleTab::ScheduleTab(
     connect(m_assignButton, &QPushButton::clicked, this, &ScheduleTab::assignClicked);
     m_addMemberButton = new QPushButton(QStringLiteral("+  Add Member"), this);
     m_addMemberButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_addMemberButton->setToolTip(
+        QStringLiteral("Put a member on this Sunday: their duties and a backup"));
     connect(m_addMemberButton, &QPushButton::clicked, this, &ScheduleTab::addMemberClicked);
     m_assignForMemberButton = new QPushButton(QStringLiteral("+  Assign Another Duty"), this);
     m_assignForMemberButton->setObjectName(QStringLiteral("secondaryButton"));
@@ -114,9 +116,7 @@ ScheduleTab::ScheduleTab(
     connect(m_resultsList, &QListWidget::currentRowChanged, this, [this](int row) {
         QListWidgetItem *item = row >= 0 ? m_resultsList->item(row) : nullptr;
         m_selectedDutyId = item ? item->data(Qt::UserRole).toInt() : -1;
-        m_editButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
-        m_deleteButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
-        m_assignForMemberButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
+        updateActionState();
     });
     connect(m_resultsList, &QListWidget::itemDoubleClicked, this, &ScheduleTab::memberDoubleClicked);
 
@@ -139,9 +139,15 @@ ScheduleTab::ScheduleTab(
     actionBar->addWidget(m_copiedLabel);
     actionBar->addStretch();
     actionBar->addWidget(m_deleteButton);
+
+    m_pastNotice = new QLabel(QStringLiteral("This Sunday has passed, so its schedule is read-only."), this);
+    m_pastNotice->setObjectName(QStringLiteral("accentLabel"));
+    m_pastNotice->setWordWrap(true);
+    m_pastNotice->hide();
     setAdminMode(false);
 
     auto *resultsLayout = new QVBoxLayout;
+    resultsLayout->addWidget(m_pastNotice);
     resultsLayout->addWidget(m_resultsList);
     auto *resultsBox = new QGroupBox(QStringLiteral("Duties"), this);
     resultsBox->setLayout(resultsLayout);
@@ -252,19 +258,35 @@ void ScheduleTab::setAdminMode(bool isAdmin)
     m_assignForMemberButton->setVisible(isAdmin);
     m_editButton->setVisible(isAdmin);
     m_deleteButton->setVisible(isAdmin);
-    m_editButton->setEnabled(isAdmin && m_selectedDutyId >= 0);
-    m_deleteButton->setEnabled(isAdmin && m_selectedDutyId >= 0);
-    m_assignForMemberButton->setEnabled(isAdmin && m_selectedDutyId >= 0);
     m_copyButton->setVisible(isAdmin);
     m_pasteButton->setVisible(isAdmin);
     m_copiedLabel->setVisible(isAdmin);
+    updateActionState();
+}
+
+bool ScheduleTab::selectedSundayEditable() const
+{
+    return DutyController::isEditableDate(m_selectedDate);
+}
+
+void ScheduleTab::updateActionState()
+{
+    const bool editable = m_isAdmin && selectedSundayEditable();
+    const bool hasDuty = m_selectedDutyId >= 0;
+    m_assignButton->setEnabled(editable);
+    m_addMemberButton->setEnabled(editable);
+    m_assignForMemberButton->setEnabled(editable && hasDuty);
+    m_editButton->setEnabled(editable && hasDuty);
+    m_deleteButton->setEnabled(editable && hasDuty);
+    m_pastNotice->setVisible(m_selectedDate.isValid() && !selectedSundayEditable());
     updateCopyPasteState();
 }
 
 void ScheduleTab::updateCopyPasteState()
 {
     m_copyButton->setEnabled(m_isAdmin && m_datesWithDuties.contains(m_selectedDate));
-    m_pasteButton->setEnabled(m_isAdmin && m_copiedDate.isValid() && m_copiedDate != m_selectedDate);
+    m_pasteButton->setEnabled(m_isAdmin && selectedSundayEditable()
+                              && m_copiedDate.isValid() && m_copiedDate != m_selectedDate);
     m_copiedLabel->setText(m_copiedDate.isValid()
         ? QStringLiteral("Copied: %1").arg(formatSunday(m_copiedDate))
         : QString());
@@ -281,7 +303,7 @@ void ScheduleTab::copyScheduleClicked()
 
 void ScheduleTab::pasteScheduleClicked()
 {
-    if (!m_isAdmin || !m_copiedDate.isValid() || m_copiedDate == m_selectedDate) {
+    if (!m_isAdmin || !selectedSundayEditable() || !m_copiedDate.isValid() || m_copiedDate == m_selectedDate) {
         return;
     }
     const QDate fromDate = m_copiedDate;
@@ -498,15 +520,14 @@ void ScheduleTab::sundaySelectionChanged(QListWidgetItem *current, QListWidgetIt
     applySundayItemStyle(current, true);
     m_selectedDate = current->data(Qt::UserRole).toDate();
     rebuildResults();
-    updateCopyPasteState();
+    updateActionState();
 }
 
 void ScheduleTab::rebuildResults()
 {
     m_resultsList->clear();
     m_selectedDutyId = -1;
-    m_editButton->setEnabled(false);
-    m_deleteButton->setEnabled(false);
+    updateActionState();
 
     const QVector<Duty> duties = m_dutyController->dutiesForDate(m_selectedDate);
     if (duties.isEmpty()) {
@@ -527,7 +548,7 @@ void ScheduleTab::rebuildResults()
 
 void ScheduleTab::assignClicked()
 {
-    if (!m_isAdmin) {
+    if (!m_isAdmin || !selectedSundayEditable()) {
         return;
     }
     AssignDutyDialog dialog(Duty(), m_selectedDate, m_userController->allUsers(), m_dutyTypeController, this);
@@ -545,16 +566,41 @@ void ScheduleTab::assignClicked()
 
 void ScheduleTab::addMemberClicked()
 {
-    if (!m_isAdmin) {
+    if (!m_isAdmin || !selectedSundayEditable()) {
         return;
     }
-    MemberEditDialog dialog(User(), m_userController, this);
-    dialog.exec();
+    AddToScheduleDialog dialog(m_selectedDate, m_userController->allUsers(), m_dutyTypeController, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    // A duty the member already has on this Sunday isn't added twice.
+    const QVector<Duty> existing = m_dutyController->dutiesForDate(m_selectedDate);
+    QStringList skipped;
+    for (Duty duty : dialog.duties()) {
+        const bool alreadyThere = std::any_of(existing.cbegin(), existing.cend(), [&duty](const Duty &other) {
+            return other.memberId() == duty.memberId() && other.dutyTypeId() == duty.dutyTypeId();
+        });
+        if (alreadyThere) {
+            skipped.append(m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).name());
+            continue;
+        }
+        if (!m_dutyController->addDuty(duty)) {
+            QMessageBox::critical(this, QStringLiteral("Add Member"), m_dutyController->lastError());
+            break;
+        }
+    }
+    populateSundayList();
+    selectSunday(m_selectedDate);
+    if (!skipped.isEmpty()) {
+        QMessageBox::information(this, QStringLiteral("Add Member"),
+            QStringLiteral("Already on this Sunday, so not added again: %1.").arg(skipped.join(QStringLiteral(", "))));
+    }
 }
 
 void ScheduleTab::assignForSelectedMemberClicked()
 {
-    if (!m_isAdmin || m_selectedDutyId < 0) {
+    if (!m_isAdmin || !selectedSundayEditable() || m_selectedDutyId < 0) {
         return;
     }
     const Duty reference = m_dutyController->dutyById(m_selectedDutyId);
@@ -581,7 +627,7 @@ void ScheduleTab::assignForSelectedMemberClicked()
 
 void ScheduleTab::editClicked()
 {
-    if (!m_isAdmin || m_selectedDutyId < 0) {
+    if (!m_isAdmin || !selectedSundayEditable() || m_selectedDutyId < 0) {
         return;
     }
     const Duty existing = m_dutyController->dutyById(m_selectedDutyId);
@@ -603,7 +649,7 @@ void ScheduleTab::editClicked()
 
 void ScheduleTab::deleteClicked()
 {
-    if (!m_isAdmin || m_selectedDutyId < 0) {
+    if (!m_isAdmin || !selectedSundayEditable() || m_selectedDutyId < 0) {
         return;
     }
     if (QMessageBox::question(this, QStringLiteral("Delete Duty"), QStringLiteral("Delete this duty?"))

@@ -14,7 +14,8 @@ class FlowLayout;
 // matching names (anywhere in the name, any case); picking one -- with the
 // mouse, or Enter for the best match -- turns it into a chip. Backspace in
 // the empty field removes the last chip. Used by the Reports tab's Member
-// filter, where no chips means "All members".
+// filter, where no chips means "All members", and -- holding duty types
+// instead of Members -- by the Schedule tab's Add Member dialog.
 class MemberPickerField : public QFrame
 {
     Q_OBJECT
@@ -25,6 +26,9 @@ public:
     // Every Member that can be picked, as (id, name). Chips for Members no
     // longer in the list are dropped.
     void setMembers(const QList<QPair<int, QString>> &members);
+
+    // Hint shown with no chips, and with some.
+    void setPlaceholders(const QString &empty, const QString &more);
 
     QVector<int> selectedIds() const;
     QStringList selectedNames() const;
@@ -48,6 +52,8 @@ private:
 
     QList<QPair<int, QString>> m_members;
     QVector<int> m_selected;
+    QString m_emptyPlaceholder = QStringLiteral("All members — type a name to add");
+    QString m_morePlaceholder = QStringLiteral("Add another member...");
     // Set between a suggestion being picked and the edit being cleared.
     bool m_justPicked = false;
 

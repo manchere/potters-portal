@@ -49,6 +49,11 @@ public:
 
     QString lastError() const { return m_lastError; }
 
+    // A schedule can only be changed until its Sunday has passed (today
+    // still counts). add/update/remove/copySchedule refuse anything that
+    // would change a past schedule, whoever calls them.
+    static bool isEditableDate(const QDate &date);
+
 public slots:
     bool addDuty(Duty &duty);
     bool updateDuty(const Duty &duty);

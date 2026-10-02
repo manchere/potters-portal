@@ -68,6 +68,7 @@ add_executable (PottersPortal
   "Mail/SmtpMail.h" "Mail/SmtpMail.cpp"
   "Views/ScheduleTab.h" "Views/ScheduleTab.cpp"
   "Views/AssignDutyDialog.h" "Views/AssignDutyDialog.cpp"
+  "Views/AddToScheduleDialog.h" "Views/AddToScheduleDialog.cpp"
   "Views/MemberEditDialog.h" "Views/MemberEditDialog.cpp"
   "Views/DutyTypeEditDialog.h" "Views/DutyTypeEditDialog.cpp"
   "Views/SongsView.h" "Views/SongsView.cpp"
