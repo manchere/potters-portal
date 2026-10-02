@@ -83,7 +83,7 @@ namespace
 
     QString tag(const QString &text, const ReportColors &c)
     {
-        return QStringLiteral("&nbsp;&nbsp;<span style='background-color:%1; color:%2; font-size:11px; font-weight:600;'>"
+        return QStringLiteral("&nbsp;&nbsp;<span style='background-color:%1; color:%2; font-size:8pt; font-weight:600;'>"
                               "&nbsp;%3&nbsp;</span>")
             .arg(c.warnBg, c.warn, esc(text));
     }
@@ -108,7 +108,7 @@ namespace
             const QString backupCell = row.supportMemberId > 0
                 ? esc(row.supportMemberName)
                 : QStringLiteral("<span style='color:%1;'>&mdash;</span>").arg(c.muted);
-            html += QStringLiteral("<tr><td class='cell'><span style='font-size:16px;'>%1</span>&nbsp; <b>%2</b></td>"
+            html += QStringLiteral("<tr><td class='cell'><span>%1</span>&nbsp; <b>%2</b></td>"
                                    "<td class='cell'>%3</td><td class='cell'>%4</td>"
                                    "<td class='cell'><span style='color:%5;'>%6</span></td></tr>")
                 .arg(esc(row.dutyTypeIcon), esc(row.dutyTypeName), servingCell, backupCell, c.muted, esc(row.notes));
@@ -383,6 +383,8 @@ QString ReportsView::currentReportHtml(bool darkColors) const
 QString ReportsView::wrapHtml(const QString &title, const QString &subtitle, const QString &body, bool darkColors) const
 {
     const ReportColors c = reportColors(darkColors);
+    // Sizes match the Schedule tab (Style.cpp): 10pt text, bold 10pt
+    // names, 9pt column captions, the page title's 15pt for the heading.
     // Kept to the subset of CSS QTextBrowser understands, so the saved
     // file and the on-screen view look alike. Row lines are set per cell
     // (class "cell") so they don't leak into the tile and bar tables.
@@ -391,11 +393,11 @@ QString ReportsView::wrapHtml(const QString &title, const QString &subtitle, con
     const QString head = QStringLiteral(
         "<html><head><meta charset='utf-8'><title>%1</title>"
         "<style>"
-        "body { font-family: 'Segoe UI', sans-serif; font-size: 14px; color: %2; }"
-        "h1 { font-size: 22px; margin-bottom: 0px; color: %2; }"
-        "h2 { font-size: 15px; margin-top: 22px; margin-bottom: 4px; color: %2; }"
-        "th.cell { text-align: left; font-weight: 600; color: %3; padding: 8px 10px; border-bottom: 1px solid %4; }"
-        "td.cell { padding: 9px 10px; border-bottom: 1px solid %4; vertical-align: middle; }"
+        "body { font-family: 'Segoe UI', sans-serif; font-size: 10pt; color: %2; }"
+        "h1 { font-size: 15pt; margin-bottom: 0px; color: %2; }"
+        "h2 { font-size: 11pt; margin-top: 18px; margin-bottom: 4px; color: %2; }"
+        "th.cell { text-align: left; font-size: 9pt; font-weight: 600; color: %3; padding: 6px 10px; border-bottom: 1px solid %4; }"
+        "td.cell { padding: 7px 10px; border-bottom: 1px solid %4; vertical-align: middle; }"
         "</style></head><body>"
         "<h1>%1</h1><p style='color:%3; margin-top:2px;'>%5</p>")
         .arg(esc(title), c.ink, c.muted, c.line, esc(subtitle));
