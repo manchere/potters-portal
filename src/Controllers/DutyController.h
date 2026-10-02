@@ -42,9 +42,10 @@ public:
     // Every duty from fromDate to toDate inclusive, newest Sunday
     // first (then by duty type name), with duty type/member names and request /
     // availability flags resolved -- for the desktop Reports tab. With
-    // memberId > 0, only duties where that member is primary or
-    // support.
-    QVector<ScheduleReportRow> scheduleReport(const QDate &fromDate, const QDate &toDate, int memberId = -1) const;
+    // memberIds given, only duties where one of those members is primary
+    // or support; empty means everyone.
+    QVector<ScheduleReportRow> scheduleReport(const QDate &fromDate, const QDate &toDate,
+                                              const QVector<int> &memberIds = {}) const;
 
     QString lastError() const { return m_lastError; }
 

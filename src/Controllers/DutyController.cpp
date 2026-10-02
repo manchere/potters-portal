@@ -276,7 +276,8 @@ bool DutyController::copySchedule(
     return true;
 }
 
-QVector<ScheduleReportRow> DutyController::scheduleReport(const QDate &fromDate, const QDate &toDate, int memberId) const
+QVector<ScheduleReportRow> DutyController::scheduleReport(const QDate &fromDate, const QDate &toDate,
+                                                         const QVector<int> &memberIds) const
 {
     QVector<ScheduleReportRow> rows;
     Database::ensureConnected();
@@ -293,8 +294,14 @@ QVector<ScheduleReportRow> DutyController::scheduleReport(const QDate &fromDate,
         "LEFT JOIN users m ON m.id = a.member_id "
         "LEFT JOIN users s ON s.id = a.support_member_id "
         "WHERE a.service_date BETWEEN :from_date AND :to_date ");
-    if (memberId > 0) {
-        sql += QStringLiteral("AND (a.member_id = :member_id OR a.support_member_id = :member_id) ");
+    if (!memberIds.isEmpty()) {
+        // The ids are ints, so they can go into the SQL directly.
+        QStringList ids;
+        for (int id : memberIds) {
+            ids.append(QString::number(id));
+        }
+        const QString list = ids.join(QLatin1Char(','));
+        sql += QStringLiteral("AND (a.member_id IN (%1) OR a.support_member_id IN (%1)) ").arg(list);
     }
     sql += QStringLiteral("ORDER BY a.service_date DESC, LOWER(r.name), a.id");
 
@@ -302,9 +309,6 @@ QVector<ScheduleReportRow> DutyController::scheduleReport(const QDate &fromDate,
     query.prepare(sql);
     query.bindValue(QStringLiteral(":from_date"), fromDate);
     query.bindValue(QStringLiteral(":to_date"), toDate);
-    if (memberId > 0) {
-        query.bindValue(QStringLiteral(":member_id"), memberId);
-    }
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return rows;

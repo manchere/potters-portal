@@ -1,6 +1,5 @@
 #include "ReportsView.h"
 
-#include <QComboBox>
 #include <QDateEdit>
 #include <QDir>
 #include <QFile>
@@ -21,6 +20,7 @@
 
 #include "Controllers/DutyController.h"
 #include "Controllers/UserController.h"
+#include "MemberPickerField.h"
 #include "Style.h"
 
 namespace
@@ -147,18 +147,14 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
         connect(edit, &QDateEdit::dateChanged, this, &ReportsView::reloadReport);
     }
 
-    m_memberCombo = new QComboBox(this);
-    m_memberCombo->setMinimumWidth(180);
-    connect(m_memberCombo, &QComboBox::currentIndexChanged, this, &ReportsView::reloadReport);
+    m_memberField = new MemberPickerField(this);
+    connect(m_memberField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
 
     auto *filterRow = new QHBoxLayout;
     filterRow->addWidget(new QLabel(QStringLiteral("From"), this));
     filterRow->addWidget(m_fromEdit);
     filterRow->addWidget(new QLabel(QStringLiteral("To"), this));
     filterRow->addWidget(m_toEdit);
-    filterRow->addSpacing(12);
-    filterRow->addWidget(new QLabel(QStringLiteral("Member"), this));
-    filterRow->addWidget(m_memberCombo);
     filterRow->addSpacing(12);
     const QList<QPair<QString, int>> presets = {
         {QStringLiteral("Last month"), 1},
@@ -173,6 +169,13 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
         filterRow->addWidget(button);
     }
     filterRow->addStretch();
+
+    // Its own row: the field grows as Members are added.
+    auto *memberRow = new QHBoxLayout;
+    auto *memberLabel = new QLabel(QStringLiteral("Members"), this);
+    memberRow->addWidget(memberLabel, 0, Qt::AlignTop);
+    memberRow->addWidget(m_memberField, 1);
+    memberLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
 
     m_sundayList = new QListWidget(this);
     m_sundayList->setFixedWidth(230);
@@ -211,6 +214,7 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     layout->addWidget(subtitle);
     layout->addSpacing(6);
     layout->addLayout(filterRow);
+    layout->addLayout(memberRow);
     layout->addLayout(columns, 1);
 
     refresh();
@@ -224,16 +228,14 @@ void ReportsView::refresh()
 
 void ReportsView::populateMemberFilter()
 {
-    const int previous = m_memberCombo->currentData().toInt();
-    m_memberCombo->blockSignals(true);
-    m_memberCombo->clear();
-    m_memberCombo->addItem(QStringLiteral("All members"), -1);
+    QList<QPair<int, QString>> members;
     for (const User &user : m_userController->allUsers()) {
-        m_memberCombo->addItem(user.name(), user.id());
+        members.append({user.id(), user.name()});
     }
-    const int index = m_memberCombo->findData(previous);
-    m_memberCombo->setCurrentIndex(index >= 0 ? index : 0);
-    m_memberCombo->blockSignals(false);
+    // refresh() reloads the report right after, so no signal is needed.
+    m_memberField->blockSignals(true);
+    m_memberField->setMembers(members);
+    m_memberField->blockSignals(false);
 }
 
 void ReportsView::presetClicked(int months)
@@ -255,7 +257,7 @@ void ReportsView::reloadReport()
     if (from > to) {
         std::swap(from, to);
     }
-    m_rows = m_dutyController->scheduleReport(from, to, m_memberCombo->currentData().toInt());
+    m_rows = m_dutyController->scheduleReport(from, to, m_memberField->selectedIds());
     populateSundayList();
 }
 
@@ -330,8 +332,9 @@ QString ReportsView::filterDescription() const
         std::swap(from, to);
     }
     QString text = QStringLiteral("%1 – %2").arg(from.toString(QStringLiteral("d MMM yyyy")), to.toString(QStringLiteral("d MMM yyyy")));
-    if (m_memberCombo->currentData().toInt() > 0) {
-        text += QStringLiteral("  ·  %1").arg(m_memberCombo->currentText());
+    const QStringList members = m_memberField->selectedNames();
+    if (!members.isEmpty()) {
+        text += QStringLiteral("  ·  %1").arg(members.join(QStringLiteral(", ")));
     }
     return text;
 }
@@ -358,8 +361,9 @@ QString ReportsView::currentReportHtml(bool darkColors) const
     if (!sunday.isValid()) {
         return wrapHtml(QStringLiteral("Who did what"), filterDescription(), rangeHtml(darkColors), darkColors);
     }
-    const QString subtitle = m_memberCombo->currentData().toInt() > 0
-        ? QStringLiteral("Only showing %1").arg(m_memberCombo->currentText())
+    const QStringList members = m_memberField->selectedNames();
+    const QString subtitle = !members.isEmpty()
+        ? QStringLiteral("Only showing %1").arg(members.join(QStringLiteral(", ")))
         : QStringLiteral("Sunday line-up");
     return wrapHtml(formatSunday(sunday), subtitle, sundayHtml(sunday, darkColors), darkColors);
 }

@@ -254,11 +254,47 @@ QComboBox::drop-down {
     border: none;
     width: 22px;
 }
-QComboBox QAbstractItemView {
+QComboBox QAbstractItemView, QListView#completerPopup {
     background: {{input}};
     border: 1px solid {{inputBorder}};
     selection-background-color: {{selection}};
     selection-color: {{selectionText}};
+}
+QListView#completerPopup::item {
+    padding: 5px 8px;
+}
+
+/* --- Multi-member field (Reports) --------------------------------------- */
+QFrame#memberPickerField {
+    border: 1px solid {{inputBorder}};
+    border-radius: 6px;
+    background: {{input}};
+}
+QFrame#memberPickerField[focused="true"] {
+    border: 1px solid {{focus}};
+}
+QLineEdit#memberPickerEdit, QLineEdit#memberPickerEdit:focus {
+    border: none;
+    background: transparent;
+    padding: 3px 4px;
+}
+QFrame#memberChip {
+    background: {{accentBg}};
+    border-radius: 11px;
+}
+QLabel#memberChipLabel {
+    color: {{accentText}};
+    font-weight: 600;
+}
+QToolButton#memberChipRemove {
+    color: {{accentText}};
+    background: transparent;
+    border: none;
+    padding: 0 4px;
+    font-weight: 700;
+}
+QToolButton#memberChipRemove:hover {
+    color: {{error}};
 }
 
 QListWidget, QTableWidget {

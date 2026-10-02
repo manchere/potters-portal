@@ -6,7 +6,6 @@
 
 #include "Models/ScheduleReportRow.h"
 
-class QComboBox;
 class QDateEdit;
 class QLabel;
 class QListWidget;
@@ -14,9 +13,10 @@ class QPushButton;
 class QTextBrowser;
 class DutyController;
 class UserController;
+class MemberPickerField;
 
 // "Reports" tab -- look up past Sunday schedules. Pick a date range (and
-// optionally one Member); the left list shows every Sunday in that range
+// optionally some Members); the left list shows every Sunday in that range
 // that had a schedule, plus an "All Sundays in range" entry at the top.
 // The right side renders a read-only "who did what" report:
 //   - a single Sunday: its line-up (duty, who served, backup, notes). A
@@ -76,7 +76,7 @@ private:
 
     QDateEdit *m_fromEdit = nullptr;
     QDateEdit *m_toEdit = nullptr;
-    QComboBox *m_memberCombo = nullptr;
+    MemberPickerField *m_memberField = nullptr;
     QListWidget *m_sundayList = nullptr;
     QTextBrowser *m_reportView = nullptr;
     QPushButton *m_saveButton = nullptr;

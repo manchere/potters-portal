@@ -68,6 +68,7 @@ add_executable (PottersPortal
   "Views/DutyTypeEditDialog.h" "Views/DutyTypeEditDialog.cpp"
   "Views/SongsView.h" "Views/SongsView.cpp"
   "Views/ReportsView.h" "Views/ReportsView.cpp"
+  "Views/MemberPickerField.h" "Views/MemberPickerField.cpp"
   "Views/SongEditDialog.h" "Views/SongEditDialog.cpp"
   "Views/AvatarLoader.h" "Views/AvatarLoader.cpp"
   "Vision/GroqQueryClient.h" "Vision/GroqQueryClient.cpp"
