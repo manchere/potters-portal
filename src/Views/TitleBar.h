@@ -25,7 +25,8 @@ public:
     // glyph/tooltip (restore vs. maximize).
     void setMaximized(bool maximized);
 
-    // Swaps the lock icon (🔒 logged out / 🔓 admin) and its tooltip.
+    // Swaps the lock icon (🔒 logged out / 🔓 admin) and its tooltip, and
+    // shows the change-password key only while an Admin is logged in.
     void setAdminLoggedIn(bool loggedIn);
 
     // Shows the theme button's glyph for switching away from the current
@@ -37,6 +38,7 @@ signals:
     void maximizeClicked();
     void closeClicked();
     void adminButtonClicked();
+    void changePasswordClicked();
     void themeButtonClicked();
 
 protected:
@@ -47,6 +49,7 @@ private:
     QLabel *m_appIcon = nullptr;
     QTabBar *m_tabBar = nullptr;
     QToolButton *m_themeButton = nullptr;
+    QToolButton *m_passwordButton = nullptr;
     QToolButton *m_adminButton = nullptr;
     QToolButton *m_minimizeButton = nullptr;
     QToolButton *m_maximizeButton = nullptr;

@@ -9,6 +9,7 @@
 #include "AdminOverviewView.h"
 #include "ScheduleTab.h"
 #include "ItemListView.h"
+#include "ChangePasswordDialog.h"
 #include "LoginDialog.h"
 #include "ReportsView.h"
 #include "SongsView.h"
@@ -136,6 +137,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_titleBar, &TitleBar::closeClicked, this, &QWidget::close);
     connect(m_titleBar, &TitleBar::maximizeClicked, this, &MainWindow::toggleMaximizeRestore);
     connect(m_titleBar, &TitleBar::adminButtonClicked, this, &MainWindow::adminButtonClicked);
+    connect(m_titleBar, &TitleBar::changePasswordClicked, this, &MainWindow::changePasswordClicked);
     connect(m_titleBar, &TitleBar::themeButtonClicked, this, &MainWindow::themeButtonClicked);
     m_titleBar->setBlackTheme(currentTheme() == Theme::Black);
 
@@ -184,6 +186,20 @@ void MainWindow::adminButtonClicked()
     m_scheduleTab->setAdminMode(isAdmin);
     m_adminOverviewView->setAdminMode(isAdmin, m_currentUser.id());
     m_songsView->setAdminMode(isAdmin);
+}
+
+void MainWindow::changePasswordClicked()
+{
+    if (m_currentUser.id() < 0) {
+        return;
+    }
+    // Re-read the account so the email goes to its current address.
+    const User admin = m_userController.userById(m_currentUser.id());
+    if (admin.id() < 0) {
+        return;
+    }
+    ChangePasswordDialog dialog(admin, &m_userController, this);
+    dialog.exec();
 }
 
 void MainWindow::themeButtonClicked()

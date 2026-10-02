@@ -44,6 +44,9 @@ public slots:
     // stale User object can't silently grant or revoke Admin. Use
     // setAdminRole() for that.
     bool updateUser(const User &user);
+    // Hashes newPassword (PasswordAuth) and stores it for userId, leaving
+    // every other field alone.
+    bool changePassword(int userId, const QString &newPassword);
     // Refuses to delete the last remaining Admin.
     bool removeUser(int id);
 

@@ -10,13 +10,8 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include "AdminContact.h"
 #include "Controllers/UserController.h"
-
-namespace
-{
-    // Who to contact for an admin password reset. Hardcoded for now.
-    const QString kAdminContactEmail = QStringLiteral("manucheremeh1995@gmail.com");
-}
 
 LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     : FramelessDialog(parent)

@@ -46,6 +46,7 @@ protected:
 private slots:
     void toggleMaximizeRestore();
     void adminButtonClicked();
+    void changePasswordClicked();
     void themeButtonClicked();
 
 private:

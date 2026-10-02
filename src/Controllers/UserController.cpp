@@ -143,6 +143,29 @@ bool UserController::updateUser(const User &user)
     return true;
 }
 
+bool UserController::changePassword(int userId, const QString &newPassword)
+{
+    const QString salt = PasswordAuth::generateSalt();
+    Database::ensureConnected();
+    QSqlQuery query;
+    query.prepare(QStringLiteral(
+        "UPDATE users SET password_hash = :password_hash, password_salt = :password_salt, "
+        "updated_at = now() WHERE id = :id"));
+    query.bindValue(QStringLiteral(":password_hash"), PasswordAuth::hashPassword(newPassword, salt));
+    query.bindValue(QStringLiteral(":password_salt"), salt);
+    query.bindValue(QStringLiteral(":id"), userId);
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return false;
+    }
+    if (query.numRowsAffected() != 1) {
+        m_lastError = QStringLiteral("That account no longer exists.");
+        return false;
+    }
+    emit usersChanged();
+    return true;
+}
+
 bool UserController::removeUser(int id)
 {
     Database::ensureConnected();
