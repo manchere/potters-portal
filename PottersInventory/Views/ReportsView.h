@@ -17,13 +17,12 @@ class UserController;
 
 // "Reports" tab -- look up past Sunday schedules. Pick a date range (and
 // optionally one Member); the left list shows every Sunday in that range
-// that had a schedule, plus a "Summary" entry at the top. The right side
-// renders a read-only report:
-//   - a single Sunday: totals, then the line-up (role, who served, backup,
-//     notes). A small tag appears next to a name only when that person
-//     had asked for time off or marked themselves away that day;
-//   - the summary: totals, how often each Member and role served (as
-//     bars), and a Sunday-by-Sunday list of filled and unfilled roles.
+// that had a schedule, plus an "All Sundays in range" entry at the top.
+// The right side renders a read-only "who did what" report:
+//   - a single Sunday: its line-up (role, who served, backup, notes). A
+//     small tag appears next to a name only when that person had asked
+//     for time off or marked themselves away that day;
+//   - all Sundays in range: each Sunday's line-up in turn, newest first.
 // "Save Report..." writes the current report as HTML (printable from any
 // browser) or CSV (for a spreadsheet).
 //
@@ -56,15 +55,15 @@ private:
     void populateSundayList();
     // darkColors is for the on-screen view in the black theme only; saved
     // files always use the light colors so they print well.
-    QString summaryHtml(bool darkColors) const;
+    QString rangeHtml(bool darkColors) const;
     QString sundayHtml(const QDate &date, bool darkColors) const;
     QString wrapHtml(const QString &title, const QString &subtitle, const QString &body, bool darkColors) const;
     // Title, subtitle, and body for whichever entry is selected.
     QString currentReportHtml(bool darkColors) const;
-    // Rows the current view shows: the whole range for the summary, or
+    // Rows the current view shows: the whole range for "All Sundays", or
     // just the selected Sunday.
     QVector<ScheduleReportRow> visibleRows() const;
-    // Invalid when the summary entry is selected.
+    // Invalid when "All Sundays in range" is selected.
     QDate selectedSunday() const;
     QString filterDescription() const;
 
