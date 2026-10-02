@@ -11,6 +11,7 @@ class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
 class QPushButton;
+class QToolButton;
 class DutyController;
 class UserController;
 class DutyTypeController;
@@ -89,6 +90,7 @@ private:
     // "Backup" + small badge + the duty's backup's name, or a dash.
     QWidget *buildBackupLine(const Duty &duty, QWidget *parent);
     QWidget *buildDutyCell(const Duty &duty, QWidget *parent);
+    QToolButton *buildEditButton(int dutyId, QWidget *parent);
     // Opens Edit Duty for one duty and saves it.
     void editDuty(int dutyId);
     // Duties only ever happen on Sundays -- rounds forward to the

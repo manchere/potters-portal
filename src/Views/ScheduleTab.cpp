@@ -298,8 +298,22 @@ QWidget *ScheduleTab::buildDutyCell(const Duty &duty, QWidget *parent)
     return cell;
 }
 
+// Opens Edit Duty for just this duty. Only added for an Admin on an
+// upcoming Sunday.
+QToolButton *ScheduleTab::buildEditButton(int dutyId, QWidget *parent)
+{
+    auto *editButton = new QToolButton(parent);
+    editButton->setObjectName(QStringLiteral("dutyEditButton"));
+    editButton->setText(QStringLiteral("Edit"));
+    editButton->setToolTip(QStringLiteral("Edit just this duty and its backup"));
+    editButton->setCursor(Qt::PointingHandCursor);
+    connect(editButton, &QToolButton::clicked, this, [this, dutyId] { editDuty(dutyId); });
+    return editButton;
+}
+
 // One duty, laid out across the full row: the member (badge, name in
-// bold, any notes beneath), the duty as an icon pill, and the backup.
+// bold, any notes beneath), the duty as an icon pill, the backup, and
+// (for an Admin on an upcoming Sunday) an Edit button.
 QWidget *ScheduleTab::buildRow(const Duty &duty)
 {
     auto *row = new QWidget(m_resultsList);
@@ -323,6 +337,9 @@ QWidget *ScheduleTab::buildRow(const Duty &duty)
     layout->addSpacing(kNameToDutyGap);
     layout->addWidget(buildDutyCell(duty, row));
     layout->addWidget(buildBackupLine(duty, row), 1);
+    if (m_isAdmin && selectedSundayEditable()) {
+        layout->addWidget(buildEditButton(duty.id(), row));
+    }
     return row;
 }
 
@@ -361,14 +378,7 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
         lineLayout->addWidget(buildDutyCell(duty, line));
         lineLayout->addWidget(buildBackupLine(duty, line), 1);
         if (canEdit) {
-            auto *editButton = new QToolButton(line);
-            editButton->setObjectName(QStringLiteral("dutyEditButton"));
-            editButton->setText(QStringLiteral("Edit"));
-            editButton->setToolTip(QStringLiteral("Edit just this duty and its backup"));
-            editButton->setCursor(Qt::PointingHandCursor);
-            const int dutyId = duty.id();
-            connect(editButton, &QToolButton::clicked, this, [this, dutyId] { editDuty(dutyId); });
-            lineLayout->addWidget(editButton);
+            lineLayout->addWidget(buildEditButton(duty.id(), line));
         }
         dutiesLayout->addWidget(line);
     }
@@ -388,8 +398,8 @@ void ScheduleTab::setAdminMode(bool isAdmin)
     m_pasteButton->setVisible(isAdmin);
     m_copiedLabel->setVisible(isAdmin);
     updateActionState();
-    // Combined rows carry per-duty Edit buttons only an Admin sees.
-    if (m_combineCheck->isChecked() && m_selectedDate.isValid()) {
+    // Rows carry per-duty Edit buttons only an Admin sees.
+    if (m_selectedDate.isValid()) {
         rebuildResults();
     }
 }
