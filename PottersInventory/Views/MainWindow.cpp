@@ -106,17 +106,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_itemListView = new ItemListView(&m_itemController, &m_tagController, &m_categoryController, this);
     m_adminOverviewView = new AdminOverviewView(
-        &m_tagController, &m_categoryController, &m_roleTypeController, &m_userController, &m_networkManager, this);
+        &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, &m_networkManager, this);
     m_dateNavigationTab = new DateNavigationTab(
-        &m_assignmentController, &m_userController, &m_roleTypeController, &m_networkManager, this);
+        &m_dutyController, &m_userController, &m_dutyTypeController, &m_networkManager, this);
     m_songsView = new SongsView(&m_songController, this);
-    m_reportsView = new ReportsView(&m_assignmentController, &m_userController, this);
+    m_reportsView = new ReportsView(&m_dutyController, &m_userController, this);
 
     auto *frame = new ResizeFrame(this);
 
     m_titleBar = new TitleBar(frame);
     // Date is inserted first (leftmost) per FR-8.1; the rest keep their
-    // existing left-to-right order. Assigning a role happens via a button
+    // existing left-to-right order. Assigning a duty happens via a button
     // on the Date tab itself (see DateNavigationTab), not a separate tab.
     m_titleBar->tabBar()->insertTab(0, QStringLiteral("Date"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Reports"));
@@ -153,17 +153,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(&m_categoryController, &CategoryController::categoriesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
     connect(&m_tagController, &TagController::tagsChanged, m_adminOverviewView, &AdminOverviewView::refresh);
-    connect(&m_assignmentController, &AssignmentController::assignmentsChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_dutyController, &DutyController::dutiesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
     connect(&m_userController, &UserController::usersChanged, m_adminOverviewView, &AdminOverviewView::refresh);
-    connect(&m_roleTypeController, &RoleTypeController::roleTypesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
 
-    connect(&m_assignmentController, &AssignmentController::assignmentsChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
+    connect(&m_dutyController, &DutyController::dutiesChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
     connect(&m_userController, &UserController::usersChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
-    connect(&m_roleTypeController, &RoleTypeController::roleTypesChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
+    connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
 
-    connect(&m_assignmentController, &AssignmentController::assignmentsChanged, m_reportsView, &ReportsView::refresh);
+    connect(&m_dutyController, &DutyController::dutiesChanged, m_reportsView, &ReportsView::refresh);
     connect(&m_userController, &UserController::usersChanged, m_reportsView, &ReportsView::refresh);
-    connect(&m_roleTypeController, &RoleTypeController::roleTypesChanged, m_reportsView, &ReportsView::refresh);
+    connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_reportsView, &ReportsView::refresh);
 }
 
 void MainWindow::adminButtonClicked()

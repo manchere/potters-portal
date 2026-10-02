@@ -4,15 +4,15 @@
 
 #include <QVector>
 
-#include "Models/Assignment.h"
+#include "Models/Duty.h"
 #include "Models/User.h"
 
 class QNetworkAccessManager;
-class RoleTypeController;
+class DutyTypeController;
 
 // "Responsibilities" modal opened by double-clicking a member's profile
 // row in DateNavigationTab's results list -- a quick summary of
-// everything they've ever been assigned (role breakdown + full history),
+// everything they've ever been assigned (duty breakdown + full history),
 // not just what's scheduled for the currently selected Sunday.
 class MemberStatsDialog : public FramelessDialog
 {
@@ -21,8 +21,8 @@ class MemberStatsDialog : public FramelessDialog
 public:
     MemberStatsDialog(
         const User &user,
-        const QVector<Assignment> &assignments,
-        RoleTypeController *roleTypeController,
+        const QVector<Duty> &duties,
+        DutyTypeController *dutyTypeController,
         QNetworkAccessManager *networkManager,
         QWidget *parent = nullptr);
 };

@@ -12,8 +12,8 @@
 #include <QTcpServer>
 
 #include "Auth/PasswordAuth.h"
-#include "Controllers/AssignmentController.h"
-#include "Controllers/RoleTypeController.h"
+#include "Controllers/DutyController.h"
+#include "Controllers/DutyTypeController.h"
 #include "Controllers/AvailabilityController.h"
 #include "Controllers/CategoryController.h"
 #include "Controllers/ItemController.h"
@@ -73,8 +73,8 @@ int main(int argc, char **argv)
     CategoryController categoryController;
     UserController userController;
     SessionController sessionController;
-    AssignmentController assignmentController;
-    RoleTypeController roleTypeController;
+    DutyController dutyController;
+    DutyTypeController dutyTypeController;
     AvailabilityController availabilityController;
     NonAvailabilityRequestController requestController;
     QNetworkAccessManager networkManager;
@@ -295,32 +295,32 @@ int main(int argc, char **argv)
         return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
     });
 
-    // --- Assignments (mobile: "my assignments" only; Admin CRUD/scheduling
-    // stays in-process on the desktop app via AssignmentController directly,
+    // --- Duties (mobile: "my duties" only; Admin CRUD/scheduling
+    // stays in-process on the desktop app via DutyController directly,
     // same as Items/Tags/Categories) -----------------------------------------
-    server.route("/api/assignments/me", QHttpServerRequest::Method::Get,
-                 [&sessionController, &userController, &assignmentController, &roleTypeController,
+    server.route("/api/duties/me", QHttpServerRequest::Method::Get,
+                 [&sessionController, &userController, &dutyController, &dutyTypeController,
                   &availabilityController, &requestController](const QHttpServerRequest &request) {
         User currentUser;
         if (!requireAuth(request, sessionController, userController, currentUser)) {
             return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
         }
-        QJsonArray assignments;
-        for (const Assignment &assignment : assignmentController.assignmentsForMember(currentUser.id())) {
-            QJsonObject json = Json::assignmentToJson(assignment, roleTypeController.roleTypeById(assignment.roleId()));
-            // FR-4.2: flag when this assignment's date collides with a mark
+        QJsonArray duties;
+        for (const Duty &duty : dutyController.dutiesForMember(currentUser.id())) {
+            QJsonObject json = Json::dutyToJson(duty, dutyTypeController.dutyTypeById(duty.dutyTypeId()));
+            // FR-4.2: flag when this duty's date collides with a mark
             // the member already made on their general calendar, so the
             // mobile client can prompt them to file a formal request.
             json[QStringLiteral("conflicts_with_calendar")] =
-                availabilityController.isMarked(currentUser.id(), assignment.serviceDate());
+                availabilityController.isMarked(currentUser.id(), duty.serviceDate());
             const NonAvailabilityRequest existing =
-                requestController.requestForAssignmentAndUser(assignment.id(), currentUser.id());
+                requestController.requestForDutyAndUser(duty.id(), currentUser.id());
             json[QStringLiteral("non_availability_request")] = existing.id() >= 0
                 ? QJsonValue(Json::nonAvailabilityRequestToJson(existing))
                 : QJsonValue();
-            assignments.append(json);
+            duties.append(json);
         }
-        return QHttpServerResponse(assignments);
+        return QHttpServerResponse(duties);
     });
 
     // --- Availability (general calendar, FR-3) --------------------------------
@@ -376,21 +376,21 @@ int main(int argc, char **argv)
 
     // --- Non-availability requests (FR-4, mobile-submitted; Admin
     // approve/deny stays in-process on the desktop app) -----------------------
-    server.route("/api/assignments/<arg>/non-availability-requests", QHttpServerRequest::Method::Post,
-                 [&sessionController, &userController, &assignmentController, &requestController]
-                 (int assignmentId, const QHttpServerRequest &request) {
+    server.route("/api/duties/<arg>/non-availability-requests", QHttpServerRequest::Method::Post,
+                 [&sessionController, &userController, &dutyController, &requestController]
+                 (int dutyId, const QHttpServerRequest &request) {
         User currentUser;
         if (!requireAuth(request, sessionController, userController, currentUser)) {
             return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
         }
-        const Assignment assignment = assignmentController.assignmentById(assignmentId);
-        if (assignment.id() < 0) {
-            return errorResponse(QStringLiteral("assignment not found"), StatusCode::NotFound);
+        const Duty duty = dutyController.dutyById(dutyId);
+        if (duty.id() < 0) {
+            return errorResponse(QStringLiteral("duty not found"), StatusCode::NotFound);
         }
         // FR-4.1: only valid once the Admin has actually assigned this user
-        // (as primary or support) to this assignment.
-        if (assignment.memberId() != currentUser.id() && assignment.supportMemberId() != currentUser.id()) {
-            return errorResponse(QStringLiteral("you are not assigned to this assignment"), StatusCode::Forbidden);
+        // (as primary or support) to this duty.
+        if (duty.memberId() != currentUser.id() && duty.supportMemberId() != currentUser.id()) {
+            return errorResponse(QStringLiteral("you are not assigned to this duty"), StatusCode::Forbidden);
         }
         const QJsonDocument doc = QJsonDocument::fromJson(request.body());
         const QString message = doc.isObject()
@@ -400,7 +400,7 @@ int main(int argc, char **argv)
             return errorResponse(QStringLiteral("a message explaining the reason is required"), StatusCode::BadRequest);
         }
         NonAvailabilityRequest newRequest;
-        newRequest.setAssignmentId(assignmentId);
+        newRequest.setDutyId(dutyId);
         newRequest.setUserId(currentUser.id());
         newRequest.setMessage(message);
         if (!requestController.create(newRequest)) {

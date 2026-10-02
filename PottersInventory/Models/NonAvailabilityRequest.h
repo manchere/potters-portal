@@ -15,21 +15,21 @@ enum class RequestStatus
 QString requestStatusToString(RequestStatus status);
 RequestStatus requestStatusFromString(const QString &status);
 
-// A formal, assignment-specific non-availability request
+// A formal, duty-specific non-availability request
 // (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md FR-4, FR-5): only valid against
-// an assignment the requesting user is already on, requires a message,
+// a duty the requesting user is already on, requires a message,
 // and is decided (approved/denied) by an Admin.
 class NonAvailabilityRequest
 {
 public:
     NonAvailabilityRequest() = default;
-    NonAvailabilityRequest(int id, int assignmentId, int userId, QString message);
+    NonAvailabilityRequest(int id, int dutyId, int userId, QString message);
 
     int id() const { return m_id; }
     void setId(int id) { m_id = id; }
 
-    int assignmentId() const { return m_assignmentId; }
-    void setAssignmentId(int assignmentId) { m_assignmentId = assignmentId; }
+    int dutyId() const { return m_dutyId; }
+    void setDutyId(int dutyId) { m_dutyId = dutyId; }
 
     int userId() const { return m_userId; }
     void setUserId(int userId) { m_userId = userId; }
@@ -48,7 +48,7 @@ public:
 
 private:
     int m_id = -1;
-    int m_assignmentId = -1;
+    int m_dutyId = -1;
     int m_userId = -1;
     QString m_message;
     RequestStatus m_status = RequestStatus::Pending;

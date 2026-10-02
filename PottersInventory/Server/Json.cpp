@@ -74,19 +74,19 @@ namespace Json
         return json;
     }
 
-    QJsonObject assignmentToJson(const Assignment &assignment, const RoleType &role)
+    QJsonObject dutyToJson(const Duty &duty, const DutyType &dutyType)
     {
         QJsonObject json;
-        json[QStringLiteral("id")] = assignment.id();
-        json[QStringLiteral("role_id")] = assignment.roleId();
-        json[QStringLiteral("role_name")] = role.name();
-        json[QStringLiteral("role_icon")] = role.icon();
-        json[QStringLiteral("service_date")] = assignment.serviceDate().toString(Qt::ISODate);
-        json[QStringLiteral("member_id")] = assignment.memberId() > 0 ? QJsonValue(assignment.memberId()) : QJsonValue();
-        json[QStringLiteral("support_member_id")] = assignment.supportMemberId() > 0
-            ? QJsonValue(assignment.supportMemberId())
+        json[QStringLiteral("id")] = duty.id();
+        json[QStringLiteral("duty_type_id")] = duty.dutyTypeId();
+        json[QStringLiteral("duty_type_name")] = dutyType.name();
+        json[QStringLiteral("duty_type_icon")] = dutyType.icon();
+        json[QStringLiteral("service_date")] = duty.serviceDate().toString(Qt::ISODate);
+        json[QStringLiteral("member_id")] = duty.memberId() > 0 ? QJsonValue(duty.memberId()) : QJsonValue();
+        json[QStringLiteral("support_member_id")] = duty.supportMemberId() > 0
+            ? QJsonValue(duty.supportMemberId())
             : QJsonValue();
-        json[QStringLiteral("notes")] = assignment.notes();
+        json[QStringLiteral("notes")] = duty.notes();
         return json;
     }
 
@@ -103,7 +103,7 @@ namespace Json
     {
         QJsonObject json;
         json[QStringLiteral("id")] = request.id();
-        json[QStringLiteral("assignment_id")] = request.assignmentId();
+        json[QStringLiteral("duty_id")] = request.dutyId();
         json[QStringLiteral("user_id")] = request.userId();
         json[QStringLiteral("message")] = request.message();
         json[QStringLiteral("status")] = requestStatusToString(request.status());

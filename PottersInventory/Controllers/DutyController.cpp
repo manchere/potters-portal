@@ -1,4 +1,4 @@
-#include "AssignmentController.h"
+#include "DutyController.h"
 
 #include <QSqlDatabase>
 #include <QSqlError>
@@ -10,182 +10,182 @@
 namespace
 {
     const QString kSelectColumns = QStringLiteral(
-        "id, role_id, service_date, member_id, support_member_id, notes");
+        "id, duty_type_id, service_date, member_id, support_member_id, notes");
 }
 
-AssignmentController::AssignmentController(QObject *parent)
+DutyController::DutyController(QObject *parent)
     : QObject(parent)
 {
 }
 
-static Assignment assignmentFromQuery(const QSqlQuery &query)
+static Duty dutyFromQuery(const QSqlQuery &query)
 {
-    Assignment assignment;
-    assignment.setId(query.value(QStringLiteral("id")).toInt());
-    assignment.setRoleId(query.value(QStringLiteral("role_id")).toInt());
-    assignment.setServiceDate(query.value(QStringLiteral("service_date")).toDate());
+    Duty duty;
+    duty.setId(query.value(QStringLiteral("id")).toInt());
+    duty.setDutyTypeId(query.value(QStringLiteral("duty_type_id")).toInt());
+    duty.setServiceDate(query.value(QStringLiteral("service_date")).toDate());
     const QVariant memberId = query.value(QStringLiteral("member_id"));
-    assignment.setMemberId(memberId.isNull() ? -1 : memberId.toInt());
+    duty.setMemberId(memberId.isNull() ? -1 : memberId.toInt());
     const QVariant supportMemberId = query.value(QStringLiteral("support_member_id"));
-    assignment.setSupportMemberId(supportMemberId.isNull() ? -1 : supportMemberId.toInt());
-    assignment.setNotes(query.value(QStringLiteral("notes")).toString());
-    return assignment;
+    duty.setSupportMemberId(supportMemberId.isNull() ? -1 : supportMemberId.toInt());
+    duty.setNotes(query.value(QStringLiteral("notes")).toString());
+    return duty;
 }
 
-QVector<Assignment> AssignmentController::allAssignments() const
+QVector<Duty> DutyController::allDuties() const
 {
-    QVector<Assignment> assignments;
+    QVector<Duty> duties;
     Database::ensureConnected();
     QSqlQuery query;
-    query.prepare(QStringLiteral("SELECT %1 FROM assignments ORDER BY service_date").arg(kSelectColumns));
+    query.prepare(QStringLiteral("SELECT %1 FROM duties ORDER BY service_date").arg(kSelectColumns));
     if (!query.exec()) {
         m_lastError = query.lastError().text();
-        return assignments;
+        return duties;
     }
     while (query.next()) {
-        assignments.append(assignmentFromQuery(query));
+        duties.append(dutyFromQuery(query));
     }
-    return assignments;
+    return duties;
 }
 
-Assignment AssignmentController::assignmentById(int id) const
+Duty DutyController::dutyById(int id) const
 {
     Database::ensureConnected();
     QSqlQuery query;
-    query.prepare(QStringLiteral("SELECT %1 FROM assignments WHERE id = :id").arg(kSelectColumns));
+    query.prepare(QStringLiteral("SELECT %1 FROM duties WHERE id = :id").arg(kSelectColumns));
     query.bindValue(QStringLiteral(":id"), id);
     if (!query.exec() || !query.next()) {
         m_lastError = query.lastError().text();
-        return Assignment();
+        return Duty();
     }
-    return assignmentFromQuery(query);
+    return dutyFromQuery(query);
 }
 
-QVector<Assignment> AssignmentController::assignmentsForMember(int userId) const
+QVector<Duty> DutyController::dutiesForMember(int userId) const
 {
-    QVector<Assignment> assignments;
+    QVector<Duty> duties;
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT %1 FROM assignments "
+        "SELECT %1 FROM duties "
         "WHERE (member_id = :user_id OR support_member_id = :user_id) AND service_date >= CURRENT_DATE "
         "ORDER BY service_date").arg(kSelectColumns));
     query.bindValue(QStringLiteral(":user_id"), userId);
     if (!query.exec()) {
         m_lastError = query.lastError().text();
-        return assignments;
+        return duties;
     }
     while (query.next()) {
-        assignments.append(assignmentFromQuery(query));
+        duties.append(dutyFromQuery(query));
     }
-    return assignments;
+    return duties;
 }
 
-QVector<Assignment> AssignmentController::allAssignmentsForMember(int userId) const
+QVector<Duty> DutyController::allDutiesForMember(int userId) const
 {
-    QVector<Assignment> assignments;
+    QVector<Duty> duties;
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT %1 FROM assignments "
+        "SELECT %1 FROM duties "
         "WHERE member_id = :user_id OR support_member_id = :user_id "
         "ORDER BY service_date DESC").arg(kSelectColumns));
     query.bindValue(QStringLiteral(":user_id"), userId);
     if (!query.exec()) {
         m_lastError = query.lastError().text();
-        return assignments;
+        return duties;
     }
     while (query.next()) {
-        assignments.append(assignmentFromQuery(query));
+        duties.append(dutyFromQuery(query));
     }
-    return assignments;
+    return duties;
 }
 
-QVector<Assignment> AssignmentController::assignmentsForDate(const QDate &date) const
+QVector<Duty> DutyController::dutiesForDate(const QDate &date) const
 {
-    QVector<Assignment> assignments;
+    QVector<Duty> duties;
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT %1 FROM assignments WHERE service_date = :service_date ORDER BY role_id").arg(kSelectColumns));
+        "SELECT %1 FROM duties WHERE service_date = :service_date ORDER BY duty_type_id").arg(kSelectColumns));
     query.bindValue(QStringLiteral(":service_date"), date);
     if (!query.exec()) {
         m_lastError = query.lastError().text();
-        return assignments;
+        return duties;
     }
     while (query.next()) {
-        assignments.append(assignmentFromQuery(query));
+        duties.append(dutyFromQuery(query));
     }
-    return assignments;
+    return duties;
 }
 
-bool AssignmentController::addAssignment(Assignment &assignment)
+bool DutyController::addDuty(Duty &duty)
 {
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "INSERT INTO assignments (role_id, service_date, member_id, support_member_id, notes) "
-        "VALUES (:role_id, :service_date, :member_id, :support_member_id, :notes) RETURNING id"));
-    query.bindValue(QStringLiteral(":role_id"), assignment.roleId());
-    query.bindValue(QStringLiteral(":service_date"), assignment.serviceDate());
+        "INSERT INTO duties (duty_type_id, service_date, member_id, support_member_id, notes) "
+        "VALUES (:duty_type_id, :service_date, :member_id, :support_member_id, :notes) RETURNING id"));
+    query.bindValue(QStringLiteral(":duty_type_id"), duty.dutyTypeId());
+    query.bindValue(QStringLiteral(":service_date"), duty.serviceDate());
     query.bindValue(QStringLiteral(":member_id"),
-        assignment.memberId() > 0 ? QVariant(assignment.memberId()) : QVariant());
+        duty.memberId() > 0 ? QVariant(duty.memberId()) : QVariant());
     query.bindValue(QStringLiteral(":support_member_id"),
-        assignment.supportMemberId() > 0 ? QVariant(assignment.supportMemberId()) : QVariant());
-    query.bindValue(QStringLiteral(":notes"), assignment.notes());
+        duty.supportMemberId() > 0 ? QVariant(duty.supportMemberId()) : QVariant());
+    query.bindValue(QStringLiteral(":notes"), duty.notes());
     if (!query.exec() || !query.next()) {
         m_lastError = query.lastError().text();
         return false;
     }
-    assignment.setId(query.value(0).toInt());
-    emit assignmentsChanged();
+    duty.setId(query.value(0).toInt());
+    emit dutiesChanged();
     return true;
 }
 
-bool AssignmentController::updateAssignment(const Assignment &assignment)
+bool DutyController::updateDuty(const Duty &duty)
 {
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "UPDATE assignments SET role_id = :role_id, service_date = :service_date, member_id = :member_id, "
+        "UPDATE duties SET duty_type_id = :duty_type_id, service_date = :service_date, member_id = :member_id, "
         "support_member_id = :support_member_id, notes = :notes, updated_at = now() WHERE id = :id"));
-    query.bindValue(QStringLiteral(":role_id"), assignment.roleId());
-    query.bindValue(QStringLiteral(":service_date"), assignment.serviceDate());
+    query.bindValue(QStringLiteral(":duty_type_id"), duty.dutyTypeId());
+    query.bindValue(QStringLiteral(":service_date"), duty.serviceDate());
     query.bindValue(QStringLiteral(":member_id"),
-        assignment.memberId() > 0 ? QVariant(assignment.memberId()) : QVariant());
+        duty.memberId() > 0 ? QVariant(duty.memberId()) : QVariant());
     query.bindValue(QStringLiteral(":support_member_id"),
-        assignment.supportMemberId() > 0 ? QVariant(assignment.supportMemberId()) : QVariant());
-    query.bindValue(QStringLiteral(":notes"), assignment.notes());
-    query.bindValue(QStringLiteral(":id"), assignment.id());
+        duty.supportMemberId() > 0 ? QVariant(duty.supportMemberId()) : QVariant());
+    query.bindValue(QStringLiteral(":notes"), duty.notes());
+    query.bindValue(QStringLiteral(":id"), duty.id());
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return false;
     }
-    emit assignmentsChanged();
+    emit dutiesChanged();
     return true;
 }
 
-bool AssignmentController::removeAssignment(int id)
+bool DutyController::removeDuty(int id)
 {
     Database::ensureConnected();
     QSqlQuery query;
-    query.prepare(QStringLiteral("DELETE FROM assignments WHERE id = :id"));
+    query.prepare(QStringLiteral("DELETE FROM duties WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), id);
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return false;
     }
-    emit assignmentsChanged();
+    emit dutiesChanged();
     return true;
 }
 
-QStringList AssignmentController::membersMarkedUnavailable(const QDate &date) const
+QStringList DutyController::membersMarkedUnavailable(const QDate &date) const
 {
     QStringList names;
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT DISTINCT u.name FROM assignments a "
+        "SELECT DISTINCT u.name FROM duties a "
         "JOIN users u ON u.id = a.member_id OR u.id = a.support_member_id "
         "JOIN availability_marks m ON m.user_id = u.id AND m.date = a.service_date "
         "WHERE a.service_date = :service_date ORDER BY u.name"));
@@ -200,7 +200,7 @@ QStringList AssignmentController::membersMarkedUnavailable(const QDate &date) co
     return names;
 }
 
-bool AssignmentController::copySchedule(
+bool DutyController::copySchedule(
     const QDate &fromDate, const QDate &toDate, bool replaceExisting, int *copied, int *skipped)
 {
     if (copied) {
@@ -227,7 +227,7 @@ bool AssignmentController::copySchedule(
     };
 
     QSqlQuery countSource;
-    countSource.prepare(QStringLiteral("SELECT COUNT(*) FROM assignments WHERE service_date = :from_date"));
+    countSource.prepare(QStringLiteral("SELECT COUNT(*) FROM duties WHERE service_date = :from_date"));
     countSource.bindValue(QStringLiteral(":from_date"), fromDate);
     if (!countSource.exec() || !countSource.next()) {
         return fail(countSource);
@@ -236,23 +236,23 @@ bool AssignmentController::copySchedule(
 
     if (replaceExisting) {
         QSqlQuery clear;
-        clear.prepare(QStringLiteral("DELETE FROM assignments WHERE service_date = :to_date"));
+        clear.prepare(QStringLiteral("DELETE FROM duties WHERE service_date = :to_date"));
         clear.bindValue(QStringLiteral(":to_date"), toDate);
         if (!clear.exec()) {
             return fail(clear);
         }
     }
 
-    // IS NOT DISTINCT FROM so an unassigned (NULL member) slot for a role
+    // IS NOT DISTINCT FROM so an unassigned (NULL member) slot for a duty type
     // also counts as "already there" and isn't duplicated.
     QSqlQuery insert;
     insert.prepare(QStringLiteral(
-        "INSERT INTO assignments (role_id, service_date, member_id, support_member_id, notes) "
-        "SELECT src.role_id, CAST(:to_date AS DATE), src.member_id, src.support_member_id, src.notes "
-        "FROM assignments src "
+        "INSERT INTO duties (duty_type_id, service_date, member_id, support_member_id, notes) "
+        "SELECT src.duty_type_id, CAST(:to_date AS DATE), src.member_id, src.support_member_id, src.notes "
+        "FROM duties src "
         "WHERE src.service_date = :from_date "
-        "AND NOT EXISTS (SELECT 1 FROM assignments dst WHERE dst.service_date = :to_date "
-        "AND dst.role_id = src.role_id AND dst.member_id IS NOT DISTINCT FROM src.member_id) "
+        "AND NOT EXISTS (SELECT 1 FROM duties dst WHERE dst.service_date = :to_date "
+        "AND dst.duty_type_id = src.duty_type_id AND dst.member_id IS NOT DISTINCT FROM src.member_id) "
         "ORDER BY src.id"));
     insert.bindValue(QStringLiteral(":to_date"), toDate);
     insert.bindValue(QStringLiteral(":from_date"), fromDate);
@@ -272,24 +272,24 @@ bool AssignmentController::copySchedule(
     if (skipped) {
         *skipped = sourceCount - inserted;
     }
-    emit assignmentsChanged();
+    emit dutiesChanged();
     return true;
 }
 
-QVector<ScheduleReportRow> AssignmentController::scheduleReport(const QDate &fromDate, const QDate &toDate, int memberId) const
+QVector<ScheduleReportRow> DutyController::scheduleReport(const QDate &fromDate, const QDate &toDate, int memberId) const
 {
     QVector<ScheduleReportRow> rows;
     Database::ensureConnected();
     QString sql = QStringLiteral(
-        "SELECT a.id, a.service_date, r.name AS role_name, r.icon AS role_icon, "
+        "SELECT a.id, a.service_date, r.name AS duty_type_name, r.icon AS duty_type_icon, "
         "a.member_id, m.name AS member_name, a.support_member_id, s.name AS support_name, a.notes, "
         "(SELECT n.status FROM non_availability_requests n "
-        " WHERE n.assignment_id = a.id AND n.user_id = a.member_id "
+        " WHERE n.duty_id = a.id AND n.user_id = a.member_id "
         " ORDER BY n.created_at DESC LIMIT 1) AS request_status, "
         "EXISTS (SELECT 1 FROM availability_marks am "
         " WHERE am.user_id = a.member_id AND am.date = a.service_date) AS member_unavailable "
-        "FROM assignments a "
-        "JOIN assignment_roles r ON r.id = a.role_id "
+        "FROM duties a "
+        "JOIN duty_types r ON r.id = a.duty_type_id "
         "LEFT JOIN users m ON m.id = a.member_id "
         "LEFT JOIN users s ON s.id = a.support_member_id "
         "WHERE a.service_date BETWEEN :from_date AND :to_date ");
@@ -311,10 +311,10 @@ QVector<ScheduleReportRow> AssignmentController::scheduleReport(const QDate &fro
     }
     while (query.next()) {
         ScheduleReportRow row;
-        row.assignmentId = query.value(QStringLiteral("id")).toInt();
+        row.dutyId = query.value(QStringLiteral("id")).toInt();
         row.serviceDate = query.value(QStringLiteral("service_date")).toDate();
-        row.roleName = query.value(QStringLiteral("role_name")).toString();
-        row.roleIcon = query.value(QStringLiteral("role_icon")).toString();
+        row.dutyTypeName = query.value(QStringLiteral("duty_type_name")).toString();
+        row.dutyTypeIcon = query.value(QStringLiteral("duty_type_icon")).toString();
         const QVariant member = query.value(QStringLiteral("member_id"));
         row.memberId = member.isNull() ? -1 : member.toInt();
         row.memberName = query.value(QStringLiteral("member_name")).toString();

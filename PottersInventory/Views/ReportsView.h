@@ -12,14 +12,14 @@ class QLabel;
 class QListWidget;
 class QPushButton;
 class QTextBrowser;
-class AssignmentController;
+class DutyController;
 class UserController;
 
 // "Reports" tab -- look up past Sunday schedules. Pick a date range (and
 // optionally one Member); the left list shows every Sunday in that range
 // that had a schedule, plus an "All Sundays in range" entry at the top.
 // The right side renders a read-only "who did what" report:
-//   - a single Sunday: its line-up (role, who served, backup, notes). A
+//   - a single Sunday: its line-up (duty, who served, backup, notes). A
 //     small tag appears next to a name only when that person had asked
 //     for time off or marked themselves away that day;
 //   - all Sundays in range: each Sunday's line-up in turn, newest first.
@@ -33,10 +33,10 @@ class ReportsView : public QWidget
     Q_OBJECT
 
 public:
-    ReportsView(AssignmentController *assignmentController, UserController *userController, QWidget *parent = nullptr);
+    ReportsView(DutyController *dutyController, UserController *userController, QWidget *parent = nullptr);
 
 public slots:
-    // Reloads the Member filter and the report (e.g. after assignments or
+    // Reloads the Member filter and the report (e.g. after duties or
     // users change).
     void refresh();
 
@@ -67,7 +67,7 @@ private:
     QDate selectedSunday() const;
     QString filterDescription() const;
 
-    AssignmentController *m_assignmentController = nullptr;
+    DutyController *m_dutyController = nullptr;
     UserController *m_userController = nullptr;
 
     // Cached result of the last scheduleReport() query for the current

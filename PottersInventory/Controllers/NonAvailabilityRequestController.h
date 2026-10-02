@@ -17,13 +17,13 @@ public:
     QVector<NonAvailabilityRequest> listForUser(int userId) const;
 
     // Used to avoid a Member submitting a second request against the same
-    // assignment; returns an invalid (id < 0) request if none exists.
-    NonAvailabilityRequest requestForAssignmentAndUser(int assignmentId, int userId) const;
+    // duty; returns an invalid (id < 0) request if none exists.
+    NonAvailabilityRequest requestForDutyAndUser(int dutyId, int userId) const;
 
     QString lastError() const { return m_lastError; }
 
 public slots:
-    // request.assignmentId()/userId()/message() must be set by the caller;
+    // request.dutyId()/userId()/message() must be set by the caller;
     // status is always inserted as Pending regardless of what's set on
     // request (FR-4.4 -- a request always starts pending).
     bool create(NonAvailabilityRequest &request);

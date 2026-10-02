@@ -13,31 +13,31 @@
 #include "AvatarLoader.h"
 #include "CategoryEditDialog.h"
 #include "Controllers/CategoryController.h"
-#include "Controllers/RoleTypeController.h"
+#include "Controllers/DutyTypeController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
 #include "MemberEditDialog.h"
-#include "RoleTypeEditDialog.h"
+#include "DutyTypeEditDialog.h"
 #include "TagEditDialog.h"
 
 AdminOverviewView::AdminOverviewView(
     TagController *tagController,
     CategoryController *categoryController,
-    RoleTypeController *roleTypeController,
+    DutyTypeController *dutyTypeController,
     UserController *userController,
     QNetworkAccessManager *networkManager,
     QWidget *parent)
     : QWidget(parent)
     , m_tagController(tagController)
     , m_categoryController(categoryController)
-    , m_roleTypeController(roleTypeController)
+    , m_dutyTypeController(dutyTypeController)
     , m_userController(userController)
     , m_networkManager(networkManager)
 {
     auto *title = new QLabel(QStringLiteral("Taxonomy"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        QStringLiteral("Browse Members, Tags, Categories, or Assignment Types one list at a time. "
+        QStringLiteral("Browse Members, Tags, Categories, or Duty Types one list at a time. "
                         "Double-click a row to edit it, or use Delete to remove it."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
@@ -45,8 +45,8 @@ AdminOverviewView::AdminOverviewView(
     m_membersToggle = new QPushButton(QStringLiteral("Members"), this);
     m_tagsToggle = new QPushButton(QStringLiteral("Tags"), this);
     m_categoriesToggle = new QPushButton(QStringLiteral("Categories"), this);
-    m_assignmentTypesToggle = new QPushButton(QStringLiteral("Assignment Types"), this);
-    for (QPushButton *toggle : {m_membersToggle, m_tagsToggle, m_categoriesToggle, m_assignmentTypesToggle}) {
+    m_dutyTypesToggle = new QPushButton(QStringLiteral("Duty Types"), this);
+    for (QPushButton *toggle : {m_membersToggle, m_tagsToggle, m_categoriesToggle, m_dutyTypesToggle}) {
         toggle->setCheckable(true);
         toggle->setObjectName(QStringLiteral("secondaryButton"));
         connect(toggle, &QPushButton::clicked, this, &AdminOverviewView::kindButtonClicked);
@@ -57,13 +57,13 @@ AdminOverviewView::AdminOverviewView(
     m_kindGroup->addButton(m_membersToggle);
     m_kindGroup->addButton(m_tagsToggle);
     m_kindGroup->addButton(m_categoriesToggle);
-    m_kindGroup->addButton(m_assignmentTypesToggle);
+    m_kindGroup->addButton(m_dutyTypesToggle);
 
     auto *toggleRow = new QHBoxLayout;
     toggleRow->addWidget(m_membersToggle);
     toggleRow->addWidget(m_tagsToggle);
     toggleRow->addWidget(m_categoriesToggle);
-    toggleRow->addWidget(m_assignmentTypesToggle);
+    toggleRow->addWidget(m_dutyTypesToggle);
     toggleRow->addStretch();
 
     m_searchEdit = new QLineEdit(this);
@@ -76,12 +76,12 @@ AdminOverviewView::AdminOverviewView(
     connect(m_addTagButton, &QPushButton::clicked, this, &AdminOverviewView::addTagClicked);
     m_addCategoryButton = new QPushButton(QStringLiteral("+  Add Category"), this);
     connect(m_addCategoryButton, &QPushButton::clicked, this, &AdminOverviewView::addCategoryClicked);
-    m_addAssignmentButton = new QPushButton(QStringLiteral("+  Add Assignment"), this);
-    m_addAssignmentButton->setToolTip(
-        QStringLiteral("Define a new duty type (name + icon) -- to schedule a Member against a role for a "
+    m_addDutyTypeButton = new QPushButton(QStringLiteral("+  Add Duty Type"), this);
+    m_addDutyTypeButton->setToolTip(
+        QStringLiteral("Define a new duty type (name + icon) -- to give a Member a duty on a "
                         "specific Sunday, use the Date tab instead."));
-    connect(m_addAssignmentButton, &QPushButton::clicked, this, &AdminOverviewView::addAssignmentTypeClicked);
-    for (QPushButton *addButton : {m_addMemberButton, m_addTagButton, m_addCategoryButton, m_addAssignmentButton}) {
+    connect(m_addDutyTypeButton, &QPushButton::clicked, this, &AdminOverviewView::addDutyTypeClicked);
+    for (QPushButton *addButton : {m_addMemberButton, m_addTagButton, m_addCategoryButton, m_addDutyTypeButton}) {
         addButton->setObjectName(QStringLiteral("secondaryButton"));
     }
 
@@ -89,7 +89,7 @@ AdminOverviewView::AdminOverviewView(
     addRow->addWidget(m_addMemberButton);
     addRow->addWidget(m_addTagButton);
     addRow->addWidget(m_addCategoryButton);
-    addRow->addWidget(m_addAssignmentButton);
+    addRow->addWidget(m_addDutyTypeButton);
     addRow->addStretch();
 
     m_list = new QListWidget(this);
@@ -171,7 +171,7 @@ void AdminOverviewView::toggleAdminRoleClicked()
     const QString question = makeAdmin
         ? QStringLiteral("Make %1 an Admin?\n\nAdmins can unlock Admin mode on the desktop app with their "
                          "password and manage members, schedules, and songs.").arg(target.name())
-        : QStringLiteral("Remove Admin from %1?\n\nThey'll stay a Member and keep their assignments, "
+        : QStringLiteral("Remove Admin from %1?\n\nThey'll stay a Member and keep their duties, "
                          "but can no longer unlock Admin mode.").arg(target.name());
     if (QMessageBox::question(this, title, question) != QMessageBox::Yes) {
         return;
@@ -186,7 +186,7 @@ void AdminOverviewView::toggleAdminRoleClicked()
 void AdminOverviewView::updateAddButtonVisibility()
 {
     // Members are a profile/login concern -- Admin-only, same as the Date
-    // tab. Tags/Categories/Assignment Types stay open to everyone.
+    // tab. Tags/Categories/Duty Types stay open to everyone.
     m_addMemberButton->setVisible(m_isAdmin);
 }
 
@@ -199,7 +199,7 @@ void AdminOverviewView::kindButtonClicked()
     } else if (m_categoriesToggle->isChecked()) {
         setKind(Kind::Categories);
     } else {
-        setKind(Kind::AssignmentTypes);
+        setKind(Kind::DutyTypes);
     }
 }
 
@@ -220,7 +220,7 @@ void AdminOverviewView::refresh()
     m_users = m_userController->allUsers();
     m_tags = m_tagController->allTags();
     m_categories = m_categoryController->allCategories();
-    m_roleTypes = m_roleTypeController->allRoleTypes();
+    m_dutyTypes = m_dutyTypeController->allDutyTypes();
     rebuildList();
 }
 
@@ -295,12 +295,12 @@ void AdminOverviewView::rebuildList()
             }
         }
     } else {
-        for (const RoleType &roleType : m_roleTypes) {
-            if (!search.isEmpty() && !roleType.name().contains(search, Qt::CaseInsensitive)) {
+        for (const DutyType &dutyType : m_dutyTypes) {
+            if (!search.isEmpty() && !dutyType.name().contains(search, Qt::CaseInsensitive)) {
                 continue;
             }
-            auto *item = new QListWidgetItem(roleType.iconAndName(), m_list);
-            item->setData(Qt::UserRole, roleType.id());
+            auto *item = new QListWidgetItem(dutyType.iconAndName(), m_list);
+            item->setData(Qt::UserRole, dutyType.id());
         }
     }
 
@@ -352,17 +352,17 @@ void AdminOverviewView::addCategoryClicked()
     }
 }
 
-void AdminOverviewView::addAssignmentTypeClicked()
+void AdminOverviewView::addDutyTypeClicked()
 {
-    RoleTypeEditDialog dialog(RoleType(), this);
+    DutyTypeEditDialog dialog(DutyType(), this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
-    RoleType newRoleType = dialog.roleType();
-    if (m_roleTypeController->addRoleType(newRoleType)) {
+    DutyType newDutyType = dialog.dutyType();
+    if (m_dutyTypeController->addDutyType(newDutyType)) {
         refresh();
     } else {
-        QMessageBox::critical(this, QStringLiteral("Add Assignment Type"), m_roleTypeController->lastError());
+        QMessageBox::critical(this, QStringLiteral("Add Duty Type"), m_dutyTypeController->lastError());
     }
 }
 
@@ -414,16 +414,16 @@ void AdminOverviewView::deleteClicked()
             QMessageBox::critical(this, QStringLiteral("Delete Category"), m_categoryController->lastError());
         }
     } else {
-        if (QMessageBox::question(this, QStringLiteral("Delete Assignment Type"), QStringLiteral("Delete this assignment type?"))
+        if (QMessageBox::question(this, QStringLiteral("Delete Duty Type"), QStringLiteral("Delete this duty type?"))
             != QMessageBox::Yes) {
             return;
         }
-        if (m_roleTypeController->removeRoleType(id)) {
+        if (m_dutyTypeController->removeDutyType(id)) {
             refresh();
         } else {
-            QMessageBox::critical(this, QStringLiteral("Delete Assignment Type"),
-                QStringLiteral("Couldn't delete -- it may still be used by one or more assignments.\n\n%1")
-                    .arg(m_roleTypeController->lastError()));
+            QMessageBox::critical(this, QStringLiteral("Delete Duty Type"),
+                QStringLiteral("Couldn't delete -- it may still be used by one or more duties.\n\n%1")
+                    .arg(m_dutyTypeController->lastError()));
         }
     }
 }
@@ -480,19 +480,19 @@ void AdminOverviewView::rowDoubleClicked(QListWidgetItem *item)
             QMessageBox::critical(this, QStringLiteral("Edit Category"), m_categoryController->lastError());
         }
     } else {
-        const RoleType existing = m_roleTypeController->roleTypeById(id);
+        const DutyType existing = m_dutyTypeController->dutyTypeById(id);
         if (existing.id() < 0) {
             return;
         }
-        RoleTypeEditDialog dialog(existing, this);
+        DutyTypeEditDialog dialog(existing, this);
         if (dialog.exec() != QDialog::Accepted) {
             return;
         }
-        RoleType updated = dialog.roleType();
-        if (m_roleTypeController->updateRoleType(updated)) {
+        DutyType updated = dialog.dutyType();
+        if (m_dutyTypeController->updateDutyType(updated)) {
             refresh();
         } else {
-            QMessageBox::critical(this, QStringLiteral("Edit Assignment Type"), m_roleTypeController->lastError());
+            QMessageBox::critical(this, QStringLiteral("Edit Duty Type"), m_dutyTypeController->lastError());
         }
     }
 }

@@ -19,7 +19,7 @@
 
 #include <algorithm>
 
-#include "Controllers/AssignmentController.h"
+#include "Controllers/DutyController.h"
 #include "Controllers/UserController.h"
 #include "Style.h"
 
@@ -87,11 +87,11 @@ namespace
             .arg(c.warnBg, c.warn, esc(text));
     }
 
-    // Who did what: one row per role -- role, who served, backup, notes.
+    // Who did what: one row per duty -- duty, who served, backup, notes.
     QString lineupTable(const QVector<ScheduleReportRow> &rows, const ReportColors &c)
     {
         QString html = QStringLiteral("<table width='100%' cellspacing='0'>"
-                                      "<tr><th class='cell'>Role</th><th class='cell'>Serving</th>"
+                                      "<tr><th class='cell'>Duty</th><th class='cell'>Serving</th>"
                                       "<th class='cell'>Backup</th><th class='cell'>Notes</th></tr>");
         for (const ScheduleReportRow &row : rows) {
             QString servingCell;
@@ -110,7 +110,7 @@ namespace
             html += QStringLiteral("<tr><td class='cell'><span style='font-size:16px;'>%1</span>&nbsp; <b>%2</b></td>"
                                    "<td class='cell'>%3</td><td class='cell'>%4</td>"
                                    "<td class='cell'><span style='color:%5;'>%6</span></td></tr>")
-                .arg(esc(row.roleIcon), esc(row.roleName), servingCell, backupCell, c.muted, esc(row.notes));
+                .arg(esc(row.dutyTypeIcon), esc(row.dutyTypeName), servingCell, backupCell, c.muted, esc(row.notes));
         }
         return html + QStringLiteral("</table>");
     }
@@ -125,9 +125,9 @@ namespace
     }
 }
 
-ReportsView::ReportsView(AssignmentController *assignmentController, UserController *userController, QWidget *parent)
+ReportsView::ReportsView(DutyController *dutyController, UserController *userController, QWidget *parent)
     : QWidget(parent)
-    , m_assignmentController(assignmentController)
+    , m_dutyController(dutyController)
     , m_userController(userController)
 {
     auto *title = new QLabel(QStringLiteral("Reports"), this);
@@ -255,7 +255,7 @@ void ReportsView::reloadReport()
     if (from > to) {
         std::swap(from, to);
     }
-    m_rows = m_assignmentController->scheduleReport(from, to, m_memberCombo->currentData().toInt());
+    m_rows = m_dutyController->scheduleReport(from, to, m_memberCombo->currentData().toInt());
     populateSundayList();
 }
 
@@ -285,7 +285,7 @@ void ReportsView::populateSundayList()
         const int count = countByDate.value(date);
         auto *item = new QListWidgetItem(
             QStringLiteral("%1  ·  %2 %3").arg(formatSunday(date)).arg(count)
-                .arg(count == 1 ? QStringLiteral("role") : QStringLiteral("roles")),
+                .arg(count == 1 ? QStringLiteral("duty") : QStringLiteral("duties")),
             m_sundayList);
         item->setData(Qt::UserRole, date);
         if (date == previouslySelected) {
@@ -404,7 +404,7 @@ QString ReportsView::rangeHtml(bool darkColors) const
                               "Try a wider range with the buttons above.</p>").arg(c.muted);
     }
 
-    // m_rows is newest first; keep that order, and each Sunday's role order.
+    // m_rows is newest first; keep that order, and each Sunday's duty order.
     QVector<QDate> dates;
     QMap<QDate, QVector<ScheduleReportRow>> rowsByDate;
     for (const ScheduleReportRow &row : m_rows) {
@@ -446,12 +446,12 @@ void ReportsView::saveClicked()
     QTextStream out(&file);
     out.setEncoding(QStringConverter::Utf8);
     if (path.endsWith(QLatin1String(".csv"), Qt::CaseInsensitive) || selectedFilter.contains(QLatin1String("csv"))) {
-        // One row per assignment, whichever view is showing, so the file
+        // One row per duty, whichever view is showing, so the file
         // works as-is in a spreadsheet.
-        out << "Date,Role,Serving,Backup,Notes,Availability\n";
+        out << "Date,Duty,Serving,Backup,Notes,Availability\n";
         for (const ScheduleReportRow &row : visibleRows()) {
             out << csvField(row.serviceDate.toString(Qt::ISODate)) << ','
-                << csvField(row.roleName) << ','
+                << csvField(row.dutyTypeName) << ','
                 << csvField(row.memberName.isEmpty() ? QStringLiteral("Unfilled") : row.memberName) << ','
                 << csvField(row.supportMemberName) << ','
                 << csvField(row.notes) << ','

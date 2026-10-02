@@ -3,10 +3,10 @@
 #include <QMainWindow>
 #include <QNetworkAccessManager>
 
-#include "Controllers/AssignmentController.h"
+#include "Controllers/DutyController.h"
 #include "Controllers/CategoryController.h"
 #include "Controllers/ItemController.h"
-#include "Controllers/RoleTypeController.h"
+#include "Controllers/DutyTypeController.h"
 #include "Controllers/SongController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
@@ -30,8 +30,8 @@ class QStackedWidget;
 // There is no login gate at startup -- the app is usable read-only right
 // away. Clicking the lock icon in the title bar opens a password-only
 // LoginDialog; on success m_currentUser becomes that Admin and Admin-only
-// actions (Assign Role/Add Member/Edit/Delete on the Date tab, editing an
-// assignment from the Taxonomy tab) appear. Clicking the icon again logs
+// actions (Assign Duty/Add Member/Edit/Delete on the Date tab, editing a
+// duty from the Taxonomy tab) appear. Clicking the icon again logs
 // out.
 class MainWindow : public QMainWindow
 {
@@ -56,8 +56,8 @@ private:
     TagController m_tagController;
     CategoryController m_categoryController;
     UserController m_userController;
-    AssignmentController m_assignmentController;
-    RoleTypeController m_roleTypeController;
+    DutyController m_dutyController;
+    DutyTypeController m_dutyTypeController;
     SongController m_songController;
     // Shared by DateNavigationTab for fetching Member avatars (DiceBear)
     // without blocking the UI thread.

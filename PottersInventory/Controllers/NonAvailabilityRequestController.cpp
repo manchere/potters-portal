@@ -9,7 +9,7 @@
 namespace
 {
     const QString kSelectColumns = QStringLiteral(
-        "id, assignment_id, user_id, message, status, decided_by, decided_at");
+        "id, duty_id, user_id, message, status, decided_by, decided_at");
 }
 
 NonAvailabilityRequestController::NonAvailabilityRequestController(QObject *parent)
@@ -21,7 +21,7 @@ static NonAvailabilityRequest requestFromQuery(const QSqlQuery &query)
 {
     NonAvailabilityRequest request;
     request.setId(query.value(QStringLiteral("id")).toInt());
-    request.setAssignmentId(query.value(QStringLiteral("assignment_id")).toInt());
+    request.setDutyId(query.value(QStringLiteral("duty_id")).toInt());
     request.setUserId(query.value(QStringLiteral("user_id")).toInt());
     request.setMessage(query.value(QStringLiteral("message")).toString());
     request.setStatus(requestStatusFromString(query.value(QStringLiteral("status")).toString()));
@@ -49,14 +49,14 @@ QVector<NonAvailabilityRequest> NonAvailabilityRequestController::listForUser(in
     return requests;
 }
 
-NonAvailabilityRequest NonAvailabilityRequestController::requestForAssignmentAndUser(int assignmentId, int userId) const
+NonAvailabilityRequest NonAvailabilityRequestController::requestForDutyAndUser(int dutyId, int userId) const
 {
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT %1 FROM non_availability_requests WHERE assignment_id = :assignment_id AND user_id = :user_id")
+        "SELECT %1 FROM non_availability_requests WHERE duty_id = :duty_id AND user_id = :user_id")
         .arg(kSelectColumns));
-    query.bindValue(QStringLiteral(":assignment_id"), assignmentId);
+    query.bindValue(QStringLiteral(":duty_id"), dutyId);
     query.bindValue(QStringLiteral(":user_id"), userId);
     if (!query.exec() || !query.next()) {
         m_lastError = query.lastError().text();
@@ -70,9 +70,9 @@ bool NonAvailabilityRequestController::create(NonAvailabilityRequest &request)
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "INSERT INTO non_availability_requests (assignment_id, user_id, message) "
-        "VALUES (:assignment_id, :user_id, :message) RETURNING id"));
-    query.bindValue(QStringLiteral(":assignment_id"), request.assignmentId());
+        "INSERT INTO non_availability_requests (duty_id, user_id, message) "
+        "VALUES (:duty_id, :user_id, :message) RETURNING id"));
+    query.bindValue(QStringLiteral(":duty_id"), request.dutyId());
     query.bindValue(QStringLiteral(":user_id"), request.userId());
     query.bindValue(QStringLiteral(":message"), request.message());
     if (!query.exec() || !query.next()) {

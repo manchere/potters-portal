@@ -2,17 +2,17 @@
 
 #include <QString>
 
-// An admin-manageable assignment duty type (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md
+// An admin-manageable duty type (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md
 // FR-6): name + a single emoji icon shown throughout the scheduling UI.
-// Replaces the old fixed AssignmentRole enum (database/migrations/0018,
-// 0019) -- Assignment now stores a roleId pointing at one of these instead
+// Replaces the old fixed DutyRole enum (database/migrations/0018,
+// 0019) -- Duty now stores a dutyTypeId pointing at one of these instead
 // of a hardcoded value, so an Admin can define new duty types from the
 // desktop Taxonomy tab.
-class RoleType
+class DutyType
 {
 public:
-    RoleType() = default;
-    RoleType(int id, QString name, QString icon);
+    DutyType() = default;
+    DutyType(int id, QString name, QString icon);
 
     int id() const { return m_id; }
     void setId(int id) { m_id = id; }

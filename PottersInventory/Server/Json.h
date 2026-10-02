@@ -3,12 +3,12 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
-#include "Models/Assignment.h"
+#include "Models/Duty.h"
 #include "Models/AvailabilityMark.h"
 #include "Models/Category.h"
 #include "Models/Item.h"
 #include "Models/NonAvailabilityRequest.h"
-#include "Models/RoleType.h"
+#include "Models/DutyType.h"
 #include "Models/Song.h"
 #include "Models/Tag.h"
 #include "Models/User.h"
@@ -30,10 +30,10 @@ namespace Json
     // server (see UserController).
     QJsonObject userToJson(const User &user);
 
-    // Embeds role_name/role_icon (resolved from the given RoleType)
-    // alongside role_id, so mobile can render a role's icon/name without a
+    // Embeds duty_type_name/duty_type_icon (resolved from the given DutyType)
+    // alongside duty_type_id, so mobile can render a duty type's icon/name without a
     // separate lookup endpoint.
-    QJsonObject assignmentToJson(const Assignment &assignment, const RoleType &role);
+    QJsonObject dutyToJson(const Duty &duty, const DutyType &dutyType);
 
     QJsonObject availabilityMarkToJson(const AvailabilityMark &mark);
 

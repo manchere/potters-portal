@@ -5,7 +5,7 @@
 // A day a Member marked as "expect not to be present" on their general
 // calendar (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md FR-3.1/3.2). Purely
 // informational -- distinct from NonAvailabilityRequest, which is a
-// formal, assignment-specific request that goes through Admin approval.
+// formal, duty-specific request that goes through Admin approval.
 class AvailabilityMark
 {
 public:

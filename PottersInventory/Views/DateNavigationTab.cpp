@@ -17,15 +17,15 @@
 #include <QShortcut>
 #include <QVBoxLayout>
 
-#include "AssignRoleDialog.h"
+#include "AssignDutyDialog.h"
 #include "MemberEditDialog.h"
 #include "AvatarLoader.h"
-#include "Controllers/AssignmentController.h"
-#include "Controllers/RoleTypeController.h"
+#include "Controllers/DutyController.h"
+#include "Controllers/DutyTypeController.h"
 #include "Controllers/UserController.h"
 #include "MemberStatsDialog.h"
-#include "Models/Assignment.h"
-#include "Models/RoleType.h"
+#include "Models/Duty.h"
+#include "Models/DutyType.h"
 #include "Models/User.h"
 
 namespace
@@ -58,42 +58,42 @@ namespace
 }
 
 DateNavigationTab::DateNavigationTab(
-    AssignmentController *assignmentController,
+    DutyController *dutyController,
     UserController *userController,
-    RoleTypeController *roleTypeController,
+    DutyTypeController *dutyTypeController,
     QNetworkAccessManager *networkManager,
     QWidget *parent)
     : QWidget(parent)
-    , m_assignmentController(assignmentController)
+    , m_dutyController(dutyController)
     , m_userController(userController)
-    , m_roleTypeController(roleTypeController)
+    , m_dutyTypeController(dutyTypeController)
     , m_networkManager(networkManager)
 {
     auto *title = new QLabel(QStringLiteral("Date"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        QStringLiteral("Pick a Sunday to see who's serving, and assign roles for it. "
+        QStringLiteral("Pick a Sunday to see who's serving, and assign duties for it. "
                         "Double-click a Member to see their responsibilities."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
 
-    m_assignButton = new QPushButton(QStringLiteral("+  Assign Role"), this);
+    m_assignButton = new QPushButton(QStringLiteral("+  Assign Duty"), this);
     connect(m_assignButton, &QPushButton::clicked, this, &DateNavigationTab::assignClicked);
     m_addMemberButton = new QPushButton(QStringLiteral("+  Add Member"), this);
     m_addMemberButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(m_addMemberButton, &QPushButton::clicked, this, &DateNavigationTab::addMemberClicked);
-    m_assignForMemberButton = new QPushButton(QStringLiteral("+  Assign Another Role"), this);
+    m_assignForMemberButton = new QPushButton(QStringLiteral("+  Assign Another Duty"), this);
     m_assignForMemberButton->setObjectName(QStringLiteral("secondaryButton"));
     m_assignForMemberButton->setToolTip(
-        QStringLiteral("Give the selected Member another role on this Sunday"));
+        QStringLiteral("Give the selected Member another duty on this Sunday"));
     connect(m_assignForMemberButton, &QPushButton::clicked, this, &DateNavigationTab::assignForSelectedMemberClicked);
     m_copyButton = new QPushButton(QStringLiteral("Copy Schedule"), this);
     m_copyButton->setObjectName(QStringLiteral("secondaryButton"));
-    m_copyButton->setToolTip(QStringLiteral("Copy this Sunday's assignments (Ctrl+C)"));
+    m_copyButton->setToolTip(QStringLiteral("Copy this Sunday's duties (Ctrl+C)"));
     connect(m_copyButton, &QPushButton::clicked, this, &DateNavigationTab::copyScheduleClicked);
     m_pasteButton = new QPushButton(QStringLiteral("Paste Schedule"), this);
     m_pasteButton->setObjectName(QStringLiteral("secondaryButton"));
-    m_pasteButton->setToolTip(QStringLiteral("Paste the copied assignments onto this Sunday (Ctrl+V)"));
+    m_pasteButton->setToolTip(QStringLiteral("Paste the copied duties onto this Sunday (Ctrl+V)"));
     connect(m_pasteButton, &QPushButton::clicked, this, &DateNavigationTab::pasteScheduleClicked);
     m_copiedLabel = new QLabel(this);
     m_copiedLabel->setObjectName(QStringLiteral("accentLabel"));
@@ -123,10 +123,10 @@ DateNavigationTab::DateNavigationTab(
     m_resultsList->setAlternatingRowColors(true);
     connect(m_resultsList, &QListWidget::currentRowChanged, this, [this](int row) {
         QListWidgetItem *item = row >= 0 ? m_resultsList->item(row) : nullptr;
-        m_selectedAssignmentId = item ? item->data(Qt::UserRole).toInt() : -1;
-        m_editButton->setEnabled(m_isAdmin && m_selectedAssignmentId >= 0);
-        m_deleteButton->setEnabled(m_isAdmin && m_selectedAssignmentId >= 0);
-        m_assignForMemberButton->setEnabled(m_isAdmin && m_selectedAssignmentId >= 0);
+        m_selectedDutyId = item ? item->data(Qt::UserRole).toInt() : -1;
+        m_editButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
+        m_deleteButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
+        m_assignForMemberButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
     });
     connect(m_resultsList, &QListWidget::itemDoubleClicked, this, &DateNavigationTab::memberDoubleClicked);
 
@@ -146,7 +146,7 @@ DateNavigationTab::DateNavigationTab(
     auto *resultsLayout = new QVBoxLayout;
     resultsLayout->addWidget(m_resultsList);
     resultsLayout->addLayout(bottomButtons);
-    auto *resultsBox = new QGroupBox(QStringLiteral("Assignments"), this);
+    auto *resultsBox = new QGroupBox(QStringLiteral("Duties"), this);
     resultsBox->setLayout(resultsLayout);
 
     m_sundaySearch = new QLineEdit(this);
@@ -205,7 +205,7 @@ QString DateNavigationTab::memberAvatarSeed(int userId) const
     return user.id() >= 0 ? user.avatarSeed() : QString();
 }
 
-QWidget *DateNavigationTab::buildRow(const Assignment &assignment)
+QWidget *DateNavigationTab::buildRow(const Duty &duty)
 {
     auto *row = new QWidget(m_resultsList);
     auto *layout = new QHBoxLayout(row);
@@ -213,7 +213,7 @@ QWidget *DateNavigationTab::buildRow(const Assignment &assignment)
     layout->setSpacing(10);
 
     auto *avatar = new QLabel(row);
-    const QString seed = memberAvatarSeed(assignment.memberId());
+    const QString seed = memberAvatarSeed(duty.memberId());
     if (!seed.isEmpty() && m_networkManager) {
         AvatarLoader::loadInto(*m_networkManager, seed, avatar, 36);
     } else {
@@ -222,30 +222,30 @@ QWidget *DateNavigationTab::buildRow(const Assignment &assignment)
     }
     layout->addWidget(avatar);
 
-    const RoleType roleType = m_roleTypeController->roleTypeById(assignment.roleId());
-    auto *roleIcon = new QLabel(roleType.icon(), row);
-    QFont iconFont = roleIcon->font();
+    const DutyType dutyType = m_dutyTypeController->dutyTypeById(duty.dutyTypeId());
+    auto *dutyTypeIcon = new QLabel(dutyType.icon(), row);
+    QFont iconFont = dutyTypeIcon->font();
     iconFont.setPointSize(16);
-    roleIcon->setFont(iconFont);
-    layout->addWidget(roleIcon);
+    dutyTypeIcon->setFont(iconFont);
+    layout->addWidget(dutyTypeIcon);
 
     auto *textContainer = new QWidget(row);
     auto *textLayout = new QVBoxLayout(textContainer);
     textLayout->setContentsMargins(0, 0, 0, 0);
     textLayout->setSpacing(2);
-    auto *roleLabel = new QLabel(roleType.name(), textContainer);
-    roleLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
+    auto *dutyTypeLabel = new QLabel(dutyType.name(), textContainer);
+    dutyTypeLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
 
     // Main member and support member on the same line, e.g.
     // "Grace Adeyemi   ·   Support: Ruth Mensah".
-    QString memberLine = memberName(assignment.memberId());
-    if (assignment.supportMemberId() > 0) {
-        memberLine += QStringLiteral("   ·   Support: %1").arg(memberName(assignment.supportMemberId()));
+    QString memberLine = memberName(duty.memberId());
+    if (duty.supportMemberId() > 0) {
+        memberLine += QStringLiteral("   ·   Support: %1").arg(memberName(duty.supportMemberId()));
     }
     auto *memberLabel = new QLabel(memberLine, textContainer);
     memberLabel->setObjectName(QStringLiteral("mutedLabel"));
 
-    textLayout->addWidget(roleLabel);
+    textLayout->addWidget(dutyTypeLabel);
     textLayout->addWidget(memberLabel);
     layout->addWidget(textContainer, 1);
 
@@ -260,9 +260,9 @@ void DateNavigationTab::setAdminMode(bool isAdmin)
     m_assignForMemberButton->setVisible(isAdmin);
     m_editButton->setVisible(isAdmin);
     m_deleteButton->setVisible(isAdmin);
-    m_editButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
-    m_deleteButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
-    m_assignForMemberButton->setEnabled(isAdmin && m_selectedAssignmentId >= 0);
+    m_editButton->setEnabled(isAdmin && m_selectedDutyId >= 0);
+    m_deleteButton->setEnabled(isAdmin && m_selectedDutyId >= 0);
+    m_assignForMemberButton->setEnabled(isAdmin && m_selectedDutyId >= 0);
     m_copyButton->setVisible(isAdmin);
     m_pasteButton->setVisible(isAdmin);
     m_copiedLabel->setVisible(isAdmin);
@@ -271,7 +271,7 @@ void DateNavigationTab::setAdminMode(bool isAdmin)
 
 void DateNavigationTab::updateCopyPasteState()
 {
-    m_copyButton->setEnabled(m_isAdmin && m_datesWithAssignments.contains(m_selectedDate));
+    m_copyButton->setEnabled(m_isAdmin && m_datesWithDuties.contains(m_selectedDate));
     m_pasteButton->setEnabled(m_isAdmin && m_copiedDate.isValid() && m_copiedDate != m_selectedDate);
     m_copiedLabel->setText(m_copiedDate.isValid()
         ? QStringLiteral("Copied: %1").arg(formatSunday(m_copiedDate))
@@ -280,7 +280,7 @@ void DateNavigationTab::updateCopyPasteState()
 
 void DateNavigationTab::copyScheduleClicked()
 {
-    if (!m_isAdmin || !m_datesWithAssignments.contains(m_selectedDate)) {
+    if (!m_isAdmin || !m_datesWithDuties.contains(m_selectedDate)) {
         return;
     }
     m_copiedDate = m_selectedDate;
@@ -294,30 +294,30 @@ void DateNavigationTab::pasteScheduleClicked()
     }
     const QDate fromDate = m_copiedDate;
     const QDate toDate = m_selectedDate;
-    const int sourceCount = m_assignmentController->assignmentsForDate(fromDate).size();
+    const int sourceCount = m_dutyController->dutiesForDate(fromDate).size();
     if (sourceCount == 0) {
         QMessageBox::information(this, QStringLiteral("Paste Schedule"),
-            QStringLiteral("%1 no longer has any assignments to copy.").arg(formatSunday(fromDate)));
+            QStringLiteral("%1 no longer has any duties to copy.").arg(formatSunday(fromDate)));
         m_copiedDate = QDate();
         updateCopyPasteState();
         return;
     }
-    const int existingCount = m_assignmentController->assignmentsForDate(toDate).size();
+    const int existingCount = m_dutyController->dutiesForDate(toDate).size();
 
     bool replaceExisting = false;
     if (existingCount == 0) {
-        const QString question = QStringLiteral("Copy %1 assignment(s) from %2 onto %3?")
+        const QString question = QStringLiteral("Copy %1 duties from %2 onto %3?")
             .arg(sourceCount).arg(formatSunday(fromDate), formatSunday(toDate));
         if (QMessageBox::question(this, QStringLiteral("Paste Schedule"), question) != QMessageBox::Yes) {
             return;
         }
     } else {
         QMessageBox box(QMessageBox::Question, QStringLiteral("Paste Schedule"),
-            QStringLiteral("%1 already has %2 assignment(s).").arg(formatSunday(toDate)).arg(existingCount),
+            QStringLiteral("%1 already has %2 duties.").arg(formatSunday(toDate)).arg(existingCount),
             QMessageBox::NoButton, this);
         box.setInformativeText(QStringLiteral(
-            "Add to them: keeps what's there and adds the copied roles (skipping any role the same "
-            "member already has).\n\nReplace them: deletes this Sunday's assignments, including any "
+            "Add to them: keeps what's there and adds the copied duties (skipping any duty the same "
+            "member already has).\n\nReplace them: deletes this Sunday's duties, including any "
             "time-off requests members sent for them, then pastes the copied schedule."));
         QPushButton *addButton = box.addButton(QStringLiteral("Add to Them"), QMessageBox::AcceptRole);
         QPushButton *replaceButton = box.addButton(QStringLiteral("Replace Them"), QMessageBox::DestructiveRole);
@@ -333,18 +333,18 @@ void DateNavigationTab::pasteScheduleClicked()
 
     int copied = 0;
     int skipped = 0;
-    if (!m_assignmentController->copySchedule(fromDate, toDate, replaceExisting, &copied, &skipped)) {
-        QMessageBox::critical(this, QStringLiteral("Paste Schedule"), m_assignmentController->lastError());
+    if (!m_dutyController->copySchedule(fromDate, toDate, replaceExisting, &copied, &skipped)) {
+        QMessageBox::critical(this, QStringLiteral("Paste Schedule"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
     selectSunday(toDate);
 
-    QString summary = QStringLiteral("Pasted %1 assignment(s) onto %2.").arg(copied).arg(formatSunday(toDate));
+    QString summary = QStringLiteral("Pasted %1 duties onto %2.").arg(copied).arg(formatSunday(toDate));
     if (skipped > 0) {
         summary += QStringLiteral("\nSkipped %1 already on that Sunday.").arg(skipped);
     }
-    const QStringList unavailable = m_assignmentController->membersMarkedUnavailable(toDate);
+    const QStringList unavailable = m_dutyController->membersMarkedUnavailable(toDate);
     if (!unavailable.isEmpty()) {
         summary += QStringLiteral("\n\nHeads up: these members marked themselves unavailable that day:\n  %1")
             .arg(unavailable.join(QStringLiteral("\n  ")));
@@ -363,26 +363,26 @@ void DateNavigationTab::populateSundayList()
     m_sundayList->clear();
 
     // One query each for members and duties up front, rather than a
-    // userById/roleTypeById round trip per assignment.
+    // userById/dutyTypeById round trip per duty.
     QHash<int, QString> memberNames;
     for (const User &user : m_userController->allUsers()) {
         memberNames.insert(user.id(), user.name());
     }
-    QHash<int, QString> roleNames;
-    for (const RoleType &roleType : m_roleTypeController->allRoleTypes()) {
-        roleNames.insert(roleType.id(), roleType.name());
+    QHash<int, QString> dutyTypeNames;
+    for (const DutyType &dutyType : m_dutyTypeController->allDutyTypes()) {
+        dutyTypeNames.insert(dutyType.id(), dutyType.name());
     }
 
-    m_datesWithAssignments.clear();
+    m_datesWithDuties.clear();
     m_sundaySearchText.clear();
-    for (const Assignment &assignment : m_assignmentController->allAssignments()) {
-        const QDate date = assignment.serviceDate();
-        m_datesWithAssignments.insert(date);
+    for (const Duty &duty : m_dutyController->allDuties()) {
+        const QDate date = duty.serviceDate();
+        m_datesWithDuties.insert(date);
         m_sundaySearchText[date].append(QStringList{
             sundaySearchText(date),
-            roleNames.value(assignment.roleId()),
-            memberNames.value(assignment.memberId()),
-            memberNames.value(assignment.supportMemberId()),
+            dutyTypeNames.value(duty.dutyTypeId()),
+            memberNames.value(duty.memberId()),
+            memberNames.value(duty.supportMemberId()),
         }.join(QLatin1Char(' ')).toLower());
     }
 
@@ -422,7 +422,7 @@ void DateNavigationTab::sundaySearchChanged()
 {
     applySundayFilter();
 
-    // Keep the Assignments panel in step with what's listed: if the selected
+    // Keep the Duties panel in step with what's listed: if the selected
     // Sunday just got filtered out, jump to the first one that matches.
     QListWidgetItem *current = m_sundayList->currentItem();
     if (!current || current->isHidden()) {
@@ -442,22 +442,22 @@ void DateNavigationTab::sundaySearchChanged()
 // Selection uses an explicit background/foreground override (applied in
 // sundaySelectionChanged) rather than relying on the list's normal
 // selection highlight, since a per-item color already set for the "has
-// assignments" tint would otherwise compete with -- and often hide --
+// duties" tint would otherwise compete with -- and often hide --
 // the native selection styling.
 void DateNavigationTab::applySundayItemStyle(QListWidgetItem *item, bool isSelected) const
 {
     const QDate date = item->data(Qt::UserRole).toDate();
-    const bool hasAssignments = m_datesWithAssignments.contains(date);
+    const bool hasDuties = m_datesWithDuties.contains(date);
 
     QFont font = item->font();
-    font.setBold(hasAssignments || isSelected);
+    font.setBold(hasDuties || isSelected);
     item->setFont(font);
 
     const bool isBlack = currentTheme() == Theme::Black;
     if (isSelected) {
         item->setBackground(isBlack ? QColor(0x1f, 0x4a, 0x85) : QColor(0x14, 0x33, 0x5c));
         item->setForeground(QColor(Qt::white));
-    } else if (hasAssignments) {
+    } else if (hasDuties) {
         item->setBackground(isBlack ? QColor(0x2a, 0x22, 0x10) : QColor(0xfa, 0xf3, 0xe0));
         item->setForeground(isBlack ? QColor(0xe0, 0xb8, 0x5a) : QColor(0x8a, 0x6a, 0x1a));
     } else {
@@ -505,24 +505,24 @@ void DateNavigationTab::sundaySelectionChanged(QListWidgetItem *current, QListWi
 void DateNavigationTab::rebuildResults()
 {
     m_resultsList->clear();
-    m_selectedAssignmentId = -1;
+    m_selectedDutyId = -1;
     m_editButton->setEnabled(false);
     m_deleteButton->setEnabled(false);
 
-    const QVector<Assignment> assignments = m_assignmentController->assignmentsForDate(m_selectedDate);
-    if (assignments.isEmpty()) {
+    const QVector<Duty> duties = m_dutyController->dutiesForDate(m_selectedDate);
+    if (duties.isEmpty()) {
         auto *item = new QListWidgetItem(m_resultsList);
         item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
         m_resultsList->addItem(item);
-        m_resultsList->setItemWidget(item, new QLabel(QStringLiteral("No assignments for this date."), m_resultsList));
+        m_resultsList->setItemWidget(item, new QLabel(QStringLiteral("No duties for this date."), m_resultsList));
         return;
     }
-    for (const Assignment &assignment : assignments) {
+    for (const Duty &duty : duties) {
         auto *item = new QListWidgetItem(m_resultsList);
-        item->setData(Qt::UserRole, assignment.id());
+        item->setData(Qt::UserRole, duty.id());
         item->setSizeHint(QSize(0, 56));
         m_resultsList->addItem(item);
-        m_resultsList->setItemWidget(item, buildRow(assignment));
+        m_resultsList->setItemWidget(item, buildRow(duty));
     }
 }
 
@@ -531,13 +531,13 @@ void DateNavigationTab::assignClicked()
     if (!m_isAdmin) {
         return;
     }
-    AssignRoleDialog dialog(Assignment(), m_selectedDate, m_userController->allUsers(), m_roleTypeController, this);
+    AssignDutyDialog dialog(Duty(), m_selectedDate, m_userController->allUsers(), m_dutyTypeController, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
-    Assignment newAssignment = dialog.assignment();
-    if (!m_assignmentController->addAssignment(newAssignment)) {
-        QMessageBox::critical(this, QStringLiteral("Assign Role"), m_assignmentController->lastError());
+    Duty newDuty = dialog.duty();
+    if (!m_dutyController->addDuty(newDuty)) {
+        QMessageBox::critical(this, QStringLiteral("Assign Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -555,25 +555,25 @@ void DateNavigationTab::addMemberClicked()
 
 void DateNavigationTab::assignForSelectedMemberClicked()
 {
-    if (!m_isAdmin || m_selectedAssignmentId < 0) {
+    if (!m_isAdmin || m_selectedDutyId < 0) {
         return;
     }
-    const Assignment reference = m_assignmentController->assignmentById(m_selectedAssignmentId);
+    const Duty reference = m_dutyController->dutyById(m_selectedDutyId);
     if (reference.id() < 0) {
         return;
     }
-    // Prefill just the Member -- role/support/notes start blank, since this
-    // is a brand-new assignment for the same person, not an edit of the
+    // Prefill just the Member -- duty type/support/notes start blank, since this
+    // is a brand-new duty for the same person, not an edit of the
     // one that's currently selected.
-    Assignment prefilled;
+    Duty prefilled;
     prefilled.setMemberId(reference.memberId());
-    AssignRoleDialog dialog(prefilled, m_selectedDate, m_userController->allUsers(), m_roleTypeController, this);
+    AssignDutyDialog dialog(prefilled, m_selectedDate, m_userController->allUsers(), m_dutyTypeController, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
-    Assignment newAssignment = dialog.assignment();
-    if (!m_assignmentController->addAssignment(newAssignment)) {
-        QMessageBox::critical(this, QStringLiteral("Assign Another Role"), m_assignmentController->lastError());
+    Duty newDuty = dialog.duty();
+    if (!m_dutyController->addDuty(newDuty)) {
+        QMessageBox::critical(this, QStringLiteral("Assign Another Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -582,20 +582,20 @@ void DateNavigationTab::assignForSelectedMemberClicked()
 
 void DateNavigationTab::editClicked()
 {
-    if (!m_isAdmin || m_selectedAssignmentId < 0) {
+    if (!m_isAdmin || m_selectedDutyId < 0) {
         return;
     }
-    const Assignment existing = m_assignmentController->assignmentById(m_selectedAssignmentId);
+    const Duty existing = m_dutyController->dutyById(m_selectedDutyId);
     if (existing.id() < 0) {
         return;
     }
-    AssignRoleDialog dialog(existing, existing.serviceDate(), m_userController->allUsers(), m_roleTypeController, this);
+    AssignDutyDialog dialog(existing, existing.serviceDate(), m_userController->allUsers(), m_dutyTypeController, this);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
-    Assignment updated = dialog.assignment();
-    if (!m_assignmentController->updateAssignment(updated)) {
-        QMessageBox::critical(this, QStringLiteral("Edit Assignment"), m_assignmentController->lastError());
+    Duty updated = dialog.duty();
+    if (!m_dutyController->updateDuty(updated)) {
+        QMessageBox::critical(this, QStringLiteral("Edit Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -604,15 +604,15 @@ void DateNavigationTab::editClicked()
 
 void DateNavigationTab::deleteClicked()
 {
-    if (!m_isAdmin || m_selectedAssignmentId < 0) {
+    if (!m_isAdmin || m_selectedDutyId < 0) {
         return;
     }
-    if (QMessageBox::question(this, QStringLiteral("Delete Assignment"), QStringLiteral("Delete this assignment?"))
+    if (QMessageBox::question(this, QStringLiteral("Delete Duty"), QStringLiteral("Delete this duty?"))
         != QMessageBox::Yes) {
         return;
     }
-    if (!m_assignmentController->removeAssignment(m_selectedAssignmentId)) {
-        QMessageBox::critical(this, QStringLiteral("Delete Assignment"), m_assignmentController->lastError());
+    if (!m_dutyController->removeDuty(m_selectedDutyId)) {
+        QMessageBox::critical(this, QStringLiteral("Delete Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -624,16 +624,16 @@ void DateNavigationTab::memberDoubleClicked(QListWidgetItem *item)
     if (!item) {
         return;
     }
-    const int assignmentId = item->data(Qt::UserRole).toInt();
-    const Assignment assignment = m_assignmentController->assignmentById(assignmentId);
-    if (assignment.id() < 0 || assignment.memberId() <= 0) {
+    const int dutyId = item->data(Qt::UserRole).toInt();
+    const Duty duty = m_dutyController->dutyById(dutyId);
+    if (duty.id() < 0 || duty.memberId() <= 0) {
         return;
     }
-    const User user = m_userController->userById(assignment.memberId());
+    const User user = m_userController->userById(duty.memberId());
     if (user.id() < 0) {
         return;
     }
-    MemberStatsDialog dialog(user, m_assignmentController->allAssignmentsForMember(user.id()), m_roleTypeController, m_networkManager, this);
+    MemberStatsDialog dialog(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController, m_networkManager, this);
     dialog.exec();
 }
 

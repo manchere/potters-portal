@@ -17,9 +17,9 @@ RequestStatus requestStatusFromString(const QString &status)
     return RequestStatus::Pending;
 }
 
-NonAvailabilityRequest::NonAvailabilityRequest(int id, int assignmentId, int userId, QString message)
+NonAvailabilityRequest::NonAvailabilityRequest(int id, int dutyId, int userId, QString message)
     : m_id(id)
-    , m_assignmentId(assignmentId)
+    , m_dutyId(dutyId)
     , m_userId(userId)
     , m_message(std::move(message))
 {

@@ -26,7 +26,7 @@ music instruments, computer items, etc.
 
 ### Members / Scheduling
 
-Adds Member profiles and Sunday duty assignments (Admin scheduling,
+Adds Member profiles and Sunday duties (Admin scheduling,
 non-availability requests). See
 [SCHEDULING_FUNCTIONAL_REQUIREMENTS.md](SCHEDULING_FUNCTIONAL_REQUIREMENTS.md)
 for the full spec.
