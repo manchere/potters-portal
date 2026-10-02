@@ -353,7 +353,7 @@ QString ReportsView::filterDescription() const
 
 void ReportsView::selectionChanged()
 {
-    m_reportView->setHtml(currentReportHtml(currentTheme() == Theme::Black));
+    m_reportView->setHtml(currentReportHtml(isDarkTheme(currentTheme())));
 
     const int sundays = m_sundayList->count() - 1;
     m_statusLabel->setText(sundays == 0

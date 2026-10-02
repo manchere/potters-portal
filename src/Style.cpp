@@ -16,6 +16,47 @@ namespace
     // white, focus rings turn gold).
     QHash<QString, QString> themeColors(Theme theme)
     {
+        if (theme == Theme::Navy) {
+            // The app icon: a deep navy field with gold strokes. Surfaces
+            // step up from the darkest navy; gold is the primary/accent
+            // color, with navy text on gold buttons.
+            return {
+                {QStringLiteral("text"), QStringLiteral("#e8ecf4")},
+                {QStringLiteral("strongText"), QStringLiteral("#ffffff")},
+                {QStringLiteral("softText"), QStringLiteral("#cdd5e3")},
+                {QStringLiteral("mutedText"), QStringLiteral("#9aa7bf")},
+                {QStringLiteral("faintText"), QStringLiteral("#7886a0")},
+                {QStringLiteral("windowBg"), QStringLiteral("#0b1a33")},
+                {QStringLiteral("windowBorder"), QStringLiteral("#1f3a66")},
+                {QStringLiteral("dialogCard"), QStringLiteral("rgba(16, 36, 74, 0.96)")},
+                {QStringLiteral("dialogCardBorder"), QStringLiteral("rgba(232, 183, 48, 0.30)")},
+                {QStringLiteral("surface"), QStringLiteral("#10244a")},
+                {QStringLiteral("surfaceAlt"), QStringLiteral("#132a54")},
+                {QStringLiteral("input"), QStringLiteral("#0e2142")},
+                {QStringLiteral("border"), QStringLiteral("#1f3a66")},
+                {QStringLiteral("inputBorder"), QStringLiteral("#2a4777")},
+                {QStringLiteral("dashedBorder"), QStringLiteral("#34507f")},
+                {QStringLiteral("divider"), QStringLiteral("#1a3360")},
+                {QStringLiteral("hover"), QStringLiteral("#17305c")},
+                {QStringLiteral("subtle"), QStringLiteral("#162d57")},
+                {QStringLiteral("subtleHover"), QStringLiteral("#1f3a69")},
+                {QStringLiteral("tabSelected"), QStringLiteral("#1d3a6b")},
+                {QStringLiteral("tabSelectedText"), QStringLiteral("#f0c75e")},
+                {QStringLiteral("selection"), QStringLiteral("#2a4a80")},
+                {QStringLiteral("selectionText"), QStringLiteral("#ffffff")},
+                {QStringLiteral("focus"), QStringLiteral("#e8b730")},
+                {QStringLiteral("primary"), QStringLiteral("#d4a72c")},
+                {QStringLiteral("primaryHover"), QStringLiteral("#e3b843")},
+                {QStringLiteral("primaryPressed"), QStringLiteral("#b88f1f")},
+                {QStringLiteral("primaryText"), QStringLiteral("#0b1a33")},
+                {QStringLiteral("primaryDisabled"), QStringLiteral("#3a4a66")},
+                {QStringLiteral("primaryDisabledText"), QStringLiteral("#8090a8")},
+                {QStringLiteral("error"), QStringLiteral("#f87171")},
+                {QStringLiteral("accentBg"), QStringLiteral("#2e2f2a")},
+                {QStringLiteral("accentText"), QStringLiteral("#f0c75e")},
+                {QStringLiteral("cardGrid"), QStringLiteral("#0b1a33")},
+            };
+        }
         if (theme == Theme::Black) {
             return {
                 {QStringLiteral("text"), QStringLiteral("#e6e6e6")},
@@ -45,6 +86,7 @@ namespace
                 {QStringLiteral("primary"), QStringLiteral("#1f4a85")},
                 {QStringLiteral("primaryHover"), QStringLiteral("#285a9e")},
                 {QStringLiteral("primaryPressed"), QStringLiteral("#173a6a")},
+                {QStringLiteral("primaryText"), QStringLiteral("white")},
                 {QStringLiteral("primaryDisabled"), QStringLiteral("#2a2f38")},
                 {QStringLiteral("primaryDisabledText"), QStringLiteral("#6f747c")},
                 {QStringLiteral("error"), QStringLiteral("#f87171")},
@@ -81,6 +123,7 @@ namespace
             {QStringLiteral("primary"), QStringLiteral("#14335c")},
             {QStringLiteral("primaryHover"), QStringLiteral("#0f2748")},
             {QStringLiteral("primaryPressed"), QStringLiteral("#0a1d36")},
+            {QStringLiteral("primaryText"), QStringLiteral("white")},
             {QStringLiteral("primaryDisabled"), QStringLiteral("#9aa8bd")},
             {QStringLiteral("primaryDisabledText"), QStringLiteral("white")},
             {QStringLiteral("error"), QStringLiteral("#dc2626")},
@@ -97,41 +140,53 @@ namespace
     const char *kLegacySettingsName = "PottersInventory";
     const char *kThemeKey = "theme";
 
+    // How each theme is stored in QSettings.
+    QString themeKey(Theme theme)
+    {
+        switch (theme) {
+        case Theme::Black: return QStringLiteral("black");
+        case Theme::Navy: return QStringLiteral("navy");
+        case Theme::Light: break;
+        }
+        return QStringLiteral("light");
+    }
+
     Theme g_currentTheme = Theme::Light;
     // The platform style and palette the app started with (e.g.
-    // windows11), restored when going back to Light after Black switched
-    // to Fusion.
+    // windows11), restored when going back to Light after a dark theme
+    // switched to Fusion.
     QString g_originalStyleName;
     QPalette g_originalPalette;
 
     // Native widgets the stylesheet doesn't reach (QMessageBox,
     // QColorDialog, scroll bars, calendar popups) draw from the palette;
-    // Fusion is used for Black because the Windows styles ignore a dark
-    // palette.
-    QPalette blackPalette()
+    // Fusion is used for the dark themes because the Windows styles ignore
+    // a dark palette.
+    QPalette darkPalette(Theme theme)
     {
+        const bool navy = theme == Theme::Navy;
         QPalette palette;
-        const QColor text(0xe6, 0xe6, 0xe6);
-        const QColor disabledText(0x6f, 0x74, 0x7c);
-        palette.setColor(QPalette::Window, QColor(0x0e, 0x0e, 0x0e));
+        const QColor text = navy ? QColor(0xe8, 0xec, 0xf4) : QColor(0xe6, 0xe6, 0xe6);
+        const QColor disabledText = navy ? QColor(0x80, 0x90, 0xa8) : QColor(0x6f, 0x74, 0x7c);
+        palette.setColor(QPalette::Window, navy ? QColor(0x10, 0x24, 0x4a) : QColor(0x0e, 0x0e, 0x0e));
         palette.setColor(QPalette::WindowText, text);
-        palette.setColor(QPalette::Base, QColor(0x12, 0x12, 0x12));
-        palette.setColor(QPalette::AlternateBase, QColor(0x16, 0x16, 0x16));
-        palette.setColor(QPalette::ToolTipBase, QColor(0x1c, 0x1c, 0x1c));
+        palette.setColor(QPalette::Base, navy ? QColor(0x0e, 0x21, 0x42) : QColor(0x12, 0x12, 0x12));
+        palette.setColor(QPalette::AlternateBase, navy ? QColor(0x13, 0x2a, 0x54) : QColor(0x16, 0x16, 0x16));
+        palette.setColor(QPalette::ToolTipBase, navy ? QColor(0x17, 0x30, 0x5c) : QColor(0x1c, 0x1c, 0x1c));
         palette.setColor(QPalette::ToolTipText, text);
-        palette.setColor(QPalette::PlaceholderText, QColor(0x7a, 0x7a, 0x7a));
+        palette.setColor(QPalette::PlaceholderText, navy ? QColor(0x78, 0x86, 0xa0) : QColor(0x7a, 0x7a, 0x7a));
         palette.setColor(QPalette::Text, text);
-        palette.setColor(QPalette::Button, QColor(0x1a, 0x1a, 0x1a));
+        palette.setColor(QPalette::Button, navy ? QColor(0x16, 0x2d, 0x57) : QColor(0x1a, 0x1a, 0x1a));
         palette.setColor(QPalette::ButtonText, text);
         palette.setColor(QPalette::BrightText, Qt::white);
-        palette.setColor(QPalette::Light, QColor(0x2a, 0x2a, 0x2a));
-        palette.setColor(QPalette::Midlight, QColor(0x22, 0x22, 0x22));
-        palette.setColor(QPalette::Mid, QColor(0x1a, 0x1a, 0x1a));
-        palette.setColor(QPalette::Dark, QColor(0x0a, 0x0a, 0x0a));
+        palette.setColor(QPalette::Light, navy ? QColor(0x2a, 0x47, 0x77) : QColor(0x2a, 0x2a, 0x2a));
+        palette.setColor(QPalette::Midlight, navy ? QColor(0x1f, 0x3a, 0x66) : QColor(0x22, 0x22, 0x22));
+        palette.setColor(QPalette::Mid, navy ? QColor(0x16, 0x2d, 0x57) : QColor(0x1a, 0x1a, 0x1a));
+        palette.setColor(QPalette::Dark, navy ? QColor(0x08, 0x13, 0x26) : QColor(0x0a, 0x0a, 0x0a));
         palette.setColor(QPalette::Shadow, Qt::black);
-        palette.setColor(QPalette::Highlight, QColor(0x1f, 0x4a, 0x85));
+        palette.setColor(QPalette::Highlight, navy ? QColor(0x2a, 0x4a, 0x80) : QColor(0x1f, 0x4a, 0x85));
         palette.setColor(QPalette::HighlightedText, Qt::white);
-        palette.setColor(QPalette::Link, QColor(0xe0, 0xb8, 0x5a));
+        palette.setColor(QPalette::Link, navy ? QColor(0xf0, 0xc7, 0x5e) : QColor(0xe0, 0xb8, 0x5a));
         palette.setColor(QPalette::Disabled, QPalette::WindowText, disabledText);
         palette.setColor(QPalette::Disabled, QPalette::Text, disabledText);
         palette.setColor(QPalette::Disabled, QPalette::ButtonText, disabledText);
@@ -357,7 +412,7 @@ QToolTip {
 
 QPushButton {
     background: {{primary}};
-    color: white;
+    color: {{primaryText}};
     border: none;
     border-radius: 8px;
     padding: 8px 20px;
@@ -461,7 +516,7 @@ QToolButton#viewToggleButton[position="last"] {
 }
 QToolButton#viewToggleButton:checked {
     background: {{primary}};
-    color: white;
+    color: {{primaryText}};
     border-color: {{primary}};
 }
 
@@ -543,9 +598,27 @@ Theme savedTheme()
         const QSettings legacy(QString::fromLatin1(kLegacySettingsName), QString::fromLatin1(kLegacySettingsName));
         theme = legacy.value(QString::fromLatin1(kThemeKey));
     }
-    return theme.toString() == QStringLiteral("black")
-        ? Theme::Black
-        : Theme::Light;
+    for (Theme candidate : {Theme::Black, Theme::Navy}) {
+        if (theme.toString() == themeKey(candidate)) {
+            return candidate;
+        }
+    }
+    return Theme::Light;
+}
+
+QString themeDisplayName(Theme theme)
+{
+    switch (theme) {
+    case Theme::Black: return QStringLiteral("Black");
+    case Theme::Navy: return QStringLiteral("Navy & Gold");
+    case Theme::Light: break;
+    }
+    return QStringLiteral("Light");
+}
+
+bool isDarkTheme(Theme theme)
+{
+    return theme != Theme::Light;
 }
 
 void applyTheme(Theme theme)
@@ -555,9 +628,9 @@ void applyTheme(Theme theme)
         g_originalPalette = QApplication::palette();
     }
 
-    if (theme == Theme::Black) {
+    if (isDarkTheme(theme)) {
         QApplication::setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
-        QApplication::setPalette(blackPalette());
+        QApplication::setPalette(darkPalette(theme));
     } else {
         QApplication::setStyle(QStyleFactory::create(g_originalStyleName));
         QApplication::setPalette(g_originalPalette);
@@ -566,8 +639,7 @@ void applyTheme(Theme theme)
     g_currentTheme = theme;
 
     QSettings settings(QString::fromLatin1(kSettingsOrg), QString::fromLatin1(kSettingsApp));
-    settings.setValue(QString::fromLatin1(kThemeKey),
-        theme == Theme::Black ? QStringLiteral("black") : QStringLiteral("light"));
+    settings.setValue(QString::fromLatin1(kThemeKey), themeKey(theme));
 }
 
 Theme currentTheme()

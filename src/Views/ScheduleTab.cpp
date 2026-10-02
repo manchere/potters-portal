@@ -445,13 +445,20 @@ void ScheduleTab::applySundayItemStyle(QListWidgetItem *item, bool isSelected) c
     font.setBold(hasDuties || isSelected);
     item->setFont(font);
 
-    const bool isBlack = currentTheme() == Theme::Black;
+    const Theme theme = currentTheme();
+    const bool isDark = isDarkTheme(theme);
     if (isSelected) {
-        item->setBackground(isBlack ? QColor(0x1f, 0x4a, 0x85) : QColor(0x14, 0x33, 0x5c));
-        item->setForeground(QColor(Qt::white));
+        // Navy & Gold selects in gold (navy text), like its buttons.
+        if (theme == Theme::Navy) {
+            item->setBackground(QColor(0xd4, 0xa7, 0x2c));
+            item->setForeground(QColor(0x0b, 0x1a, 0x33));
+        } else {
+            item->setBackground(isDark ? QColor(0x1f, 0x4a, 0x85) : QColor(0x14, 0x33, 0x5c));
+            item->setForeground(QColor(Qt::white));
+        }
     } else if (hasDuties) {
-        item->setBackground(isBlack ? QColor(0x2a, 0x22, 0x10) : QColor(0xfa, 0xf3, 0xe0));
-        item->setForeground(isBlack ? QColor(0xe0, 0xb8, 0x5a) : QColor(0x8a, 0x6a, 0x1a));
+        item->setBackground(isDark ? QColor(0x2a, 0x22, 0x10) : QColor(0xfa, 0xf3, 0xe0));
+        item->setForeground(isDark ? QColor(0xe0, 0xb8, 0x5a) : QColor(0x8a, 0x6a, 0x1a));
     } else {
         item->setBackground(QBrush());
         item->setForeground(QBrush());
