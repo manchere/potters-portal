@@ -1,4 +1,4 @@
-#include "PottersInventory.h"
+#include "Portal.h"
 
 #include <QApplication>
 #include <QMessageBox>

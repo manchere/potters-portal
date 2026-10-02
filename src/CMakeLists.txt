@@ -39,7 +39,7 @@ set(CORE_SOURCES
 
 # --- Desktop app (Qt Widgets) ------------------------------------------------
 add_executable (PottersPortal
-  "PottersInventory.cpp" "PottersInventory.h"
+  "Portal.cpp" "Portal.h"
   "Style.h" "Style.cpp"
   ${CORE_SOURCES}
   "Views/MainWindow.h" "Views/MainWindow.cpp"

@@ -27,7 +27,7 @@ namespace
         request.setRawHeader("Accept", "application/json");
         // Nominatim's usage policy requires a descriptive User-Agent
         // identifying the application (anonymous/default Qt UA gets 403'd).
-        request.setRawHeader("User-Agent", "PottersInventory/1.0 (church inventory desktop app)");
+        request.setRawHeader("User-Agent", "PottersPortal/1.0 (church portal desktop app)");
 
         QNetworkReply *reply = manager.get(request);
         QEventLoop loop;

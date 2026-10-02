@@ -12,4 +12,4 @@ endif()
 project ("PottersPortal")
 
 # Include sub-projects.
-add_subdirectory ("PottersInventory")
+add_subdirectory ("src")

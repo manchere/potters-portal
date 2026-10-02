@@ -2,7 +2,7 @@
 
 #include <QString>
 
-// Single stylesheet applied to the whole app (see PottersInventory.cpp) so
+// Single stylesheet applied to the whole app (see Portal.cpp) so
 // every view shares the same look without repeating QSS per widget. The
 // same stylesheet is filled in with one of two color sets: the original
 // light theme or a black one, toggled from the title bar.

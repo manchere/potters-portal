@@ -428,7 +428,7 @@ int main(int argc, char **argv)
         qCritical("Failed to listen on port %d", port);
         return 1;
     }
-    qInfo("Potter's Inventory server listening on http://localhost:%d", port);
+    qInfo("Potter's Portal server listening on http://localhost:%d", port);
 
     return app.exec();
 }

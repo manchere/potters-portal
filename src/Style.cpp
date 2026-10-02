@@ -90,8 +90,11 @@ namespace
         };
     }
 
-    const char *kSettingsOrg = "PottersInventory";
-    const char *kSettingsApp = "PottersInventory";
+    const char *kSettingsOrg = "PottersPortal";
+    const char *kSettingsApp = "PottersPortal";
+    // Where settings were saved before the app was renamed; only read, so
+    // a theme chosen back then still applies.
+    const char *kLegacySettingsName = "PottersInventory";
     const char *kThemeKey = "theme";
 
     Theme g_currentTheme = Theme::Light;
@@ -474,7 +477,12 @@ QLabel#detailValue {
 Theme savedTheme()
 {
     const QSettings settings(QString::fromLatin1(kSettingsOrg), QString::fromLatin1(kSettingsApp));
-    return settings.value(QString::fromLatin1(kThemeKey)).toString() == QStringLiteral("black")
+    QVariant theme = settings.value(QString::fromLatin1(kThemeKey));
+    if (!theme.isValid()) {
+        const QSettings legacy(QString::fromLatin1(kLegacySettingsName), QString::fromLatin1(kLegacySettingsName));
+        theme = legacy.value(QString::fromLatin1(kThemeKey));
+    }
+    return theme.toString() == QStringLiteral("black")
         ? Theme::Black
         : Theme::Light;
 }

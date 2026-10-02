@@ -100,7 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
-    setWindowTitle(QStringLiteral("Potter's Inventory"));
+    setWindowTitle(QStringLiteral("Potter's Portal"));
     resize(1080, 720);
     setMinimumSize(760, 480);
 

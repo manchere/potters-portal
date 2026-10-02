@@ -1,8 +1,8 @@
 # Scheduling / Member Duties — Functional Requirements
 
 Scope: adds Member profiles, Sunday duties, and non-availability
-requests on top of the existing PottersInventory backend. Targets the
-desktop app (`PottersInventory/`, primarily Admin workflows) and the mobile
+requests on top of the existing Portal backend. Targets the
+desktop app (`src/`, primarily Admin workflows) and the mobile
 app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 
 ## Actors
@@ -198,6 +198,6 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 - **Mobile (React Native)**: Member-facing — self-service profile
   creation, avatar, own-duty view, availability calendar,
   non-availability request submission and status.
-- **Backend (`PottersInventory/Server`)**: authentication, Members,
+- **Backend (`src/Server`)**: authentication, Members,
   Duties, and Non-Availability Requests REST endpoints shared by both
   clients.
