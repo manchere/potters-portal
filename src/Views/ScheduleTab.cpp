@@ -220,7 +220,11 @@ namespace
         pill->setObjectName(QStringLiteral("dutyPill"));
         pill->setToolTip(text);
         pill->ensurePolished();
-        pill->setMinimumWidth(pill->sizeHint().width());
+        // Always its natural size: squeezed shorter (e.g. in a combined
+        // member row) the rounded background would lose its corners.
+        // A few spare pixels so emoji (drawn from a fallback font that can
+        // run wider than measured) never eat into the padding.
+        pill->setFixedSize(pill->sizeHint() + QSize(6, 2));
         return pill;
     }
 
@@ -252,7 +256,11 @@ namespace
     void setRowWidget(QListWidget *list, QListWidgetItem *item, QWidget *row)
     {
         row->ensurePolished();
-        item->setSizeHint(QSize(0, std::max(52, row->sizeHint().height())));
+        if (row->layout()) {
+            row->layout()->activate();
+        }
+        const int height = std::max(row->sizeHint().height(), row->minimumSizeHint().height());
+        item->setSizeHint(QSize(0, std::max(52, height + 4)));
         list->setItemWidget(item, row);
     }
 }
@@ -293,7 +301,7 @@ QWidget *ScheduleTab::buildDutyCell(const Duty &duty, QWidget *parent)
     cell->setFixedWidth(m_dutyColumnWidth);
     auto *layout = new QHBoxLayout(cell);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(makeDutyPill(m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName(), cell));
+    layout->addWidget(makeDutyPill(m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName(), cell), 0, Qt::AlignVCenter);
     layout->addStretch();
     return cell;
 }
@@ -369,11 +377,11 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
     auto *dutiesColumn = new QWidget(row);
     auto *dutiesLayout = new QVBoxLayout(dutiesColumn);
     dutiesLayout->setContentsMargins(0, 0, 0, 0);
-    dutiesLayout->setSpacing(4);
+    dutiesLayout->setSpacing(6);
     for (const Duty &duty : duties) {
         auto *line = new QWidget(dutiesColumn);
         auto *lineLayout = new QHBoxLayout(line);
-        lineLayout->setContentsMargins(0, 0, 0, 0);
+        lineLayout->setContentsMargins(0, 1, 0, 1);
         lineLayout->setSpacing(12);
         lineLayout->addWidget(buildDutyCell(duty, line));
         lineLayout->addWidget(buildBackupLine(duty, line), 1);
