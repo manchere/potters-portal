@@ -129,7 +129,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_sidebar->addPage(QStringLiteral("📅"), QStringLiteral("Schedule")); // 📅
     m_sidebar->addPage(QStringLiteral("📊"), QStringLiteral("Reports"));  // 📊
     m_sidebar->addPage(QStringLiteral("🎵"), QStringLiteral("Songs"));    // 🎵
-    m_sidebar->addPage(QStringLiteral("📦"), QStringLiteral("Items"));    // 📦
+    m_sidebar->addPage(QStringLiteral("📦"), QStringLiteral("Inventory"));    // 📦
     m_sidebar->addPage(QStringLiteral("🏷"), QStringLiteral("Taxonomy")); // 🏷
     m_sidebar->addPage(QStringLiteral("⚙"), QStringLiteral("Settings"));     // ⚙
 

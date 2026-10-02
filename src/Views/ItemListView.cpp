@@ -124,7 +124,7 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     viewToggleRow->addWidget(listViewButton);
     viewToggleRow->addWidget(gridViewButton);
 
-    auto *title = new QLabel(QStringLiteral("Items"), this);
+    auto *title = new QLabel(QStringLiteral("Inventory"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(QStringLiteral("Select a row to edit, delete, add a tag, or change status."), this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));

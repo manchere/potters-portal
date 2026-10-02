@@ -20,7 +20,7 @@ class TagController;
 class CategoryController;
 class QNetworkAccessManager;
 
-// "Items" tab: a table (or card grid) of every item with actions to edit,
+// "Inventory" tab: a table (or card grid) of every item with actions to edit,
 // delete, change status, or attach a tag. Also owns the search/question bar
 // that filters whichever view is currently shown.
 class ItemListView : public QWidget

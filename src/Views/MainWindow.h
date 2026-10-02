@@ -26,7 +26,7 @@ class QStackedWidget;
 // Owns the controllers and wires the tabs to each other: e.g. creating a
 // tag refreshes the tag list shown in both Items and the combined
 // Taxonomy tab. Adding an item happens via a modal dialog opened from the
-// Items tab, not a separate tab. Frameless window: TitleBar (custom
+// Inventory tab, not a separate tab. Frameless window: TitleBar (custom
 // minimize/maximize/close + the admin lock) sits above the Sidebar and a
 // QStackedWidget that swaps between the pages; the last page, Settings,
 // holds the theme choice and the Admin password change.
