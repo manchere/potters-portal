@@ -14,7 +14,6 @@ class NonAvailabilityRequestController : public QObject
 public:
     explicit NonAvailabilityRequestController(QObject *parent = nullptr);
 
-    QVector<NonAvailabilityRequest> listPending() const;
     QVector<NonAvailabilityRequest> listForUser(int userId) const;
 
     // Used to avoid a Member submitting a second request against the same
@@ -26,11 +25,8 @@ public:
 public slots:
     // request.assignmentId()/userId()/message() must be set by the caller;
     // status is always inserted as Pending regardless of what's set on
-    // request (FR-4.4 -- a request always starts pending, the Admin
-    // decides it separately via decide()).
+    // request (FR-4.4 -- a request always starts pending).
     bool create(NonAvailabilityRequest &request);
-
-    bool decide(int id, bool approve, int decidedByUserId);
 
 signals:
     void requestsChanged();

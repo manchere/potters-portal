@@ -35,7 +35,6 @@ public slots:
     bool setItemImage(int id, const QByteArray &data, const QString &mime);
     bool setItemTags(int itemId, const QVector<int> &tagIds);
     bool addTagToItem(int itemId, int tagId);
-    bool removeTagFromItem(int itemId, int tagId);
 
 signals:
     void itemsChanged();

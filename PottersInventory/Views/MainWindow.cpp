@@ -118,8 +118,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Date is inserted first (leftmost) per FR-8.1; the rest keep their
     // existing left-to-right order. Assigning a role happens via a button
     // on the Date tab itself (see DateNavigationTab), not a separate tab.
-    // The former Non-Availability Requests tab has been removed (see
-    // MainWindow.h note).
     m_titleBar->tabBar()->insertTab(0, QStringLiteral("Date"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Reports"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Songs"));

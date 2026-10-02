@@ -67,16 +67,15 @@ add_executable (PottersInventory
   "Views/ReportsView.h" "Views/ReportsView.cpp"
   "Views/SongEditDialog.h" "Views/SongEditDialog.cpp"
   "Views/AvatarLoader.h" "Views/AvatarLoader.cpp"
-  "Views/NonAvailabilityRequestsView.h" "Views/NonAvailabilityRequestsView.cpp"
   "Vision/GroqQueryClient.h" "Vision/GroqQueryClient.cpp"
   "Vision/LocationClient.h" "Vision/LocationClient.cpp"
 )
 target_include_directories(PottersInventory PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # --- REST API server (Qt HttpServer, no GUI) --------------------------------
-# Same Models/Controllers/Database as the desktop app; this is the piece a
-# browser-based web frontend (web/) and, later, a native mobile app both
-# talk to over HTTP instead of opening a direct database connection.
+# Same Models/Controllers/Database as the desktop app; this is the piece the
+# mobile app (mobile/) talks to over HTTP instead of opening a direct
+# database connection.
 add_executable (PottersInventoryServer
   ${CORE_SOURCES}
   "Server/Json.h" "Server/Json.cpp"
@@ -84,8 +83,6 @@ add_executable (PottersInventoryServer
   "Server/ServerMain.cpp"
 )
 target_include_directories(PottersInventoryServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(PottersInventoryServer PRIVATE
-  POTTERS_WEB_ROOT="${CMAKE_SOURCE_DIR}/web")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET PottersInventory PROPERTY CXX_STANDARD 20)

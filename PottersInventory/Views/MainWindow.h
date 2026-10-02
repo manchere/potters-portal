@@ -33,12 +33,6 @@ class QStackedWidget;
 // actions (Assign Role/Add Member/Edit/Delete on the Date tab, editing an
 // assignment from the Taxonomy tab) appear. Clicking the icon again logs
 // out.
-//
-// Note: the Non-Availability Requests tab (Admin approve/deny) has been
-// removed from the desktop UI per product decision -- NonAvailabilityRequestsView
-// and its backend (Controller/Model/REST endpoints, used by the mobile
-// submission flow) are left intact, just unwired from MainWindow, in case
-// the desktop approval UI comes back later.
 class MainWindow : public QMainWindow
 {
     Q_OBJECT

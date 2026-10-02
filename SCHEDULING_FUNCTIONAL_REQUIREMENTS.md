@@ -84,6 +84,9 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 
 ## 6. Admin — Non-Availability Approval
 
+> Not currently implemented: the desktop approval screen was removed, so
+> requests submitted from mobile stay pending.
+
 - **FR-5.1** An Admin shall be able to view all pending non-availability
   requests.
 - **FR-5.2** An Admin shall be able to approve or deny a non-availability

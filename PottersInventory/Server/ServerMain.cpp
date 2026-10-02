@@ -1,11 +1,9 @@
-// REST API + static web frontend host, reusing the same Models/Controllers/
-// Database code as the desktop app. Every route below is a thin wrapper
-// around an existing Controller method, so the two frontends (desktop
-// widgets, browser) and any future native mobile client all go through
-// identical business logic and validation.
+// REST API for the mobile app, reusing the same Models/Controllers/Database
+// code as the desktop app. Every route below is a thin wrapper around an
+// existing Controller method, so desktop and mobile go through identical
+// business logic and validation.
 #include <QCoreApplication>
 #include <QDate>
-#include <QFile>
 #include <QHttpServer>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -21,7 +19,6 @@
 #include "Controllers/ItemController.h"
 #include "Controllers/NonAvailabilityRequestController.h"
 #include "Controllers/SessionController.h"
-#include "Controllers/SongController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
 #include "Database/Database.h"
@@ -34,24 +31,6 @@ using StatusCode = QHttpServerResponder::StatusCode;
 static QHttpServerResponse errorResponse(const QString &message, StatusCode status)
 {
     return QHttpServerResponse(QJsonObject{{QStringLiteral("error"), message}}, status);
-}
-
-static QString webRootDir()
-{
-    const QString override = qEnvironmentVariable("WEB_ROOT");
-    if (!override.isEmpty()) {
-        return override;
-    }
-    return QStringLiteral(POTTERS_WEB_ROOT);
-}
-
-static QHttpServerResponse serveStaticFile(const QString &relativePath, const QByteArray &contentType)
-{
-    QFile file(webRootDir() + QLatin1Char('/') + relativePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return QHttpServerResponse(StatusCode::NotFound);
-    }
-    return QHttpServerResponse(contentType, file.readAll());
 }
 
 // Accepts a data URL ("data:image/jpeg;base64,...") or bare base64 and
@@ -98,48 +77,9 @@ int main(int argc, char **argv)
     RoleTypeController roleTypeController;
     AvailabilityController availabilityController;
     NonAvailabilityRequestController requestController;
-    SongController songController;
     QNetworkAccessManager networkManager;
 
     QHttpServer server;
-
-    // --- Static web frontend --------------------------------------------
-    server.route("/", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("index.html"), "text/html; charset=utf-8");
-    });
-    server.route("/style.css", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("style.css"), "text/css; charset=utf-8");
-    });
-    server.route("/app.js", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("app.js"), "application/javascript; charset=utf-8");
-    });
-    server.route("/items.html", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("items.html"), "text/html; charset=utf-8");
-    });
-    server.route("/items.js", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("items.js"), "application/javascript; charset=utf-8");
-    });
-    server.route("/tags.html", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("tags.html"), "text/html; charset=utf-8");
-    });
-    server.route("/tags.js", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("tags.js"), "application/javascript; charset=utf-8");
-    });
-    server.route("/pwa.js", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("pwa.js"), "application/javascript; charset=utf-8");
-    });
-    server.route("/manifest.json", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("manifest.json"), "application/manifest+json; charset=utf-8");
-    });
-    server.route("/service-worker.js", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("service-worker.js"), "application/javascript; charset=utf-8");
-    });
-    server.route("/icons/icon-192.png", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("icons/icon-192.png"), "image/png");
-    });
-    server.route("/icons/icon-512.png", QHttpServerRequest::Method::Get, [] {
-        return serveStaticFile(QStringLiteral("icons/icon-512.png"), "image/png");
-    });
 
     // --- Items -------------------------------------------------------------
     server.route("/api/items", QHttpServerRequest::Method::Get, [&itemController] {
@@ -248,20 +188,6 @@ int main(int argc, char **argv)
         return QHttpServerResponse(Json::itemToJson(itemController.itemById(id)));
     });
 
-    server.route("/api/items/<arg>/tags/<arg>", QHttpServerRequest::Method::Post, [&itemController](int itemId, int tagId) {
-        if (!itemController.addTagToItem(itemId, tagId)) {
-            return errorResponse(itemController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(Json::itemToJson(itemController.itemById(itemId)));
-    });
-
-    server.route("/api/items/<arg>/tags/<arg>", QHttpServerRequest::Method::Delete, [&itemController](int itemId, int tagId) {
-        if (!itemController.removeTagFromItem(itemId, tagId)) {
-            return errorResponse(itemController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(Json::itemToJson(itemController.itemById(itemId)));
-    });
-
     // --- Vision (Groq) -------------------------------------------------------
     // Suggests a name/description from a photo; the client fills the Add Item
     // form with the result for the user to review/edit, it never saves
@@ -281,7 +207,7 @@ int main(int argc, char **argv)
         return QHttpServerResponse(suggestion);
     });
 
-    // --- Tags ----------------------------------------------------------------
+    // --- Tags and categories (read-only; managed from the desktop app) ----
     server.route("/api/tags", QHttpServerRequest::Method::Get, [&tagController] {
         QJsonArray tags;
         for (const Tag &tag : tagController.allTags()) {
@@ -290,93 +216,12 @@ int main(int argc, char **argv)
         return QHttpServerResponse(tags);
     });
 
-    server.route("/api/tags", QHttpServerRequest::Method::Post, [&tagController](const QHttpServerRequest &request) {
-        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
-        if (!doc.isObject()) {
-            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
-        }
-        Tag tag = Json::tagFromJson(doc.object());
-        if (tag.name().trimmed().isEmpty()) {
-            return errorResponse(QStringLiteral("name is required"), StatusCode::BadRequest);
-        }
-        if (!tagController.addTag(tag)) {
-            return errorResponse(tagController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(Json::tagToJson(tag), StatusCode::Created);
-    });
-
-    server.route("/api/tags/<arg>", QHttpServerRequest::Method::Put, [&tagController](int id, const QHttpServerRequest &request) {
-        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
-        if (!doc.isObject()) {
-            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
-        }
-        Tag tag = Json::tagFromJson(doc.object());
-        tag.setId(id);
-        if (!tagController.updateTag(tag)) {
-            return errorResponse(tagController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(Json::tagToJson(tag));
-    });
-
-    server.route("/api/tags/<arg>", QHttpServerRequest::Method::Delete, [&tagController](int id) {
-        if (!tagController.removeTag(id)) {
-            return errorResponse(tagController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
-    });
-
-    // --- Categories ------------------------------------------------------------
     server.route("/api/categories", QHttpServerRequest::Method::Get, [&categoryController] {
         QJsonArray categories;
         for (const Category &category : categoryController.allCategories()) {
             categories.append(Json::categoryToJson(category));
         }
         return QHttpServerResponse(categories);
-    });
-
-    server.route("/api/categories", QHttpServerRequest::Method::Post, [&categoryController](const QHttpServerRequest &request) {
-        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
-        if (!doc.isObject()) {
-            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
-        }
-        Category category = Json::categoryFromJson(doc.object());
-        if (category.name().trimmed().isEmpty()) {
-            return errorResponse(QStringLiteral("name is required"), StatusCode::BadRequest);
-        }
-        if (!categoryController.addCategory(category)) {
-            return errorResponse(categoryController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(Json::categoryToJson(category), StatusCode::Created);
-    });
-
-    server.route("/api/categories/<arg>", QHttpServerRequest::Method::Put, [&categoryController](int id, const QHttpServerRequest &request) {
-        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
-        if (!doc.isObject()) {
-            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
-        }
-        Category category = Json::categoryFromJson(doc.object());
-        category.setId(id);
-        if (!categoryController.updateCategory(category)) {
-            return errorResponse(categoryController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(Json::categoryToJson(category));
-    });
-
-    server.route("/api/categories/<arg>", QHttpServerRequest::Method::Delete, [&categoryController](int id) {
-        if (!categoryController.removeCategory(id)) {
-            return errorResponse(categoryController.lastError(), StatusCode::InternalServerError);
-        }
-        return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
-    });
-
-    // --- Songs (read-only; the library is managed from the desktop Songs
-    // tab) -----------------------------------------------------------------
-    server.route("/api/songs", QHttpServerRequest::Method::Get, [&songController] {
-        QJsonArray songs;
-        for (const Song &song : songController.allSongs()) {
-            songs.append(Json::songToJson(song));
-        }
-        return QHttpServerResponse(songs);
     });
 
     // --- Auth ----------------------------------------------------------------

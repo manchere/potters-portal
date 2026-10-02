@@ -31,23 +31,6 @@ static NonAvailabilityRequest requestFromQuery(const QSqlQuery &query)
     return request;
 }
 
-QVector<NonAvailabilityRequest> NonAvailabilityRequestController::listPending() const
-{
-    QVector<NonAvailabilityRequest> requests;
-    Database::ensureConnected();
-    QSqlQuery query;
-    query.prepare(QStringLiteral(
-        "SELECT %1 FROM non_availability_requests WHERE status = 'pending' ORDER BY created_at").arg(kSelectColumns));
-    if (!query.exec()) {
-        m_lastError = query.lastError().text();
-        return requests;
-    }
-    while (query.next()) {
-        requests.append(requestFromQuery(query));
-    }
-    return requests;
-}
-
 QVector<NonAvailabilityRequest> NonAvailabilityRequestController::listForUser(int userId) const
 {
     QVector<NonAvailabilityRequest> requests;
@@ -98,24 +81,6 @@ bool NonAvailabilityRequestController::create(NonAvailabilityRequest &request)
     }
     request.setId(query.value(0).toInt());
     request.setStatus(RequestStatus::Pending);
-    emit requestsChanged();
-    return true;
-}
-
-bool NonAvailabilityRequestController::decide(int id, bool approve, int decidedByUserId)
-{
-    Database::ensureConnected();
-    QSqlQuery query;
-    query.prepare(QStringLiteral(
-        "UPDATE non_availability_requests SET status = :status, decided_by = :decided_by, "
-        "decided_at = now(), updated_at = now() WHERE id = :id"));
-    query.bindValue(QStringLiteral(":status"), requestStatusToString(approve ? RequestStatus::Approved : RequestStatus::Denied));
-    query.bindValue(QStringLiteral(":decided_by"), decidedByUserId);
-    query.bindValue(QStringLiteral(":id"), id);
-    if (!query.exec()) {
-        m_lastError = query.lastError().text();
-        return false;
-    }
     emit requestsChanged();
     return true;
 }

@@ -23,10 +23,8 @@ namespace Json
     Item itemFromJson(const QJsonObject &json);
 
     QJsonObject tagToJson(const Tag &tag);
-    Tag tagFromJson(const QJsonObject &json);
 
     QJsonObject categoryToJson(const Category &category);
-    Category categoryFromJson(const QJsonObject &json);
 
     // Never includes password_hash/password_salt -- those never leave the
     // server (see UserController).
@@ -40,6 +38,4 @@ namespace Json
     QJsonObject availabilityMarkToJson(const AvailabilityMark &mark);
 
     QJsonObject nonAvailabilityRequestToJson(const NonAvailabilityRequest &request);
-
-    QJsonObject songToJson(const Song &song);
 }

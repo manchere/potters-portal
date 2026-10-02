@@ -55,25 +55,12 @@ namespace Json
         return json;
     }
 
-    Tag tagFromJson(const QJsonObject &json)
-    {
-        return Tag(json.value(QStringLiteral("id")).toInt(-1),
-                    json.value(QStringLiteral("name")).toString(),
-                    json.value(QStringLiteral("color")).toString(QStringLiteral("#3b82f6")),
-                    json.value(QStringLiteral("description")).toString());
-    }
-
     QJsonObject categoryToJson(const Category &category)
     {
         QJsonObject json;
         json[QStringLiteral("id")] = category.id();
         json[QStringLiteral("name")] = category.name();
         return json;
-    }
-
-    Category categoryFromJson(const QJsonObject &json)
-    {
-        return Category(json.value(QStringLiteral("id")).toInt(-1), json.value(QStringLiteral("name")).toString());
     }
 
     QJsonObject userToJson(const User &user)
@@ -127,15 +114,4 @@ namespace Json
         return json;
     }
 
-    QJsonObject songToJson(const Song &song)
-    {
-        QJsonObject json;
-        json[QStringLiteral("id")] = song.id();
-        json[QStringLiteral("title")] = song.title();
-        json[QStringLiteral("artist")] = song.artist();
-        json[QStringLiteral("song_key")] = song.songKey();
-        json[QStringLiteral("link")] = song.link();
-        json[QStringLiteral("lyrics")] = song.lyrics();
-        return json;
-    }
 }

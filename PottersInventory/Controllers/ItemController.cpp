@@ -266,18 +266,3 @@ bool ItemController::addTagToItem(int itemId, int tagId)
     emit itemsChanged();
     return true;
 }
-
-bool ItemController::removeTagFromItem(int itemId, int tagId)
-{
-    Database::ensureConnected();
-    QSqlQuery query;
-    query.prepare(QStringLiteral("DELETE FROM item_tags WHERE item_id = :itemId AND tag_id = :tagId"));
-    query.bindValue(QStringLiteral(":itemId"), itemId);
-    query.bindValue(QStringLiteral(":tagId"), tagId);
-    if (!query.exec()) {
-        m_lastError = query.lastError().text();
-        return false;
-    }
-    emit itemsChanged();
-    return true;
-}

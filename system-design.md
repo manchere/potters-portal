@@ -37,6 +37,5 @@ for the full spec.
   play link, lyrics). Selecting a song shows its details; **Play** opens the
   link in the browser.
 - Anyone can view songs; adding, editing, and deleting are Admin-only.
-- `GET /api/songs` exposes the library read-only for the mobile app.
 
 <!-- Add more UI requirements here. -->
