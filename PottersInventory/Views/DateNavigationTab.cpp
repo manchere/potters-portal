@@ -30,10 +30,12 @@
 
 namespace
 {
-    // A couple of months of history for context, plus a year of upcoming
-    // Sundays to schedule against.
-    constexpr int kPastWeeks = 8;
-    constexpr int kFutureWeeks = 52;
+    // The list runs from the upcoming Sunday through the end of October
+    // next year (past Sundays are looked up on the Reports tab).
+    QDate sundayListEnd(const QDate &today)
+    {
+        return QDate(today.year() + 1, 10, 31);
+    }
 
     QString formatSunday(const QDate &date)
     {
@@ -384,15 +386,15 @@ void DateNavigationTab::populateSundayList()
         }.join(QLatin1Char(' ')).toLower());
     }
 
-    QDate sunday = nearestSunday(QDate::currentDate()).addDays(-7 * kPastWeeks);
-    for (int i = 0; i < kPastWeeks + kFutureWeeks; ++i) {
+    const QDate today = QDate::currentDate();
+    const QDate end = sundayListEnd(today);
+    for (QDate sunday = nearestSunday(today); sunday <= end; sunday = sunday.addDays(7)) {
         auto *item = new QListWidgetItem(formatSunday(sunday), m_sundayList);
         item->setData(Qt::UserRole, sunday);
         applySundayItemStyle(item, false);
         if (!m_sundaySearchText.contains(sunday)) {
             m_sundaySearchText.insert(sunday, {sundaySearchText(sunday)});
         }
-        sunday = sunday.addDays(7);
     }
     applySundayFilter();
 }
