@@ -9,7 +9,6 @@ class QLabel;
 class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
-class QNetworkAccessManager;
 class QPushButton;
 class DutyController;
 class UserController;
@@ -18,7 +17,7 @@ class Duty;
 
 // Leftmost tab (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md FR-6/FR-7/FR-8): pick
 // a Sunday from a scrollable list (e.g. "Sun 6 Sep 2026"), see every
-// Member's duty (with avatar + duty icon) for it, and
+// Member's duty (with color badge + duty icon) for it, and
 // create/edit/delete duties right here via the "Assign Duty" button
 // -- there is no separate Duties tab. "+ Add Member" creates a new
 // Member profile without leaving this tab either.
@@ -35,7 +34,6 @@ public:
         DutyController *dutyController,
         UserController *userController,
         DutyTypeController *dutyTypeController,
-        QNetworkAccessManager *networkManager,
         QWidget *parent = nullptr);
 
 public slots:
@@ -78,7 +76,6 @@ private:
     void applySundayItemStyle(QListWidgetItem *item, bool isSelected) const;
     QWidget *buildRow(const Duty &duty);
     QString memberName(int userId) const;
-    QString memberAvatarSeed(int userId) const;
     // Duties only ever happen on Sundays -- rounds forward to the
     // Sunday of date's week (or date itself, if it's already Sunday).
     static QDate nearestSunday(const QDate &date);
@@ -89,7 +86,6 @@ private:
     DutyController *m_dutyController = nullptr;
     UserController *m_userController = nullptr;
     DutyTypeController *m_dutyTypeController = nullptr;
-    QNetworkAccessManager *m_networkManager = nullptr;
 
     QLineEdit *m_sundaySearch = nullptr;
     QLabel *m_noSundayMatchLabel = nullptr;

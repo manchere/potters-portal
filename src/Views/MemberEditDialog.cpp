@@ -10,8 +10,10 @@
 #include <QVBoxLayout>
 
 #include "Auth/PasswordAuth.h"
-#include "AvatarLoader.h"
 #include "Controllers/UserController.h"
+#include "MemberBadge.h"
+#include "MemberColorPicker.h"
+#include "Models/MemberColors.h"
 
 namespace
 {
@@ -27,12 +29,10 @@ namespace
 MemberEditDialog::MemberEditDialog(
     const User &user,
     UserController *userController,
-    QNetworkAccessManager *networkManager,
     QWidget *parent)
     : FramelessDialog(parent)
     , m_existingUser(user)
     , m_userController(userController)
-    , m_networkManager(networkManager)
 {
     const bool isNew = user.id() < 0;
     const QString title = isNew ? QStringLiteral("Add Member") : QStringLiteral("Edit Member");
@@ -40,10 +40,14 @@ MemberEditDialog::MemberEditDialog(
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
 
-    m_avatarPreview = new QLabel(this);
-    m_avatarPreview->setAlignment(Qt::AlignCenter);
-    auto *avatarRow = new QVBoxLayout;
-    avatarRow->addWidget(m_avatarPreview, 0, Qt::AlignHCenter);
+    // The Member's circle as it will appear elsewhere, above the form.
+    m_badgePreview = MemberBadge::make(user.name(), user.color(), 72, this);
+    auto *badgeRow = new QVBoxLayout;
+    badgeRow->addWidget(m_badgePreview, 0, Qt::AlignHCenter);
+
+    m_colorPicker = new MemberColorPicker(this);
+    m_colorPicker->setColor(isNew ? MemberColors::defaultColor() : user.color());
+    connect(m_colorPicker, &MemberColorPicker::colorChanged, this, &MemberEditDialog::updateBadgePreview);
 
     auto errorLabel = [this]() {
         auto *label = new QLabel(this);
@@ -54,7 +58,7 @@ MemberEditDialog::MemberEditDialog(
 
     m_nameEdit = new QLineEdit(user.name(), this);
     m_nameEdit->setPlaceholderText(QStringLiteral("e.g. Grace Adeyemi"));
-    connect(m_nameEdit, &QLineEdit::textChanged, this, &MemberEditDialog::updateAvatarPreview);
+    connect(m_nameEdit, &QLineEdit::textChanged, this, &MemberEditDialog::updateBadgePreview);
     connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
     m_nameError = errorLabel();
 
@@ -77,6 +81,7 @@ MemberEditDialog::MemberEditDialog(
     auto *form = new QFormLayout;
     form->addRow(QStringLiteral("Name"), m_nameEdit);
     form->addRow(QString(), m_nameError);
+    form->addRow(QStringLiteral("Color"), m_colorPicker);
     form->addRow(QStringLiteral("Email"), m_emailEdit);
     form->addRow(QString(), m_emailError);
     form->addRow(QStringLiteral("Password"), m_passwordEdit);
@@ -90,11 +95,11 @@ MemberEditDialog::MemberEditDialog(
 
     auto *layout = contentLayout();
     layout->addWidget(heading);
-    layout->addLayout(avatarRow);
+    layout->addLayout(badgeRow);
     layout->addLayout(form);
     layout->addWidget(buttons);
 
-    updateAvatarPreview();
+    updateBadgePreview();
 }
 
 void MemberEditDialog::toggleShowPassword(bool show)
@@ -102,12 +107,10 @@ void MemberEditDialog::toggleShowPassword(bool show)
     m_passwordEdit->setEchoMode(show ? QLineEdit::Normal : QLineEdit::Password);
 }
 
-void MemberEditDialog::updateAvatarPreview()
+void MemberEditDialog::updateBadgePreview()
 {
-    const QString seed = m_nameEdit->text().trimmed().isEmpty() ? QStringLiteral("member") : m_nameEdit->text().trimmed();
-    if (m_networkManager) {
-        AvatarLoader::loadInto(*m_networkManager, seed, m_avatarPreview, 72);
-    }
+    const QString name = m_nameEdit->text().trimmed();
+    MemberBadge::update(m_badgePreview, name.isEmpty() ? QStringLiteral("?") : name, m_colorPicker->color());
 }
 
 bool MemberEditDialog::validate()
@@ -146,7 +149,7 @@ void MemberEditDialog::saveClicked()
     User user = m_existingUser;
     user.setName(m_nameEdit->text().trimmed());
     user.setEmail(m_emailEdit->text().trimmed());
-    user.setAvatarSeed(m_nameEdit->text().trimmed());
+    user.setColor(m_colorPicker->color());
 
     const QString password = m_passwordEdit->text();
     if (!password.isEmpty()) {

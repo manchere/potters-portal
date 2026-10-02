@@ -10,24 +10,20 @@
 #include <QMap>
 #include <QVBoxLayout>
 
-#include "AvatarLoader.h"
 #include "Controllers/DutyTypeController.h"
+#include "MemberBadge.h"
 #include "Models/DutyType.h"
 
 MemberStatsDialog::MemberStatsDialog(
     const User &user,
     const QVector<Duty> &duties,
     DutyTypeController *dutyTypeController,
-    QNetworkAccessManager *networkManager,
     QWidget *parent)
     : FramelessDialog(parent)
 {
     setWindowTitle(QStringLiteral("%1 — Responsibilities").arg(user.name()));
 
-    auto *avatar = new QLabel(this);
-    if (networkManager) {
-        AvatarLoader::loadInto(*networkManager, user.avatarSeed(), avatar, 64);
-    }
+    auto *badge = MemberBadge::make(user.name(), user.color(), 64, this);
 
     auto *nameLabel = new QLabel(user.name(), this);
     nameLabel->setObjectName(QStringLiteral("pageTitle"));
@@ -40,7 +36,7 @@ MemberStatsDialog::MemberStatsDialog(
     headerText->addWidget(nameLabel);
     headerText->addWidget(countLabel);
     auto *header = new QHBoxLayout;
-    header->addWidget(avatar);
+    header->addWidget(badge);
     header->addSpacing(4);
     header->addLayout(headerText);
     header->addStretch();

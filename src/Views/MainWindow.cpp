@@ -108,9 +108,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_itemListView = new ItemListView(&m_itemController, &m_tagController, &m_categoryController, this);
     m_adminOverviewView = new AdminOverviewView(
-        &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, &m_networkManager, this);
+        &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, this);
     m_scheduleTab = new ScheduleTab(
-        &m_dutyController, &m_userController, &m_dutyTypeController, &m_networkManager, this);
+        &m_dutyController, &m_userController, &m_dutyTypeController, this);
     m_songsView = new SongsView(&m_songController, this);
     m_reportsView = new ReportsView(&m_dutyController, &m_userController, this);
 

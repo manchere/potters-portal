@@ -13,7 +13,6 @@ class QListWidgetItem;
 class QLineEdit;
 class QPushButton;
 class QButtonGroup;
-class QNetworkAccessManager;
 class TagController;
 class CategoryController;
 class DutyTypeController;
@@ -24,7 +23,7 @@ class UserController;
 // the buttons at the top), with a search-by-name filter, four "+ Add"
 // buttons, double-click to edit, and one generic Delete button that acts
 // on whichever kind is currently shown. Tag rows are colored with the
-// tag's own color; Member rows show their avatar at the side.
+// tag's own color; Member rows show their color badge at the side.
 //
 // "+ Add Duty" creates a duty *type* (a duty name + icon,
 // e.g. "Ushering" + an emoji) -- it does NOT schedule a Member against a
@@ -46,7 +45,6 @@ public:
         CategoryController *categoryController,
         DutyTypeController *dutyTypeController,
         UserController *userController,
-        QNetworkAccessManager *networkManager,
         QWidget *parent = nullptr);
 
 public slots:
@@ -85,7 +83,6 @@ private:
     CategoryController *m_categoryController = nullptr;
     DutyTypeController *m_dutyTypeController = nullptr;
     UserController *m_userController = nullptr;
-    QNetworkAccessManager *m_networkManager = nullptr;
     bool m_isAdmin = false;
     int m_adminUserId = -1;
     Kind m_kind = Kind::Members;

@@ -19,7 +19,7 @@
 
 #include "AssignDutyDialog.h"
 #include "MemberEditDialog.h"
-#include "AvatarLoader.h"
+#include "MemberBadge.h"
 #include "Controllers/DutyController.h"
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/UserController.h"
@@ -61,13 +61,11 @@ ScheduleTab::ScheduleTab(
     DutyController *dutyController,
     UserController *userController,
     DutyTypeController *dutyTypeController,
-    QNetworkAccessManager *networkManager,
     QWidget *parent)
     : QWidget(parent)
     , m_dutyController(dutyController)
     , m_userController(userController)
     , m_dutyTypeController(dutyTypeController)
-    , m_networkManager(networkManager)
 {
     auto *title = new QLabel(QStringLiteral("Schedule"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
@@ -196,15 +194,6 @@ QString ScheduleTab::memberName(int userId) const
     return user.id() >= 0 ? user.name() : QStringLiteral("(deleted member)");
 }
 
-QString ScheduleTab::memberAvatarSeed(int userId) const
-{
-    if (userId <= 0) {
-        return QString();
-    }
-    const User user = m_userController->userById(userId);
-    return user.id() >= 0 ? user.avatarSeed() : QString();
-}
-
 QWidget *ScheduleTab::buildRow(const Duty &duty)
 {
     auto *row = new QWidget(m_resultsList);
@@ -212,15 +201,16 @@ QWidget *ScheduleTab::buildRow(const Duty &duty)
     layout->setContentsMargins(8, 6, 8, 6);
     layout->setSpacing(10);
 
-    auto *avatar = new QLabel(row);
-    const QString seed = memberAvatarSeed(duty.memberId());
-    if (!seed.isEmpty() && m_networkManager) {
-        AvatarLoader::loadInto(*m_networkManager, seed, avatar, 36);
+    const User member = duty.memberId() > 0 ? m_userController->userById(duty.memberId()) : User();
+    if (member.id() >= 0) {
+        layout->addWidget(MemberBadge::make(member.name(), member.color(), 36, row));
     } else {
-        avatar->setFixedSize(36, 36);
-        avatar->setObjectName(QStringLiteral("avatarPlaceholder"));
+        // Unfilled duty (or a deleted Member): an empty grey circle.
+        auto *placeholder = new QLabel(row);
+        placeholder->setFixedSize(36, 36);
+        placeholder->setObjectName(QStringLiteral("avatarPlaceholder"));
+        layout->addWidget(placeholder);
     }
-    layout->addWidget(avatar);
 
     const DutyType dutyType = m_dutyTypeController->dutyTypeById(duty.dutyTypeId());
     auto *dutyTypeIcon = new QLabel(dutyType.icon(), row);
@@ -549,7 +539,7 @@ void ScheduleTab::addMemberClicked()
     if (!m_isAdmin) {
         return;
     }
-    MemberEditDialog dialog(User(), m_userController, m_networkManager, this);
+    MemberEditDialog dialog(User(), m_userController, this);
     dialog.exec();
 }
 
@@ -633,7 +623,7 @@ void ScheduleTab::memberDoubleClicked(QListWidgetItem *item)
     if (user.id() < 0) {
         return;
     }
-    MemberStatsDialog dialog(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController, m_networkManager, this);
+    MemberStatsDialog dialog(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController, this);
     dialog.exec();
 }
 

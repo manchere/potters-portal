@@ -36,11 +36,10 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   b) **by an Admin**, via the "+ Add Member" button on the desktop Schedule tab
   (name, email, password — the Admin sets initial credentials and shares
   them with the Member).
-- **FR-1.2** Creating a profile shall generate an avatar for the Member
-  automatically, keyed to a seed derived from their name — implemented via
-  [DiceBear](https://www.dicebear.com/), a free third-party avatar API
-  requiring no key and no photo upload. The avatar is a consistent
-  generated picture for that Member, not a literal photo likeness.
+- **FR-1.2** Creating a profile shall let the Member (or the Admin
+  creating it) pick a profile color from a fixed palette. The Member is
+  then shown as a circle in that color with their initials — no pictures
+  or photos. The color can be changed later by editing the profile.
 - **FR-1.3** A user account may hold both the Admin and Member roles
   simultaneously; an Admin with the Member role shall have their own
   profile, appear in scheduling, and be assignable to duties the same
@@ -116,7 +115,7 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 - **FR-7.3** An Admin shall be able to assign a second, support/backup
   Member to a duty, to cover the primary assignee's absence.
 - **FR-7.4** Every Member shown in scheduling views shall display their
-  avatar (FR-1.2) alongside their name; when a duty has a support
+  color badge (FR-1.2) alongside their name; when a duty has a support
   Member, the primary and support Member shall be shown together on the
   same line (e.g. "Grace Adeyemi · Support: Ruth Mensah").
 
@@ -132,7 +131,7 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   scheduled for it (FR-7.4), with Sundays that already have at least one
   duty visually distinguished in the list itself.
 - **FR-8.3** Double-clicking a Member in the results shall open a
-  read-only "responsibilities" summary for that Member: an avatar, a count
+  read-only "responsibilities" summary for that Member: their color badge, a count
   of duties by duty type, and their full duty history (not only the
   selected Sunday).
 - **FR-8.4** Creating, editing, and deleting a duty (FR-6, FR-7)
@@ -193,10 +192,10 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 
 - **Desktop (Qt/C++)**: Admin-facing — the Schedule tab is the primary
   scheduling surface (duty CRUD, scheduling, support-Member
-  duty, Member creation, avatars, duty type icons), plus non-availability
+  duty, Member creation, color badges, duty type icons), plus non-availability
   approval and the combined Tags/Categories/Duties overview tab.
 - **Mobile (React Native)**: Member-facing — self-service profile
-  creation, avatar, own-duty view, availability calendar,
+  creation with a color pick, own-duty view, availability calendar,
   non-availability request submission and status.
 - **Backend (`src/Server`)**: authentication, Members,
   Duties, and Non-Availability Requests REST endpoints shared by both

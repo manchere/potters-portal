@@ -399,7 +399,7 @@ QLabel#statPill {
 }
 QLabel#avatarPlaceholder {
     background: {{subtleHover}};
-    border-radius: 4px;
+    border-radius: 18px;
 }
 
 /* --- Inline field validation errors (below the offending field) -------- */

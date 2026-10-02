@@ -10,7 +10,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-#include "AvatarLoader.h"
+#include "MemberBadge.h"
 #include "CategoryEditDialog.h"
 #include "Controllers/CategoryController.h"
 #include "Controllers/DutyTypeController.h"
@@ -25,14 +25,12 @@ AdminOverviewView::AdminOverviewView(
     CategoryController *categoryController,
     DutyTypeController *dutyTypeController,
     UserController *userController,
-    QNetworkAccessManager *networkManager,
     QWidget *parent)
     : QWidget(parent)
     , m_tagController(tagController)
     , m_categoryController(categoryController)
     , m_dutyTypeController(dutyTypeController)
     , m_userController(userController)
-    , m_networkManager(networkManager)
 {
     auto *title = new QLabel(QStringLiteral("Taxonomy"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
@@ -245,11 +243,7 @@ void AdminOverviewView::rebuildList()
             auto *rowLayout = new QHBoxLayout(row);
             rowLayout->setContentsMargins(8, 4, 8, 4);
             rowLayout->setSpacing(10);
-            auto *avatar = new QLabel(row);
-            if (m_networkManager) {
-                AvatarLoader::loadInto(*m_networkManager, user.avatarSeed(), avatar, 32);
-            }
-            rowLayout->addWidget(avatar);
+            rowLayout->addWidget(MemberBadge::make(user.name(), user.color(), 32, row));
             auto *textContainer = new QWidget(row);
             auto *textLayout = new QVBoxLayout(textContainer);
             textLayout->setContentsMargins(0, 0, 0, 0);
@@ -318,7 +312,7 @@ void AdminOverviewView::addMemberClicked()
     if (!m_isAdmin) {
         return;
     }
-    MemberEditDialog dialog(User(), m_userController, m_networkManager, this);
+    MemberEditDialog dialog(User(), m_userController, this);
     if (dialog.exec() == QDialog::Accepted) {
         refresh();
     }
@@ -445,7 +439,7 @@ void AdminOverviewView::rowDoubleClicked(QListWidgetItem *item)
         if (existing.id() < 0) {
             return;
         }
-        MemberEditDialog dialog(existing, m_userController, m_networkManager, this);
+        MemberEditDialog dialog(existing, m_userController, this);
         if (dialog.exec() == QDialog::Accepted) {
             refresh();
         }

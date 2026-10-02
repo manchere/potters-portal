@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QNetworkAccessManager>
 
 #include "Controllers/DutyController.h"
 #include "Controllers/CategoryController.h"
@@ -61,9 +60,6 @@ private:
     DutyController m_dutyController;
     DutyTypeController m_dutyTypeController;
     SongController m_songController;
-    // Shared by ScheduleTab for fetching Member avatars (DiceBear)
-    // without blocking the UI thread.
-    QNetworkAccessManager m_networkManager;
 
     ItemListView *m_itemListView = nullptr;
     AdminOverviewView *m_adminOverviewView = nullptr;

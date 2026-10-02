@@ -20,7 +20,7 @@ static User userFromQuery(const QSqlQuery &query)
     user.setPasswordHash(query.value(QStringLiteral("password_hash")).toString());
     user.setPasswordSalt(query.value(QStringLiteral("password_salt")).toString());
     user.setIsAdmin(query.value(QStringLiteral("is_admin")).toBool());
-    user.setAvatarSeed(query.value(QStringLiteral("avatar_seed")).toString());
+    user.setColor(query.value(QStringLiteral("color")).toString());
     return user;
 }
 
@@ -30,7 +30,7 @@ QVector<User> UserController::allUsers() const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, avatar_seed FROM users ORDER BY name"));
+        "SELECT id, name, email, password_hash, password_salt, is_admin, color FROM users ORDER BY name"));
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return users;
@@ -46,7 +46,7 @@ User UserController::userById(int id) const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, avatar_seed "
+        "SELECT id, name, email, password_hash, password_salt, is_admin, color "
         "FROM users WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), id);
     if (!query.exec() || !query.next()) {
@@ -61,7 +61,7 @@ User UserController::userByEmail(const QString &email) const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, avatar_seed "
+        "SELECT id, name, email, password_hash, password_salt, is_admin, color "
         "FROM users WHERE LOWER(email) = LOWER(:email)"));
     query.bindValue(QStringLiteral(":email"), email);
     if (!query.exec() || !query.next()) {
@@ -100,14 +100,14 @@ bool UserController::addUser(User &user)
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "INSERT INTO users (name, email, password_hash, password_salt, is_admin, avatar_seed) "
-        "VALUES (:name, :email, :password_hash, :password_salt, :is_admin, :avatar_seed) RETURNING id"));
+        "INSERT INTO users (name, email, password_hash, password_salt, is_admin, color) "
+        "VALUES (:name, :email, :password_hash, :password_salt, :is_admin, :color) RETURNING id"));
     query.bindValue(QStringLiteral(":name"), user.name());
     query.bindValue(QStringLiteral(":email"), user.email());
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
     query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
     query.bindValue(QStringLiteral(":is_admin"), user.isAdmin());
-    query.bindValue(QStringLiteral(":avatar_seed"), user.avatarSeed());
+    query.bindValue(QStringLiteral(":color"), user.color());
     if (!query.exec() || !query.next()) {
         m_lastError = query.lastError().text();
         return false;
@@ -127,11 +127,11 @@ bool UserController::updateUser(const User &user)
     QSqlQuery query;
     query.prepare(QStringLiteral(
         "UPDATE users SET name = :name, email = :email, "
-        "avatar_seed = :avatar_seed, password_hash = :password_hash, password_salt = :password_salt, "
+        "color = :color, password_hash = :password_hash, password_salt = :password_salt, "
         "updated_at = now() WHERE id = :id"));
     query.bindValue(QStringLiteral(":name"), user.name());
     query.bindValue(QStringLiteral(":email"), user.email());
-    query.bindValue(QStringLiteral(":avatar_seed"), user.avatarSeed());
+    query.bindValue(QStringLiteral(":color"), user.color());
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
     query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
     query.bindValue(QStringLiteral(":id"), user.id());

@@ -17,6 +17,7 @@ set(CORE_SOURCES
   "Models/Tag.h" "Models/Tag.cpp"
   "Models/Category.h" "Models/Category.cpp"
   "Models/User.h" "Models/User.cpp"
+  "Models/MemberColors.h" "Models/MemberColors.cpp"
   "Models/Duty.h" "Models/Duty.cpp"
   "Models/ScheduleReportRow.h"
   "Models/DutyType.h" "Models/DutyType.cpp"
@@ -71,7 +72,8 @@ add_executable (PottersPortal
   "Views/ReportsView.h" "Views/ReportsView.cpp"
   "Views/MemberPickerField.h" "Views/MemberPickerField.cpp"
   "Views/SongEditDialog.h" "Views/SongEditDialog.cpp"
-  "Views/AvatarLoader.h" "Views/AvatarLoader.cpp"
+  "Views/MemberBadge.h" "Views/MemberBadge.cpp"
+  "Views/MemberColorPicker.h" "Views/MemberColorPicker.cpp"
   "Vision/GroqQueryClient.h" "Vision/GroqQueryClient.cpp"
   "Vision/LocationClient.h" "Vision/LocationClient.cpp"
 )

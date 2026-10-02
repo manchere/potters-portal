@@ -70,7 +70,7 @@ namespace Json
         json[QStringLiteral("name")] = user.name();
         json[QStringLiteral("email")] = user.email();
         json[QStringLiteral("is_admin")] = user.isAdmin();
-        json[QStringLiteral("avatar_seed")] = user.avatarSeed();
+        json[QStringLiteral("color")] = user.color();
         return json;
     }
 

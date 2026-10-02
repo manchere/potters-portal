@@ -7,7 +7,6 @@
 #include "Models/Duty.h"
 #include "Models/User.h"
 
-class QNetworkAccessManager;
 class DutyTypeController;
 
 // "Responsibilities" modal opened by double-clicking a member's profile
@@ -23,6 +22,5 @@ public:
         const User &user,
         const QVector<Duty> &duties,
         DutyTypeController *dutyTypeController,
-        QNetworkAccessManager *networkManager,
         QWidget *parent = nullptr);
 };

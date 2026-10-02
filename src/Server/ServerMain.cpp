@@ -22,6 +22,7 @@
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
 #include "Database/Database.h"
+#include "Models/MemberColors.h"
 #include "AuthMiddleware.h"
 #include "Json.h"
 #include "Vision/GroqVisionClient.h"
@@ -237,6 +238,11 @@ int main(int argc, char **argv)
         const QString name = body.value(QStringLiteral("name")).toString().trimmed();
         const QString email = body.value(QStringLiteral("email")).toString().trimmed();
         const QString password = body.value(QStringLiteral("password")).toString();
+        // Optional; profiles created without one get the default color.
+        const QString color = body.value(QStringLiteral("color")).toString(MemberColors::defaultColor());
+        if (!MemberColors::isValid(color)) {
+            return errorResponse(QStringLiteral("color must be one of the profile colors"), StatusCode::BadRequest);
+        }
         if (name.isEmpty() || email.isEmpty() || password.length() < 8) {
             return errorResponse(
                 QStringLiteral("name, email, and a password of at least 8 characters are required"),
@@ -249,7 +255,7 @@ int main(int argc, char **argv)
         user.setName(name);
         user.setEmail(email);
         user.setIsAdmin(false);
-        user.setAvatarSeed(name);
+        user.setColor(color.toLower());
         const QString salt = PasswordAuth::generateSalt();
         user.setPasswordSalt(salt);
         user.setPasswordHash(PasswordAuth::hashPassword(password, salt));
