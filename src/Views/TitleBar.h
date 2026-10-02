@@ -22,8 +22,9 @@ public:
     // glyph/tooltip (restore vs. maximize).
     void setMaximized(bool maximized);
 
-    // Swaps the lock icon (🔒 logged out / 🔓 admin) and its tooltip.
-    void setAdminLoggedIn(bool loggedIn);
+    // Swaps the lock icon (🔒 signed out / 🔓 signed in) and its tooltip,
+    // which names who's signed in. Pass an empty name when signed out.
+    void setSignedIn(const QString &name, bool isAdmin);
 
 signals:
     void minimizeClicked();

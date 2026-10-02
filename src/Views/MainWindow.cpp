@@ -1,11 +1,16 @@
 #include "MainWindow.h"
 
+#include <QApplication>
+#include <QMessageBox>
 #include <QMouseEvent>
+#include <QProcess>
+#include <QPushButton>
 #include <QStackedWidget>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QWindow>
 
+#include "AccessRightsDialog.h"
 #include "AdminOverviewView.h"
 #include "ScheduleTab.h"
 #include "ItemListView.h"
@@ -14,8 +19,10 @@
 #include "ReportsView.h"
 #include "SettingsView.h"
 #include "SongsView.h"
+#include "FeedbackView.h"
 #include "Sidebar.h"
 #include "TitleBar.h"
+#include "Language.h"
 #include "Style.h"
 
 namespace {
@@ -103,7 +110,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
-    setWindowTitle(QStringLiteral("Potters Portal"));
+    setWindowTitle(tr("Potters Portal"));
     resize(1080, 720);
     setMinimumSize(760, 480);
 
@@ -113,9 +120,11 @@ MainWindow::MainWindow(QWidget *parent)
     m_scheduleTab = new ScheduleTab(
         &m_dutyController, &m_userController, &m_dutyTypeController, this);
     m_songsView = new SongsView(&m_songController, this);
+    m_feedbackView = new FeedbackView(&m_feedbackController, &m_userController, this);
     m_reportsView = new ReportsView(&m_dutyController, &m_userController, this);
     m_settingsView = new SettingsView(this);
     m_settingsView->setCurrentTheme(currentTheme());
+    m_settingsView->setCurrentLanguage(savedLanguage());
 
     auto *frame = new ResizeFrame(this);
 
@@ -126,12 +135,13 @@ MainWindow::MainWindow(QWidget *parent)
     // itself (see ScheduleTab), not a separate page. Sidebar order must
     // match the stack's.
     m_sidebar = new Sidebar(frame);
-    m_sidebar->addPage(QStringLiteral("📅"), QStringLiteral("Schedule")); // 📅
-    m_sidebar->addPage(QStringLiteral("📊"), QStringLiteral("Reports"));  // 📊
-    m_sidebar->addPage(QStringLiteral("🎵"), QStringLiteral("Songs"));    // 🎵
-    m_sidebar->addPage(QStringLiteral("📦"), QStringLiteral("Inventory"));    // 📦
-    m_sidebar->addPage(QStringLiteral("🏷"), QStringLiteral("Taxonomy")); // 🏷
-    m_sidebar->addPage(QStringLiteral("⚙"), QStringLiteral("Settings"));     // ⚙
+    m_sidebar->addPage(QStringLiteral("📅"), tr("Schedule")); // 📅
+    m_sidebar->addPage(QStringLiteral("📊"), tr("Reports"));  // 📊
+    m_sidebar->addPage(QStringLiteral("🎵"), tr("Songs"));    // 🎵
+    m_sidebar->addPage(QStringLiteral("📦"), tr("Inventory"));    // 📦
+    m_sidebar->addPage(QStringLiteral("🏷"), tr("Taxonomy")); // 🏷
+    m_sidebar->addPage(QStringLiteral("💬"), tr("Feedback"));
+    m_sidebar->addPage(QStringLiteral("⚙"), tr("Settings"));     // ⚙
 
     m_stack = new QStackedWidget(frame);
     m_stack->addWidget(m_scheduleTab);
@@ -139,6 +149,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_stack->addWidget(m_songsView);
     m_stack->addWidget(m_itemListView);
     m_stack->addWidget(m_adminOverviewView);
+    m_stack->addWidget(m_feedbackView);
     m_stack->addWidget(m_settingsView);
 
     connect(m_sidebar, &Sidebar::currentChanged, m_stack, &QStackedWidget::setCurrentIndex);
@@ -148,6 +159,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_titleBar, &TitleBar::adminButtonClicked, this, &MainWindow::adminButtonClicked);
     connect(m_settingsView, &SettingsView::changePasswordClicked, this, &MainWindow::changePasswordClicked);
     connect(m_settingsView, &SettingsView::themeChosen, this, &MainWindow::themeChosen);
+    connect(m_settingsView, &SettingsView::languageChosen, this, &MainWindow::languageChosen);
+    connect(m_settingsView, &SettingsView::accessRightsClicked, this, &MainWindow::accessRightsClicked);
+
+    // A duty's rights follow who has it on the upcoming Sunday, and a
+    // member's team can change, so recheck whenever any of it does.
+    connect(&m_accessController, &AccessController::rulesChanged, this, &MainWindow::applyAccess);
+    connect(&m_dutyController, &DutyController::dutiesChanged, this, &MainWindow::applyAccess);
+    connect(&m_userController, &UserController::usersChanged, this, &MainWindow::applyAccess);
 
     auto *frameLayout = new QVBoxLayout(frame);
     frameLayout->setContentsMargins(kResizeMargin, kResizeMargin, kResizeMargin, kResizeMargin);
@@ -179,13 +198,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(&m_dutyController, &DutyController::dutiesChanged, m_reportsView, &ReportsView::refresh);
     connect(&m_userController, &UserController::usersChanged, m_reportsView, &ReportsView::refresh);
+    connect(&m_userController, &UserController::usersChanged, m_feedbackView, &FeedbackView::refresh);
     connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_reportsView, &ReportsView::refresh);
+
+    applyAccess();
 }
 
 void MainWindow::adminButtonClicked()
 {
     if (m_currentUser.id() >= 0) {
-        // Already logged in -- clicking the unlocked icon logs out.
+        // Already signed in -- clicking the unlocked icon signs out.
         m_currentUser = User();
     } else {
         LoginDialog dialog(&m_userController, this);
@@ -194,13 +216,48 @@ void MainWindow::adminButtonClicked()
         }
         m_currentUser = dialog.loggedInUser();
     }
+    applyAccess();
+}
 
-    const bool isAdmin = m_currentUser.id() >= 0;
-    m_titleBar->setAdminLoggedIn(isAdmin);
+void MainWindow::applyAccess()
+{
+    // Re-read the account: their team or Admin role may have changed.
+    if (m_currentUser.id() >= 0) {
+        const User fresh = m_userController.userById(m_currentUser.id());
+        m_currentUser = fresh.id() >= 0 ? fresh : User();
+    }
+    const bool isAdmin = m_currentUser.id() >= 0 && m_currentUser.isAdmin();
+    const QDate today = QDate::currentDate();
+    const QDate upcomingSunday = today.addDays(7 - today.dayOfWeek()); // today, if it's Sunday
+    const AccessRights rights = m_accessController.rightsFor(m_currentUser, upcomingSunday);
+
+    m_titleBar->setSignedIn(m_currentUser.id() >= 0 ? m_currentUser.name() : QString(), isAdmin);
     m_scheduleTab->setAdminMode(isAdmin);
-    m_adminOverviewView->setAdminMode(isAdmin, m_currentUser.id());
-    m_songsView->setAdminMode(isAdmin);
+    m_reportsView->setCanSave(rights.section(Section::Reports).create);
+    m_songsView->setAccess(rights.section(Section::Songs));
+    m_itemListView->setAccess(rights.section(Section::Inventory));
+    m_adminOverviewView->setAccess(rights.section(Section::Taxonomy), isAdmin, m_currentUser.id());
+    m_feedbackView->setAccess(rights.section(Section::Feedback));
     m_settingsView->setAdminMode(isAdmin);
+
+    // Sidebar pages after Schedule, in the same order as allSections().
+    const QVector<Section> sections = allSections();
+    for (int i = 0; i < sections.size(); ++i) {
+        m_sidebar->setPageVisible(i + 1, rights.section(sections[i]).view);
+    }
+    const int current = m_sidebar->currentIndex();
+    if (current > 0 && !rights.section(sections[current - 1]).view) {
+        m_sidebar->setCurrentIndex(0);
+    }
+}
+
+void MainWindow::accessRightsClicked()
+{
+    if (!m_currentUser.isAdmin()) {
+        return;
+    }
+    AccessRightsDialog dialog(&m_accessController, &m_userController, &m_teamController, &m_dutyTypeController, this);
+    dialog.exec();
 }
 
 void MainWindow::changePasswordClicked()
@@ -224,6 +281,35 @@ void MainWindow::themeChosen(Theme theme)
     // reached by the stylesheet.
     m_scheduleTab->restyleSundayItems();
     m_reportsView->restyleReport();
+}
+
+void MainWindow::languageChosen(Language language)
+{
+    if (language == savedLanguage()) {
+        return;
+    }
+    saveLanguage(language);
+    // Asked in the language being switched to, since that's the one the
+    // person picked and can read.
+    const bool french = language == Language::French;
+    QMessageBox box(QMessageBox::Question,
+        french ? QStringLiteral("Langue") : QStringLiteral("Language"),
+        french ? QStringLiteral("Redémarrer Potters Portal en français maintenant ?")
+               : QStringLiteral("Restart Potters Portal in English now?"),
+        QMessageBox::NoButton, this);
+    QPushButton *restartButton = box.addButton(
+        french ? QStringLiteral("Redémarrer") : QStringLiteral("Restart"), QMessageBox::AcceptRole);
+    box.addButton(french ? QStringLiteral("Plus tard") : QStringLiteral("Later"), QMessageBox::RejectRole);
+    box.setInformativeText(french
+        ? QStringLiteral("Sinon, le changement s'appliquera au prochain démarrage.")
+        : QStringLiteral("Otherwise it applies the next time the app starts."));
+    box.exec();
+    if (box.clickedButton() != restartButton) {
+        return;
+    }
+    if (QProcess::startDetached(QCoreApplication::applicationFilePath(), QCoreApplication::arguments().mid(1))) {
+        QApplication::quit();
+    }
 }
 
 void MainWindow::toggleMaximizeRestore()

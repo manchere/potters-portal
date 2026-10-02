@@ -13,7 +13,7 @@
 SettingsView::SettingsView(QWidget *parent)
     : QWidget(parent)
 {
-    auto *title = new QLabel(QStringLiteral("Settings"), this);
+    auto *title = new QLabel(tr("Settings"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     m_subtitle = new QLabel(this);
     m_subtitle->setObjectName(QStringLiteral("pageSubtitle"));
@@ -29,11 +29,11 @@ SettingsView::SettingsView(QWidget *parent)
         QString description;
         QStringList swatches;
     } themes[] = {
-        {Theme::Light, QStringLiteral("White pages with navy buttons."),
+        {Theme::Light, tr("White pages with navy buttons."),
          {QStringLiteral("#f7f8fb"), QStringLiteral("#ffffff"), QStringLiteral("#14335c"), QStringLiteral("#d6a537")}},
-        {Theme::Black, QStringLiteral("Black pages, easy on the eyes at night."),
+        {Theme::Black, tr("Black pages, easy on the eyes at night."),
          {QStringLiteral("#000000"), QStringLiteral("#0e0e0e"), QStringLiteral("#1f4a85"), QStringLiteral("#d6a537")}},
-        {Theme::Navy, QStringLiteral("Deep navy with gold, the colors of the app icon."),
+        {Theme::Navy, tr("Deep navy with gold, the colors of the app icon."),
          {QStringLiteral("#0b1a33"), QStringLiteral("#10244a"), QStringLiteral("#d4a72c"), QStringLiteral("#f0c75e")}},
     };
     for (const auto &option : themes) {
@@ -42,16 +42,38 @@ SettingsView::SettingsView(QWidget *parent)
         themeRow->addWidget(card, 1);
     }
 
-    auto *appearanceBox = new QGroupBox(QStringLiteral("Appearance"), this);
+    auto *appearanceBox = new QGroupBox(tr("Appearance"), this);
     auto *appearanceLayout = new QVBoxLayout(appearanceBox);
     appearanceLayout->addLayout(themeRow);
 
+    // --- Language -----------------------------------------------------------
+    // Each name in its own language, so it can be found whichever is active.
+    m_englishRadio = new QRadioButton(QStringLiteral("English (ENG)"), this);
+    m_frenchRadio = new QRadioButton(QStringLiteral("Français (FR)"), this);
+    auto *languageGroup = new QButtonGroup(this);
+    languageGroup->addButton(m_englishRadio);
+    languageGroup->addButton(m_frenchRadio);
+    connect(m_englishRadio, &QRadioButton::clicked, this, [this]() { emit languageChosen(Language::English); });
+    connect(m_frenchRadio, &QRadioButton::clicked, this, [this]() { emit languageChosen(Language::French); });
+    auto *languageHint = new QLabel(tr("The app restarts to switch language."), this);
+    languageHint->setObjectName(QStringLiteral("mutedLabel"));
+
+    auto *languageRow = new QHBoxLayout;
+    languageRow->addWidget(m_englishRadio);
+    languageRow->addSpacing(16);
+    languageRow->addWidget(m_frenchRadio);
+    languageRow->addSpacing(16);
+    languageRow->addWidget(languageHint, 1);
+    auto *languageBox = new QGroupBox(tr("Language"), this);
+    auto *languageLayout = new QVBoxLayout(languageBox);
+    languageLayout->addLayout(languageRow);
+
     // --- Admin password ---------------------------------------------------
-    auto *passwordButton = new QPushButton(QStringLiteral("Change Password..."), this);
+    auto *passwordButton = new QPushButton(tr("Change Password..."), this);
     passwordButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(passwordButton, &QPushButton::clicked, this, &SettingsView::changePasswordClicked);
     auto *passwordHint = new QLabel(
-        QStringLiteral("Sets a new password for the Admin account you're logged in with."), this);
+        tr("Sets a new password for the Admin account you're logged in with."), this);
     passwordHint->setObjectName(QStringLiteral("mutedLabel"));
     passwordHint->setWordWrap(true);
 
@@ -59,9 +81,27 @@ SettingsView::SettingsView(QWidget *parent)
     passwordRow->addWidget(passwordButton);
     passwordRow->addSpacing(8);
     passwordRow->addWidget(passwordHint, 1);
-    m_passwordBox = new QGroupBox(QStringLiteral("Admin password"), this);
+    m_passwordBox = new QGroupBox(tr("Admin password"), this);
     auto *passwordLayout = new QVBoxLayout(m_passwordBox);
     passwordLayout->addLayout(passwordRow);
+
+    // --- Access rights (Admin) ------------------------------------------------
+    auto *accessButton = new QPushButton(tr("Manage Access Rights..."), this);
+    accessButton->setObjectName(QStringLiteral("secondaryButton"));
+    connect(accessButton, &QPushButton::clicked, this, &SettingsView::accessRightsClicked);
+    auto *accessHint = new QLabel(
+        tr("Choose what everyone, each member, team or duty can open and change in Reports, Songs, "
+           "Inventory, Taxonomy, Feedback and Settings."),
+        this);
+    accessHint->setObjectName(QStringLiteral("mutedLabel"));
+    accessHint->setWordWrap(true);
+    auto *accessRow = new QHBoxLayout;
+    accessRow->addWidget(accessButton);
+    accessRow->addSpacing(8);
+    accessRow->addWidget(accessHint, 1);
+    m_accessBox = new QGroupBox(tr("Access rights"), this);
+    auto *accessLayout = new QVBoxLayout(m_accessBox);
+    accessLayout->addLayout(accessRow);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(20, 20, 20, 20);
@@ -70,7 +110,9 @@ SettingsView::SettingsView(QWidget *parent)
     layout->addWidget(m_subtitle);
     layout->addSpacing(6);
     layout->addWidget(appearanceBox);
+    layout->addWidget(languageBox);
     layout->addWidget(m_passwordBox);
+    layout->addWidget(m_accessBox);
     layout->addStretch();
 
     setAdminMode(false);
@@ -129,6 +171,11 @@ void SettingsView::setCurrentTheme(Theme theme)
     updateCardHighlight();
 }
 
+void SettingsView::setCurrentLanguage(Language language)
+{
+    (language == Language::French ? m_frenchRadio : m_englishRadio)->setChecked(true);
+}
+
 void SettingsView::updateCardHighlight()
 {
     for (const ThemeOption &option : std::as_const(m_themeOptions)) {
@@ -141,7 +188,8 @@ void SettingsView::updateCardHighlight()
 void SettingsView::setAdminMode(bool isAdmin)
 {
     m_passwordBox->setVisible(isAdmin);
+    m_accessBox->setVisible(isAdmin);
     m_subtitle->setText(isAdmin
-        ? QStringLiteral("Choose how the app looks, and change the Admin password.")
-        : QStringLiteral("Choose how the app looks."));
+        ? tr("Choose how the app looks and its language, change the Admin password, and set who can do what.")
+        : tr("Choose how the app looks and its language."));
 }

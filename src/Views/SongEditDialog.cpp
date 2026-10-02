@@ -12,7 +12,7 @@ SongEditDialog::SongEditDialog(const Song &song, QWidget *parent)
     : FramelessDialog(parent)
     , m_id(song.id())
 {
-    const QString title = song.id() < 0 ? QStringLiteral("Add Song") : QStringLiteral("Edit Song");
+    const QString title = song.id() < 0 ? tr("Add Song") : tr("Edit Song");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
@@ -25,15 +25,15 @@ SongEditDialog::SongEditDialog(const Song &song, QWidget *parent)
     };
 
     m_titleEdit = new QLineEdit(song.title(), this);
-    m_titleEdit->setPlaceholderText(QStringLiteral("e.g. Way Maker"));
+    m_titleEdit->setPlaceholderText(tr("e.g. Way Maker"));
     connect(m_titleEdit, &QLineEdit::textChanged, this, [this]() { m_titleError->clear(); });
     m_titleError = errorLabel();
 
     m_artistEdit = new QLineEdit(song.artist(), this);
-    m_artistEdit->setPlaceholderText(QStringLiteral("e.g. Sinach"));
+    m_artistEdit->setPlaceholderText(tr("e.g. Sinach"));
 
     m_keyEdit = new QLineEdit(song.songKey(), this);
-    m_keyEdit->setPlaceholderText(QStringLiteral("e.g. G"));
+    m_keyEdit->setPlaceholderText(tr("e.g. G"));
     m_keyEdit->setMaximumWidth(120);
 
     m_linkEdit = new QLineEdit(song.link(), this);
@@ -42,17 +42,17 @@ SongEditDialog::SongEditDialog(const Song &song, QWidget *parent)
     m_linkError = errorLabel();
 
     m_lyricsEdit = new QPlainTextEdit(song.lyrics(), this);
-    m_lyricsEdit->setPlaceholderText(QStringLiteral("Lyrics or notes (optional)"));
+    m_lyricsEdit->setPlaceholderText(tr("Lyrics or notes (optional)"));
     m_lyricsEdit->setMinimumSize(420, 180);
 
     auto *form = new QFormLayout;
-    form->addRow(QStringLiteral("Title"), m_titleEdit);
+    form->addRow(tr("Title"), m_titleEdit);
     form->addRow(QString(), m_titleError);
-    form->addRow(QStringLiteral("Artist"), m_artistEdit);
-    form->addRow(QStringLiteral("Key"), m_keyEdit);
-    form->addRow(QStringLiteral("Play link"), m_linkEdit);
+    form->addRow(tr("Artist"), m_artistEdit);
+    form->addRow(tr("Key"), m_keyEdit);
+    form->addRow(tr("Play link"), m_linkEdit);
     form->addRow(QString(), m_linkError);
-    form->addRow(QStringLiteral("Lyrics"), m_lyricsEdit);
+    form->addRow(tr("Lyrics"), m_lyricsEdit);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &SongEditDialog::saveClicked);
@@ -68,7 +68,7 @@ void SongEditDialog::saveClicked()
 {
     bool valid = true;
     if (m_titleEdit->text().trimmed().isEmpty()) {
-        m_titleError->setText(QStringLiteral("Title is required."));
+        m_titleError->setText(tr("Title is required."));
         valid = false;
     }
     const QString link = m_linkEdit->text().trimmed();
@@ -76,7 +76,7 @@ void SongEditDialog::saveClicked()
         const QUrl url(link, QUrl::StrictMode);
         const QString scheme = url.scheme().toLower();
         if (!url.isValid() || url.host().isEmpty() || (scheme != QLatin1String("http") && scheme != QLatin1String("https"))) {
-            m_linkError->setText(QStringLiteral("Enter a full web link starting with https://"));
+            m_linkError->setText(tr("Enter a full web link starting with https://"));
             valid = false;
         }
     }

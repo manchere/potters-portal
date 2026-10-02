@@ -1,5 +1,6 @@
 #include "AssignDutyDialog.h"
 
+#include <QLocale>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
@@ -20,13 +21,13 @@ AssignDutyDialog::AssignDutyDialog(
     , m_id(duty.id())
     , m_serviceDate(serviceDate)
 {
-    const QString title = duty.id() < 0 ? QStringLiteral("Assign Duty") : QStringLiteral("Edit Duty");
+    const QString title = duty.id() < 0 ? tr("Assign Duty") : tr("Edit Duty");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
 
     auto *dateLabel = new QLabel(
-        QStringLiteral("Sunday: %1").arg(serviceDate.toString(QStringLiteral("yyyy-MM-dd"))), this);
+        tr("Sunday: %1").arg(QLocale().toString(serviceDate, QStringLiteral("yyyy-MM-dd"))), this);
     dateLabel->setObjectName(QStringLiteral("pageSubtitle"));
 
     QList<QPair<int, QString>> dutyTypes;
@@ -35,7 +36,7 @@ AssignDutyDialog::AssignDutyDialog(
     }
     m_dutyTypeEdit = new SuggestLineEdit(this);
     m_dutyTypeEdit->setItems(dutyTypes);
-    m_dutyTypeEdit->setPlaceholderText(QStringLiteral("Type a duty, e.g. Ushering"));
+    m_dutyTypeEdit->setPlaceholderText(tr("Type a duty, e.g. Ushering"));
     m_dutyTypeEdit->setCurrentId(duty.dutyTypeId());
 
     // Left empty means nobody (the old "None" choice).
@@ -47,20 +48,20 @@ AssignDutyDialog::AssignDutyDialog(
     m_supportMemberEdit = new SuggestLineEdit(this);
     for (SuggestLineEdit *edit : {m_memberEdit, m_supportMemberEdit}) {
         edit->setItems(memberItems);
-        edit->setPlaceholderText(QStringLiteral("Type a name, or leave empty for nobody"));
+        edit->setPlaceholderText(tr("Type a name, or leave empty for nobody"));
     }
     m_memberEdit->setCurrentId(duty.memberId());
     m_supportMemberEdit->setCurrentId(duty.supportMemberId());
 
     m_notesEdit = new QPlainTextEdit(duty.notes(), this);
     m_notesEdit->setFixedHeight(60);
-    m_notesEdit->setPlaceholderText(QStringLiteral("Optional notes"));
+    m_notesEdit->setPlaceholderText(tr("Optional notes"));
 
     auto *form = new QFormLayout;
-    form->addRow(QStringLiteral("Duty"), m_dutyTypeEdit);
-    form->addRow(QStringLiteral("Member"), m_memberEdit);
-    form->addRow(QStringLiteral("Support member"), m_supportMemberEdit);
-    form->addRow(QStringLiteral("Notes"), m_notesEdit);
+    form->addRow(tr("Duty"), m_dutyTypeEdit);
+    form->addRow(tr("Member"), m_memberEdit);
+    form->addRow(tr("Support member"), m_supportMemberEdit);
+    form->addRow(tr("Notes"), m_notesEdit);
 
     m_errorLabel = new QLabel(this);
     m_errorLabel->setObjectName(QStringLiteral("fieldError"));
@@ -85,14 +86,14 @@ void AssignDutyDialog::saveClicked()
 {
     if (m_dutyTypeEdit->currentId() < 0) {
         m_errorLabel->setText(m_dutyTypeEdit->text().trimmed().isEmpty()
-            ? QStringLiteral("Pick a duty.")
-            : QStringLiteral("\"%1\" isn't a duty -- pick one from the suggestions.").arg(m_dutyTypeEdit->text().trimmed()));
+            ? tr("Pick a duty.")
+            : tr("\"%1\" isn't a duty -- pick one from the suggestions.").arg(m_dutyTypeEdit->text().trimmed()));
         m_dutyTypeEdit->setFocus();
         return;
     }
     for (SuggestLineEdit *edit : {m_memberEdit, m_supportMemberEdit}) {
         if (edit->hasUnknownText()) {
-            m_errorLabel->setText(QStringLiteral("No member is called \"%1\" -- pick one from the suggestions, "
+            m_errorLabel->setText(tr("No member is called \"%1\" -- pick one from the suggestions, "
                                                  "or leave it empty.").arg(edit->text().trimmed()));
             edit->setFocus();
             return;

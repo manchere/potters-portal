@@ -14,6 +14,11 @@ namespace Badge
 {
     QColor statusColor(ItemStatus status);
 
+    // The status as shown to people, in the app's language (e.g.
+    // "Available" / "Disponible"). Filtering and the database keep using
+    // itemStatusToString().
+    QString statusName(ItemStatus status);
+
     // Light tint of `color` as background, full `color` as text.
     QLabel *make(const QString &text, const QColor &color, QWidget *parent);
 }

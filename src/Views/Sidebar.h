@@ -19,6 +19,9 @@ public:
     // The first page added starts checked.
     void addPage(const QString &icon, const QString &label);
 
+    // Hides or shows a page's button (e.g. a tab someone has no access to).
+    void setPageVisible(int index, bool visible);
+
     int currentIndex() const;
     void setCurrentIndex(int index);
 

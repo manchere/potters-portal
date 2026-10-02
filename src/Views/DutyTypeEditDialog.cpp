@@ -10,24 +10,24 @@ DutyTypeEditDialog::DutyTypeEditDialog(const DutyType &dutyType, QWidget *parent
     : FramelessDialog(parent)
     , m_id(dutyType.id())
 {
-    const QString title = dutyType.id() < 0 ? QStringLiteral("Add Duty Type") : QStringLiteral("Edit Duty Type");
+    const QString title = dutyType.id() < 0 ? tr("Add Duty Type") : tr("Edit Duty Type");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
 
     m_nameEdit = new QLineEdit(dutyType.name(), this);
-    m_nameEdit->setPlaceholderText(QStringLiteral("e.g. Ushering"));
+    m_nameEdit->setPlaceholderText(tr("e.g. Ushering"));
     connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
     m_nameError = new QLabel(this);
     m_nameError->setObjectName(QStringLiteral("fieldError"));
 
     m_iconEdit = new QLineEdit(dutyType.icon(), this);
-    m_iconEdit->setPlaceholderText(QStringLiteral("A single emoji, e.g. \U0001F6CE️"));
+    m_iconEdit->setPlaceholderText(tr("A single emoji, e.g. 🛎️"));
 
     auto *form = new QFormLayout;
-    form->addRow(QStringLiteral("Name"), m_nameEdit);
+    form->addRow(tr("Name"), m_nameEdit);
     form->addRow(QString(), m_nameError);
-    form->addRow(QStringLiteral("Icon"), m_iconEdit);
+    form->addRow(tr("Icon"), m_iconEdit);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &DutyTypeEditDialog::saveClicked);
@@ -42,7 +42,7 @@ DutyTypeEditDialog::DutyTypeEditDialog(const DutyType &dutyType, QWidget *parent
 void DutyTypeEditDialog::saveClicked()
 {
     if (m_nameEdit->text().trimmed().isEmpty()) {
-        m_nameError->setText(QStringLiteral("Name is required."));
+        m_nameError->setText(tr("Name is required."));
         return;
     }
     accept();

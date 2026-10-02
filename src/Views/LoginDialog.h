@@ -9,11 +9,10 @@ class QLabel;
 class QLineEdit;
 class UserController;
 
-// Password-only admin unlock, triggered by the lock icon in TitleBar
-// rather than a blocking dialog at startup -- the app is usable
-// read-only without logging in at all. No email/username field: the
-// password alone is checked against every Admin account
-// (UserController::verifyAdminPassword).
+// Sign-in for any member (email + password), opened from the lock icon in
+// TitleBar rather than a blocking dialog at startup -- the app is usable
+// without signing in, with whatever Settings > Access Rights allows
+// everyone. Admins sign in the same way and get full access.
 class LoginDialog : public FramelessDialog
 {
     Q_OBJECT
@@ -30,6 +29,7 @@ private slots:
 
 private:
     UserController *m_userController = nullptr;
+    QLineEdit *m_emailEdit = nullptr;
     QLineEdit *m_passwordEdit = nullptr;
     QCheckBox *m_showPasswordCheck = nullptr;
     QLabel *m_errorLabel = nullptr;

@@ -5,12 +5,14 @@
 #include <QVector>
 #include <QWidget>
 
+#include "Models/AccessRights.h"
 #include "Models/Category.h"
 #include "Models/Item.h"
 #include "Models/Tag.h"
 
 class QTableWidget;
 class QLineEdit;
+class QPushButton;
 class QToolButton;
 class QLabel;
 class QStackedWidget;
@@ -33,6 +35,9 @@ public:
 
 public slots:
     void refresh();
+    // Shows Add / Edit, Add Tag, Set Status / Delete per the Inventory
+    // rights in Settings > Access Rights.
+    void setAccess(const SectionAccess &access);
 
 private slots:
     void addItemClicked();
@@ -84,6 +89,12 @@ private:
 
     QLineEdit *m_searchEdit = nullptr;
     QToolButton *m_questionModeButton = nullptr;
+    SectionAccess m_access;
+    QPushButton *m_addItemButton = nullptr;
+    QPushButton *m_editButton = nullptr;
+    QPushButton *m_addTagButton = nullptr;
+    QPushButton *m_setStatusButton = nullptr;
+    QPushButton *m_deleteButton = nullptr;
     QLabel *m_networkStatusLabel = nullptr;
 
     bool m_questionMode = false;

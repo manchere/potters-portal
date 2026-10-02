@@ -39,7 +39,7 @@ ItemDetailsDialog::ItemDetailsDialog(const Item &item, const QString &categoryNa
     photoLabel->setAlignment(Qt::AlignCenter);
     if (photo.isNull()) {
         photoLabel->setObjectName(QStringLiteral("cardPhotoPlaceholder"));
-        photoLabel->setText(QStringLiteral("No Photo"));
+        photoLabel->setText(tr("No Photo"));
     } else {
         photoLabel->setPixmap(photo.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
@@ -49,7 +49,7 @@ ItemDetailsDialog::ItemDetailsDialog(const Item &item, const QString &categoryNa
     nameLabel->setWordWrap(true);
 
     auto *statusRow = new QHBoxLayout;
-    statusRow->addWidget(Badge::make(capitalize(itemStatusToString(item.status())), Badge::statusColor(item.status()), this));
+    statusRow->addWidget(Badge::make(Badge::statusName(item.status()), Badge::statusColor(item.status()), this));
     statusRow->addStretch();
 
     // QFormLayout (same as ItemFormWidget.cpp's details form) correctly
@@ -58,13 +58,13 @@ ItemDetailsDialog::ItemDetailsDialog(const Item &item, const QString &categoryNa
     auto *fieldsForm = new QFormLayout;
     fieldsForm->setSpacing(10);
     fieldsForm->setLabelAlignment(Qt::AlignRight | Qt::AlignTop);
-    fieldsForm->addRow(QStringLiteral("Quantity"), valueLabel(QString::number(item.quantity()), this));
-    fieldsForm->addRow(QStringLiteral("Location"), valueLabel(item.location(), this));
-    fieldsForm->addRow(QStringLiteral("Category"), valueLabel(categoryName, this));
+    fieldsForm->addRow(tr("Quantity"), valueLabel(QString::number(item.quantity()), this));
+    fieldsForm->addRow(tr("Location"), valueLabel(item.location(), this));
+    fieldsForm->addRow(tr("Category"), valueLabel(categoryName, this));
     if (!item.barcode().isEmpty()) {
-        fieldsForm->addRow(QStringLiteral("Barcode"), valueLabel(item.barcode(), this));
+        fieldsForm->addRow(tr("Barcode"), valueLabel(item.barcode(), this));
     }
-    fieldsForm->addRow(QStringLiteral("Description"), valueLabel(item.description(), this));
+    fieldsForm->addRow(tr("Description"), valueLabel(item.description(), this));
 
     if (!tags.isEmpty()) {
         auto *tagsCell = new QWidget(this);
@@ -72,7 +72,7 @@ ItemDetailsDialog::ItemDetailsDialog(const Item &item, const QString &categoryNa
         for (const Tag &tag : tags) {
             tagsFlow->addWidget(Badge::make(tag.name(), QColor(tag.color()), tagsCell));
         }
-        fieldsForm->addRow(QStringLiteral("Tags"), tagsCell);
+        fieldsForm->addRow(tr("Tags"), tagsCell);
     }
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);

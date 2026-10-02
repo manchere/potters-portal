@@ -40,7 +40,7 @@ MemberEditDialog::MemberEditDialog(
     , m_userController(userController)
 {
     const bool isNew = user.id() < 0;
-    const QString title = isNew ? QStringLiteral("Add Member") : QStringLiteral("Edit Member");
+    const QString title = isNew ? tr("Add Member") : tr("Edit Member");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
@@ -62,47 +62,47 @@ MemberEditDialog::MemberEditDialog(
     };
 
     m_nameEdit = new QLineEdit(user.name(), this);
-    m_nameEdit->setPlaceholderText(QStringLiteral("e.g. Grace Adeyemi"));
+    m_nameEdit->setPlaceholderText(tr("e.g. Grace Adeyemi"));
     connect(m_nameEdit, &QLineEdit::textChanged, this, &MemberEditDialog::updateBadgePreview);
     connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
     m_nameError = errorLabel();
 
     m_teamCombo = new QComboBox(this);
-    m_teamCombo->addItem(QStringLiteral("No team"), -1);
+    m_teamCombo->addItem(tr("No team"), -1);
     for (const Team &team : teamController->allTeams()) {
         m_teamCombo->addItem(team.name(), team.id());
     }
     m_teamCombo->setCurrentIndex(std::max(0, m_teamCombo->findData(user.teamId())));
 
     m_emailEdit = new QLineEdit(user.email(), this);
-    m_emailEdit->setPlaceholderText(QStringLiteral("member@example.com"));
+    m_emailEdit->setPlaceholderText(tr("member@example.com"));
     connect(m_emailEdit, &QLineEdit::textChanged, this, [this]() { m_emailError->clear(); });
     m_emailError = errorLabel();
 
     m_passwordEdit = new QLineEdit(this);
     m_passwordEdit->setEchoMode(QLineEdit::Password);
     m_passwordEdit->setPlaceholderText(isNew
-        ? QStringLiteral("Min. 8 characters -- share this with the member")
-        : QStringLiteral("Leave blank to keep the current password"));
+        ? tr("Min. 8 characters -- share this with the member")
+        : tr("Leave blank to keep the current password"));
     connect(m_passwordEdit, &QLineEdit::textChanged, this, [this]() { m_passwordError->clear(); });
     m_passwordError = errorLabel();
 
-    m_showPasswordCheck = new QCheckBox(QStringLiteral("Show password"), this);
+    m_showPasswordCheck = new QCheckBox(tr("Show password"), this);
     connect(m_showPasswordCheck, &QCheckBox::toggled, this, &MemberEditDialog::toggleShowPassword);
 
     auto *form = new QFormLayout;
-    form->addRow(QStringLiteral("Name"), m_nameEdit);
+    form->addRow(tr("Name"), m_nameEdit);
     form->addRow(QString(), m_nameError);
-    form->addRow(QStringLiteral("Color"), m_colorPicker);
-    form->addRow(QStringLiteral("Team"), m_teamCombo);
-    form->addRow(QStringLiteral("Email"), m_emailEdit);
+    form->addRow(tr("Color"), m_colorPicker);
+    form->addRow(tr("Team"), m_teamCombo);
+    form->addRow(tr("Email"), m_emailEdit);
     form->addRow(QString(), m_emailError);
-    form->addRow(QStringLiteral("Password"), m_passwordEdit);
+    form->addRow(tr("Password"), m_passwordEdit);
     form->addRow(QString(), m_passwordError);
     form->addRow(QString(), m_showPasswordCheck);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-    buttons->button(QDialogButtonBox::Save)->setText(isNew ? QStringLiteral("Add Member") : QStringLiteral("Save Changes"));
+    buttons->button(QDialogButtonBox::Save)->setText(isNew ? tr("Add Member") : tr("Save Changes"));
     connect(buttons, &QDialogButtonBox::accepted, this, &MemberEditDialog::saveClicked);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -131,23 +131,23 @@ bool MemberEditDialog::validate()
     const bool isNew = m_existingUser.id() < 0;
     bool valid = true;
     if (m_nameEdit->text().trimmed().isEmpty()) {
-        m_nameError->setText(QStringLiteral("Name is required."));
+        m_nameError->setText(tr("Name is required."));
         valid = false;
     }
     const QString email = m_emailEdit->text().trimmed();
     if (email.isEmpty()) {
-        m_emailError->setText(QStringLiteral("Email is required."));
+        m_emailError->setText(tr("Email is required."));
         valid = false;
     } else if (!looksLikeEmail(email)) {
-        m_emailError->setText(QStringLiteral("Enter a valid email address."));
+        m_emailError->setText(tr("Enter a valid email address."));
         valid = false;
     }
     const QString password = m_passwordEdit->text();
     if (isNew && password.length() < 8) {
-        m_passwordError->setText(QStringLiteral("Password must be at least 8 characters."));
+        m_passwordError->setText(tr("Password must be at least 8 characters."));
         valid = false;
     } else if (!isNew && !password.isEmpty() && password.length() < 8) {
-        m_passwordError->setText(QStringLiteral("Password must be at least 8 characters (or leave it blank)."));
+        m_passwordError->setText(tr("Password must be at least 8 characters (or leave it blank)."));
         valid = false;
     }
     return valid;

@@ -126,13 +126,13 @@ bool DutyController::isEditableDate(const QDate &date)
 
 namespace
 {
-    const QString kPastScheduleError = QStringLiteral("This Sunday has passed, so its schedule can't be changed.");
+    const char *const kPastScheduleError = QT_TRANSLATE_NOOP("DutyController", "This Sunday has passed, so its schedule can't be changed.");
 }
 
 bool DutyController::addDuty(Duty &duty)
 {
     if (!isEditableDate(duty.serviceDate())) {
-        m_lastError = kPastScheduleError;
+        m_lastError = tr(kPastScheduleError);
         return false;
     }
     Database::ensureConnected();
@@ -161,7 +161,7 @@ bool DutyController::updateDuty(const Duty &duty)
     // Neither the duty's current Sunday nor the one it'd move to may be
     // in the past.
     if (!isEditableDate(duty.serviceDate()) || !isEditableDate(dutyById(duty.id()).serviceDate())) {
-        m_lastError = kPastScheduleError;
+        m_lastError = tr(kPastScheduleError);
         return false;
     }
     Database::ensureConnected();
@@ -188,7 +188,7 @@ bool DutyController::updateDuty(const Duty &duty)
 bool DutyController::removeDuty(int id)
 {
     if (!isEditableDate(dutyById(id).serviceDate())) {
-        m_lastError = kPastScheduleError;
+        m_lastError = tr(kPastScheduleError);
         return false;
     }
     Database::ensureConnected();
@@ -234,12 +234,12 @@ bool DutyController::copySchedule(
         *skipped = 0;
     }
     if (fromDate == toDate) {
-        m_lastError = QStringLiteral("Pick a different Sunday to paste onto.");
+        m_lastError = tr("Pick a different Sunday to paste onto.");
         return false;
     }
     // Copying *from* a past Sunday is fine; pasting onto one isn't.
     if (!isEditableDate(toDate)) {
-        m_lastError = kPastScheduleError;
+        m_lastError = tr(kPastScheduleError);
         return false;
     }
 

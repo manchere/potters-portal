@@ -12,7 +12,7 @@ namespace
     {
         const QString error = query.lastError().text();
         if (error.contains(QStringLiteral("teams_name_key"))) {
-            return QStringLiteral("There's already a team called \"%1\".").arg(name);
+            return TeamController::tr("There's already a team called \"%1\".").arg(name);
         }
         return error;
     }

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 
+#include <QLocale>
 #include <QBrush>
 #include <QCheckBox>
 #include <QFont>
@@ -43,7 +44,7 @@ namespace
     QString formatSunday(const QDate &date)
     {
         // e.g. "Sun 6 Sep 2026", per SCHEDULING_FUNCTIONAL_REQUIREMENTS.md.
-        return date.toString(QStringLiteral("ddd d MMM yyyy"));
+        return QLocale().toString(date, QStringLiteral("ddd d MMM yyyy"));
     }
 
     // Every way someone might type a Sunday into the search box: the list's
@@ -53,7 +54,7 @@ namespace
     {
         return QStringList{
             formatSunday(date),
-            date.toString(QStringLiteral("dddd d MMMM yyyy")),
+            QLocale().toString(date, QStringLiteral("dddd d MMMM yyyy")),
             date.toString(QStringLiteral("dd/MM/yyyy")),
             date.toString(Qt::ISODate),
         }.join(QLatin1Char(' ')).toLower();
@@ -70,29 +71,29 @@ ScheduleTab::ScheduleTab(
     , m_userController(userController)
     , m_dutyTypeController(dutyTypeController)
 {
-    auto *title = new QLabel(QStringLiteral("Schedule"), this);
+    auto *title = new QLabel(tr("Schedule"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        QStringLiteral("Pick a Sunday to see who's serving, and assign duties for it. "
+        tr("Pick a Sunday to see who's serving, and assign duties for it. "
                         "Double-click a member to edit their duties and backup."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
     subtitle->setWordWrap(true);
 
-    m_assignButton = new QPushButton(QStringLiteral("+  Assign Duty"), this);
+    m_assignButton = new QPushButton(tr("+  Assign Duty"), this);
     connect(m_assignButton, &QPushButton::clicked, this, &ScheduleTab::assignClicked);
-    m_addMemberButton = new QPushButton(QStringLiteral("+  Add Member"), this);
+    m_addMemberButton = new QPushButton(tr("+  Add Member"), this);
     m_addMemberButton->setObjectName(QStringLiteral("secondaryButton"));
     m_addMemberButton->setToolTip(
-        QStringLiteral("Put a member on this Sunday: their duties and a backup"));
+        tr("Put a member on this Sunday: their duties and a backup"));
     connect(m_addMemberButton, &QPushButton::clicked, this, &ScheduleTab::addMemberClicked);
-    m_copyButton = new QPushButton(QStringLiteral("Copy Schedule"), this);
+    m_copyButton = new QPushButton(tr("Copy Schedule"), this);
     m_copyButton->setObjectName(QStringLiteral("secondaryButton"));
-    m_copyButton->setToolTip(QStringLiteral("Copy this Sunday's duties (Ctrl+C)"));
+    m_copyButton->setToolTip(tr("Copy this Sunday's duties (Ctrl+C)"));
     connect(m_copyButton, &QPushButton::clicked, this, &ScheduleTab::copyScheduleClicked);
-    m_pasteButton = new QPushButton(QStringLiteral("Paste Schedule"), this);
+    m_pasteButton = new QPushButton(tr("Paste Schedule"), this);
     m_pasteButton->setObjectName(QStringLiteral("secondaryButton"));
-    m_pasteButton->setToolTip(QStringLiteral("Paste the copied duties onto this Sunday (Ctrl+V)"));
+    m_pasteButton->setToolTip(tr("Paste the copied duties onto this Sunday (Ctrl+V)"));
     connect(m_pasteButton, &QPushButton::clicked, this, &ScheduleTab::pasteScheduleClicked);
     m_copiedLabel = new QLabel(this);
     m_copiedLabel->setObjectName(QStringLiteral("accentLabel"));
@@ -119,16 +120,15 @@ ScheduleTab::ScheduleTab(
     });
     connect(m_resultsList, &QListWidget::itemDoubleClicked, this, &ScheduleTab::memberDoubleClicked);
 
-    m_combineCheck = new QCheckBox(QStringLiteral("Combine each member's duties into one row"), this);
-    m_combineCheck->setToolTip(QStringLiteral(
-        "Show one row per member with all their duties. Each duty keeps its own backup "
+    m_combineCheck = new QCheckBox(tr("Combine each member's duties into one row"), this);
+    m_combineCheck->setToolTip(tr("Show one row per member with all their duties. Each duty keeps its own backup "
         "and can still be edited on its own."));
     connect(m_combineCheck, &QCheckBox::toggled, this, &ScheduleTab::rebuildResults);
 
-    m_editButton = new QPushButton(QStringLiteral("Edit"), this);
+    m_editButton = new QPushButton(tr("Edit"), this);
     m_editButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(m_editButton, &QPushButton::clicked, this, &ScheduleTab::editClicked);
-    m_deleteButton = new QPushButton(QStringLiteral("Delete"), this);
+    m_deleteButton = new QPushButton(tr("Delete"), this);
     m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
     connect(m_deleteButton, &QPushButton::clicked, this, &ScheduleTab::deleteClicked);
 
@@ -144,7 +144,7 @@ ScheduleTab::ScheduleTab(
     actionBar->addStretch();
     actionBar->addWidget(m_deleteButton);
 
-    m_pastNotice = new QLabel(QStringLiteral("This Sunday has passed, so its schedule is read-only."), this);
+    m_pastNotice = new QLabel(tr("This Sunday has passed, so its schedule is read-only."), this);
     m_pastNotice->setObjectName(QStringLiteral("accentLabel"));
     m_pastNotice->setWordWrap(true);
     m_pastNotice->hide();
@@ -154,22 +154,21 @@ ScheduleTab::ScheduleTab(
     resultsLayout->addWidget(m_pastNotice);
     resultsLayout->addWidget(m_combineCheck);
     resultsLayout->addWidget(m_resultsList);
-    auto *resultsBox = new QGroupBox(QStringLiteral("Duties"), this);
+    auto *resultsBox = new QGroupBox(tr("Duties"), this);
     resultsBox->setLayout(resultsLayout);
 
     m_sundaySearch = new QLineEdit(this);
     m_sundaySearch->setFixedWidth(200);
-    m_sundaySearch->setPlaceholderText(QStringLiteral("Search date, duty, name..."));
-    m_sundaySearch->setToolTip(QStringLiteral(
-        "Find Sundays by date (e.g. \"27 Sep\" or \"October\"), by duty, or by a member's first or last name"));
+    m_sundaySearch->setPlaceholderText(tr("Search date, duty, name..."));
+    m_sundaySearch->setToolTip(tr("Find Sundays by date (e.g. \"27 Sep\" or \"October\"), by duty, or by a member's first or last name"));
     m_sundaySearch->setClearButtonEnabled(true);
     connect(m_sundaySearch, &QLineEdit::textChanged, this, &ScheduleTab::sundaySearchChanged);
 
-    m_noSundayMatchLabel = new QLabel(QStringLiteral("No Sundays match."), this);
+    m_noSundayMatchLabel = new QLabel(tr("No Sundays match."), this);
     m_noSundayMatchLabel->setObjectName(QStringLiteral("mutedLabel"));
     m_noSundayMatchLabel->hide();
 
-    auto *sundayBox = new QGroupBox(QStringLiteral("Sundays"), this);
+    auto *sundayBox = new QGroupBox(tr("Sundays"), this);
     auto *sundayLayout = new QVBoxLayout;
     sundayLayout->addWidget(m_sundaySearch);
     sundayLayout->addWidget(m_noSundayMatchLabel);
@@ -274,7 +273,7 @@ QWidget *ScheduleTab::buildBackupLine(const Duty &duty, QWidget *parent)
     auto *layout = new QHBoxLayout(line);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(6);
-    auto *caption = new QLabel(QStringLiteral("Backup"), line);
+    auto *caption = new QLabel(tr("Backup"), line);
     caption->setObjectName(QStringLiteral("dutyCaption"));
     layout->addWidget(caption, 0, Qt::AlignVCenter);
     const User backup = duty.supportMemberId() > 0 ? m_userController->userById(duty.supportMemberId()) : User();
@@ -312,8 +311,8 @@ QToolButton *ScheduleTab::buildEditButton(int dutyId, QWidget *parent)
 {
     auto *editButton = new QToolButton(parent);
     editButton->setObjectName(QStringLiteral("dutyEditButton"));
-    editButton->setText(QStringLiteral("Edit"));
-    editButton->setToolTip(QStringLiteral("Edit just this duty and its backup"));
+    editButton->setText(tr("Edit"));
+    editButton->setToolTip(tr("Edit just this duty and its backup"));
     editButton->setCursor(Qt::PointingHandCursor);
     connect(editButton, &QToolButton::clicked, this, [this, dutyId] { editDuty(dutyId); });
     return editButton;
@@ -341,7 +340,7 @@ QWidget *ScheduleTab::buildRow(const Duty &duty)
     }
     layout->addWidget(member.id() >= 0
         ? buildMemberColumn(member.name(), QStringLiteral("dutyMemberName"), duty.notes(), row)
-        : buildMemberColumn(QStringLiteral("Nobody assigned"), QStringLiteral("dutyUnfilled"), duty.notes(), row));
+        : buildMemberColumn(tr("Nobody assigned"), QStringLiteral("dutyUnfilled"), duty.notes(), row));
     layout->addSpacing(kNameToDutyGap);
     layout->addWidget(buildDutyCell(duty, row));
     layout->addWidget(buildBackupLine(duty, row), 1);
@@ -427,8 +426,8 @@ void ScheduleTab::updateActionState()
     m_deleteButton->setEnabled(editable && hasDuty);
     // On a combined row they act on the member's whole place this Sunday.
     const bool memberRow = m_selectedMemberId > 0;
-    m_editButton->setText(memberRow ? QStringLiteral("Edit Member") : QStringLiteral("Edit"));
-    m_deleteButton->setText(memberRow ? QStringLiteral("Remove Member") : QStringLiteral("Delete"));
+    m_editButton->setText(memberRow ? tr("Edit Member") : tr("Edit"));
+    m_deleteButton->setText(memberRow ? tr("Remove Member") : tr("Delete"));
     m_pastNotice->setVisible(m_selectedDate.isValid() && !selectedSundayEditable());
     updateCopyPasteState();
 }
@@ -439,7 +438,7 @@ void ScheduleTab::updateCopyPasteState()
     m_pasteButton->setEnabled(m_isAdmin && selectedSundayEditable()
                               && m_copiedDate.isValid() && m_copiedDate != m_selectedDate);
     m_copiedLabel->setText(m_copiedDate.isValid()
-        ? QStringLiteral("Copied: %1").arg(formatSunday(m_copiedDate))
+        ? tr("Copied: %1").arg(formatSunday(m_copiedDate))
         : QString());
 }
 
@@ -461,8 +460,8 @@ void ScheduleTab::pasteScheduleClicked()
     const QDate toDate = m_selectedDate;
     const int sourceCount = m_dutyController->dutiesForDate(fromDate).size();
     if (sourceCount == 0) {
-        QMessageBox::information(this, QStringLiteral("Paste Schedule"),
-            QStringLiteral("%1 no longer has any duties to copy.").arg(formatSunday(fromDate)));
+        QMessageBox::information(this, tr("Paste Schedule"),
+            tr("%1 no longer has any duties to copy.").arg(formatSunday(fromDate)));
         m_copiedDate = QDate();
         updateCopyPasteState();
         return;
@@ -471,21 +470,20 @@ void ScheduleTab::pasteScheduleClicked()
 
     bool replaceExisting = false;
     if (existingCount == 0) {
-        const QString question = QStringLiteral("Copy %1 duties from %2 onto %3?")
+        const QString question = tr("Copy %1 duties from %2 onto %3?")
             .arg(sourceCount).arg(formatSunday(fromDate), formatSunday(toDate));
-        if (QMessageBox::question(this, QStringLiteral("Paste Schedule"), question) != QMessageBox::Yes) {
+        if (QMessageBox::question(this, tr("Paste Schedule"), question) != QMessageBox::Yes) {
             return;
         }
     } else {
-        QMessageBox box(QMessageBox::Question, QStringLiteral("Paste Schedule"),
-            QStringLiteral("%1 already has %2 duties.").arg(formatSunday(toDate)).arg(existingCount),
+        QMessageBox box(QMessageBox::Question, tr("Paste Schedule"),
+            tr("%1 already has %2 duties.").arg(formatSunday(toDate)).arg(existingCount),
             QMessageBox::NoButton, this);
-        box.setInformativeText(QStringLiteral(
-            "Add to them: keeps what's there and adds the copied duties (skipping any duty the same "
+        box.setInformativeText(tr("Add to them: keeps what's there and adds the copied duties (skipping any duty the same "
             "member already has).\n\nReplace them: deletes this Sunday's duties, including any "
             "time-off requests members sent for them, then pastes the copied schedule."));
-        QPushButton *addButton = box.addButton(QStringLiteral("Add to Them"), QMessageBox::AcceptRole);
-        QPushButton *replaceButton = box.addButton(QStringLiteral("Replace Them"), QMessageBox::DestructiveRole);
+        QPushButton *addButton = box.addButton(tr("Add to Them"), QMessageBox::AcceptRole);
+        QPushButton *replaceButton = box.addButton(tr("Replace Them"), QMessageBox::DestructiveRole);
         box.addButton(QMessageBox::Cancel);
         box.setDefaultButton(addButton);
         box.exec();
@@ -499,22 +497,22 @@ void ScheduleTab::pasteScheduleClicked()
     int copied = 0;
     int skipped = 0;
     if (!m_dutyController->copySchedule(fromDate, toDate, replaceExisting, &copied, &skipped)) {
-        QMessageBox::critical(this, QStringLiteral("Paste Schedule"), m_dutyController->lastError());
+        QMessageBox::critical(this, tr("Paste Schedule"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
     selectSunday(toDate);
 
-    QString summary = QStringLiteral("Pasted %1 duties onto %2.").arg(copied).arg(formatSunday(toDate));
+    QString summary = tr("Pasted %1 duties onto %2.").arg(copied).arg(formatSunday(toDate));
     if (skipped > 0) {
-        summary += QStringLiteral("\nSkipped %1 already on that Sunday.").arg(skipped);
+        summary += tr("\nSkipped %1 already on that Sunday.").arg(skipped);
     }
     const QStringList unavailable = m_dutyController->membersMarkedUnavailable(toDate);
     if (!unavailable.isEmpty()) {
-        summary += QStringLiteral("\n\nHeads up: these members marked themselves unavailable that day:\n  %1")
+        summary += tr("\n\nHeads up: these members marked themselves unavailable that day:\n  %1")
             .arg(unavailable.join(QStringLiteral("\n  ")));
     }
-    QMessageBox::information(this, QStringLiteral("Paste Schedule"), summary);
+    QMessageBox::information(this, tr("Paste Schedule"), summary);
 }
 
 QDate ScheduleTab::nearestSunday(const QDate &date)
@@ -686,7 +684,7 @@ void ScheduleTab::rebuildResults()
         auto *item = new QListWidgetItem(m_resultsList);
         item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
         m_resultsList->addItem(item);
-        m_resultsList->setItemWidget(item, new QLabel(QStringLiteral("No duties for this date."), m_resultsList));
+        m_resultsList->setItemWidget(item, new QLabel(tr("No duties for this date."), m_resultsList));
         return;
     }
     m_dutyColumnWidth = 0;
@@ -743,7 +741,7 @@ void ScheduleTab::assignClicked()
     }
     Duty newDuty = dialog.duty();
     if (!m_dutyController->addDuty(newDuty)) {
-        QMessageBox::critical(this, QStringLiteral("Assign Duty"), m_dutyController->lastError());
+        QMessageBox::critical(this, tr("Assign Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -772,15 +770,15 @@ void ScheduleTab::addMemberClicked()
             continue;
         }
         if (!m_dutyController->addDuty(duty)) {
-            QMessageBox::critical(this, QStringLiteral("Add Member"), m_dutyController->lastError());
+            QMessageBox::critical(this, tr("Add Member"), m_dutyController->lastError());
             break;
         }
     }
     populateSundayList();
     selectSunday(m_selectedDate);
     if (!skipped.isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("Add Member"),
-            QStringLiteral("Already on this Sunday, so not added again: %1.").arg(skipped.join(QStringLiteral(", "))));
+        QMessageBox::information(this, tr("Add Member"),
+            tr("Already on this Sunday, so not added again: %1.").arg(skipped.join(QStringLiteral(", "))));
     }
 }
 
@@ -811,7 +809,7 @@ void ScheduleTab::editDuty(int dutyId)
     }
     Duty updated = dialog.duty();
     if (!m_dutyController->updateDuty(updated)) {
-        QMessageBox::critical(this, QStringLiteral("Edit Duty"), m_dutyController->lastError());
+        QMessageBox::critical(this, tr("Edit Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -831,14 +829,14 @@ void ScheduleTab::deleteClicked()
             }
         }
         const QString name = m_userController->userById(m_selectedMemberId).name();
-        const QString question = QStringLiteral("Remove %1 from this Sunday? This deletes their %2 duties.")
+        const QString question = tr("Remove %1 from this Sunday? This deletes their %2 duties.")
             .arg(name).arg(dutyIds.size());
-        if (QMessageBox::question(this, QStringLiteral("Remove Member"), question) != QMessageBox::Yes) {
+        if (QMessageBox::question(this, tr("Remove Member"), question) != QMessageBox::Yes) {
             return;
         }
         for (int dutyId : std::as_const(dutyIds)) {
             if (!m_dutyController->removeDuty(dutyId)) {
-                QMessageBox::critical(this, QStringLiteral("Remove Member"), m_dutyController->lastError());
+                QMessageBox::critical(this, tr("Remove Member"), m_dutyController->lastError());
                 break;
             }
         }
@@ -846,12 +844,12 @@ void ScheduleTab::deleteClicked()
         selectSunday(m_selectedDate);
         return;
     }
-    if (QMessageBox::question(this, QStringLiteral("Delete Duty"), QStringLiteral("Delete this duty?"))
+    if (QMessageBox::question(this, tr("Delete Duty"), tr("Delete this duty?"))
         != QMessageBox::Yes) {
         return;
     }
     if (!m_dutyController->removeDuty(m_selectedDutyId)) {
-        QMessageBox::critical(this, QStringLiteral("Delete Duty"), m_dutyController->lastError());
+        QMessageBox::critical(this, tr("Delete Duty"), m_dutyController->lastError());
         return;
     }
     populateSundayList();
@@ -949,7 +947,7 @@ void ScheduleTab::editMemberOnSchedule(int memberId)
         }
     }
     if (!ok) {
-        QMessageBox::critical(this, QStringLiteral("Edit Member"), m_dutyController->lastError());
+        QMessageBox::critical(this, tr("Edit Member"), m_dutyController->lastError());
     }
     populateSundayList();
     selectSunday(m_selectedDate);

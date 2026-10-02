@@ -659,11 +659,11 @@ Theme savedTheme()
 QString themeDisplayName(Theme theme)
 {
     switch (theme) {
-    case Theme::Black: return QStringLiteral("Black");
-    case Theme::Navy: return QStringLiteral("Navy & Gold");
+    case Theme::Black: return QCoreApplication::translate("Style", "Black");
+    case Theme::Navy: return QCoreApplication::translate("Style", "Navy & Gold");
     case Theme::Light: break;
     }
-    return QStringLiteral("Light");
+    return QCoreApplication::translate("Style", "Light");
 }
 
 bool isDarkTheme(Theme theme)

@@ -1,5 +1,6 @@
 #include "ChangePasswordDialog.h"
 
+#include <QLocale>
 #include <QApplication>
 #include <QCheckBox>
 #include <QDateTime>
@@ -26,12 +27,12 @@ ChangePasswordDialog::ChangePasswordDialog(const User &admin, UserController *us
     , m_admin(admin)
     , m_userController(userController)
 {
-    setWindowTitle(QStringLiteral("Change Password"));
+    setWindowTitle(tr("Change Password"));
 
-    auto *heading = new QLabel(QStringLiteral("Change Password"), this);
+    auto *heading = new QLabel(tr("Change Password"), this);
     heading->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        QStringLiteral("For %1. The new password will be emailed to you and to %2.")
+        tr("For %1. The new password will be emailed to you and to %2.")
             .arg(admin.name(), kAdminContactEmail),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
@@ -39,7 +40,7 @@ ChangePasswordDialog::ChangePasswordDialog(const User &admin, UserController *us
 
     m_newPasswordEdit = new QLineEdit(this);
     m_newPasswordEdit->setEchoMode(QLineEdit::Password);
-    m_newPasswordEdit->setPlaceholderText(QStringLiteral("At least %1 characters").arg(kMinPasswordLength));
+    m_newPasswordEdit->setPlaceholderText(tr("At least %1 characters").arg(kMinPasswordLength));
     m_newPasswordEdit->setFocus();
     m_confirmEdit = new QLineEdit(this);
     m_confirmEdit->setEchoMode(QLineEdit::Password);
@@ -47,12 +48,12 @@ ChangePasswordDialog::ChangePasswordDialog(const User &admin, UserController *us
         connect(edit, &QLineEdit::textChanged, this, [this]() { m_errorLabel->clear(); });
     }
 
-    m_showPasswordCheck = new QCheckBox(QStringLiteral("Show password"), this);
+    m_showPasswordCheck = new QCheckBox(tr("Show password"), this);
     connect(m_showPasswordCheck, &QCheckBox::toggled, this, &ChangePasswordDialog::toggleShowPassword);
 
     auto *form = new QFormLayout;
-    form->addRow(QStringLiteral("New password"), m_newPasswordEdit);
-    form->addRow(QStringLiteral("Confirm"), m_confirmEdit);
+    form->addRow(tr("New password"), m_newPasswordEdit);
+    form->addRow(tr("Confirm"), m_confirmEdit);
     form->addRow(QString(), m_showPasswordCheck);
 
     m_errorLabel = new QLabel(this);
@@ -60,7 +61,7 @@ ChangePasswordDialog::ChangePasswordDialog(const User &admin, UserController *us
     m_errorLabel->setWordWrap(true);
 
     m_buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    m_buttons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("Change Password"));
+    m_buttons->button(QDialogButtonBox::Ok)->setText(tr("Change Password"));
     connect(m_buttons, &QDialogButtonBox::accepted, this, &ChangePasswordDialog::submit);
     connect(m_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -83,22 +84,21 @@ void ChangePasswordDialog::submit()
 {
     const QString password = m_newPasswordEdit->text();
     if (password.length() < kMinPasswordLength) {
-        m_errorLabel->setText(QStringLiteral("Password must be at least %1 characters.").arg(kMinPasswordLength));
+        m_errorLabel->setText(tr("Password must be at least %1 characters.").arg(kMinPasswordLength));
         return;
     }
     if (password != m_confirmEdit->text()) {
-        m_errorLabel->setText(QStringLiteral("The two passwords don't match."));
+        m_errorLabel->setText(tr("The two passwords don't match."));
         return;
     }
     if (!SmtpMail::isConfigured()) {
-        m_errorLabel->setText(QStringLiteral(
-            "Email isn't set up, so the new password couldn't be sent. Set SMTP_USERNAME and "
+        m_errorLabel->setText(tr("Email isn't set up, so the new password couldn't be sent. Set SMTP_USERNAME and "
             "SMTP_PASSWORD (a Gmail app password), restart the app, and try again. Nothing was changed."));
         return;
     }
 
     if (!m_userController->changePassword(m_admin.id(), password)) {
-        m_errorLabel->setText(QStringLiteral("Couldn't change the password: %1").arg(m_userController->lastError()));
+        m_errorLabel->setText(tr("Couldn't change the password: %1").arg(m_userController->lastError()));
         return;
     }
 
@@ -108,26 +108,25 @@ void ChangePasswordDialog::submit()
             recipients << address;
         }
     }
-    const QString body = QStringLiteral(
-        "The Potters Portal admin password for %1 (%2) was changed on %3.\n\n"
+    const QString body = tr("The Potters Portal admin password for %1 (%2) was changed on %3.\n\n"
         "New password: %4\n")
         .arg(m_admin.name(), m_admin.email(),
-             QDateTime::currentDateTime().toString(QStringLiteral("d MMM yyyy 'at' HH:mm")), password);
+             QLocale().toString(QDateTime::currentDateTime(), tr("d MMM yyyy 'at' HH:mm")), password);
 
     m_buttons->setEnabled(false);
     QApplication::setOverrideCursor(Qt::WaitCursor);
     QString sendError;
-    const bool sent = SmtpMail::send(recipients, QStringLiteral("Potters Portal admin password changed"), body, &sendError);
+    const bool sent = SmtpMail::send(recipients, tr("Potters Portal admin password changed"), body, &sendError);
     QApplication::restoreOverrideCursor();
     m_buttons->setEnabled(true);
 
     if (sent) {
-        QMessageBox::information(this, QStringLiteral("Change Password"),
-            QStringLiteral("Password changed. The new password was emailed to:\n  %1")
+        QMessageBox::information(this, tr("Change Password"),
+            tr("Password changed. The new password was emailed to:\n  %1")
                 .arg(recipients.join(QStringLiteral("\n  "))));
     } else {
-        QMessageBox::warning(this, QStringLiteral("Change Password"),
-            QStringLiteral("Password changed, but the email couldn't be sent:\n%1\n\n"
+        QMessageBox::warning(this, tr("Change Password"),
+            tr("Password changed, but the email couldn't be sent:\n%1\n\n"
                            "Make a note of the new password now.").arg(sendError));
     }
     accept();

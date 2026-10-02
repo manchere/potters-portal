@@ -3,6 +3,7 @@
 #include <QVector>
 #include <QWidget>
 
+#include "Models/AccessRights.h"
 #include "Models/Song.h"
 
 class QLabel;
@@ -16,9 +17,8 @@ class SongController;
 // the left (title, artist, key), and the selected song's details on the
 // right with a Play button that opens its link in the browser.
 //
-// Viewing is open to everyone; adding, editing, and deleting songs are
-// Admin-only and hidden until Admin mode is unlocked (FR-0.4), the same
-// as scheduling on the Schedule tab.
+// Adding, editing, and deleting songs follow the Songs rights set in
+// Settings > Access Rights; their buttons are hidden for anyone without.
 class SongsView : public QWidget
 {
     Q_OBJECT
@@ -28,7 +28,7 @@ public:
 
 public slots:
     void refresh();
-    void setAdminMode(bool isAdmin);
+    void setAccess(const SectionAccess &access);
 
 private slots:
     void addClicked();
@@ -46,7 +46,7 @@ private:
 
     SongController *m_songController = nullptr;
     QVector<Song> m_songs;
-    bool m_isAdmin = false;
+    SectionAccess m_access;
 
     QLineEdit *m_searchEdit = nullptr;
     QPushButton *m_addButton = nullptr;

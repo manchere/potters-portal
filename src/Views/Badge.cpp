@@ -1,5 +1,6 @@
 #include "Badge.h"
 
+#include <QCoreApplication>
 #include <QLabel>
 
 namespace Badge
@@ -13,6 +14,17 @@ namespace Badge
         case ItemStatus::Lost: return QColor(0x6b, 0x72, 0x80);
         }
         return QColor(0x2f, 0x35, 0x42);
+    }
+
+    QString statusName(ItemStatus status)
+    {
+        switch (status) {
+        case ItemStatus::Available: return QCoreApplication::translate("Badge", "Available");
+        case ItemStatus::Missing: return QCoreApplication::translate("Badge", "Missing");
+        case ItemStatus::Broken: return QCoreApplication::translate("Badge", "Broken");
+        case ItemStatus::Lost: return QCoreApplication::translate("Badge", "Lost");
+        }
+        return QString();
     }
 
     QLabel *make(const QString &text, const QColor &color, QWidget *parent)

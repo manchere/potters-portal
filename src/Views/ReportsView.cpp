@@ -1,5 +1,7 @@
 #include "ReportsView.h"
 
+#include <QLocale>
+#include <QCoreApplication>
 #include <QDateEdit>
 #include <QDir>
 #include <QFile>
@@ -33,7 +35,7 @@ namespace
     QString formatSunday(const QDate &date)
     {
         // Same format as the Schedule tab, e.g. "Sun 6 Sep 2026".
-        return date.toString(QStringLiteral("ddd d MMM yyyy"));
+        return QLocale().toString(date, QStringLiteral("ddd d MMM yyyy"));
     }
 
     QString esc(const QString &text)
@@ -70,13 +72,13 @@ namespace
     QString availabilityNote(const ScheduleReportRow &row)
     {
         if (row.requestStatus == QLatin1String("approved")) {
-            return QStringLiteral("Time off approved");
+            return QCoreApplication::translate("ReportsView", "Time off approved");
         }
         if (row.requestStatus == QLatin1String("pending")) {
-            return QStringLiteral("Asked for time off");
+            return QCoreApplication::translate("ReportsView", "Asked for time off");
         }
         if (row.memberMarkedUnavailable) {
-            return QStringLiteral("Marked away");
+            return QCoreApplication::translate("ReportsView", "Marked away");
         }
         return QString();
     }
@@ -92,8 +94,10 @@ namespace
     QString lineupTable(const QVector<ScheduleReportRow> &rows, const ReportColors &c)
     {
         QString html = QStringLiteral("<table width='100%' cellspacing='0'>"
-                                      "<tr><th class='cell'>Duty</th><th class='cell'>Serving</th>"
-                                      "<th class='cell'>Backup</th><th class='cell'>Notes</th></tr>");
+                                      "<tr><th class='cell'>%1</th><th class='cell'>%2</th>"
+                                      "<th class='cell'>%3</th><th class='cell'>%4</th></tr>")
+            .arg(QCoreApplication::translate("ReportsView", "Duty"), QCoreApplication::translate("ReportsView", "Serving"),
+                 QCoreApplication::translate("ReportsView", "Backup"), QCoreApplication::translate("ReportsView", "Notes"));
         for (const ScheduleReportRow &row : rows) {
             QString servingCell;
             if (row.memberId > 0) {
@@ -103,7 +107,8 @@ namespace
                     servingCell += tag(note, c);
                 }
             } else {
-                servingCell = QStringLiteral("<span style='color:%1; font-weight:600;'>Nobody assigned</span>").arg(c.warn);
+                servingCell = QStringLiteral("<span style='color:%1; font-weight:600;'>%2</span>")
+                    .arg(c.warn, esc(QCoreApplication::translate("ReportsView", "Nobody assigned")));
             }
             const QString backupCell = row.supportMemberId > 0
                 ? esc(row.supportMemberName)
@@ -131,10 +136,10 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     , m_dutyController(dutyController)
     , m_userController(userController)
 {
-    auto *title = new QLabel(QStringLiteral("Reports"), this);
+    auto *title = new QLabel(tr("Reports"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        QStringLiteral("Look up past Sunday schedules and who did what. Pick a date range, then one Sunday, "
+        tr("Look up past Sunday schedules and who did what. Pick a date range, then one Sunday, "
                         "or \"All Sundays in range\" to see every Sunday in it."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
@@ -153,15 +158,15 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     connect(m_memberField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
 
     auto *filterRow = new QHBoxLayout;
-    filterRow->addWidget(new QLabel(QStringLiteral("From"), this));
+    filterRow->addWidget(new QLabel(tr("From"), this));
     filterRow->addWidget(m_fromEdit);
-    filterRow->addWidget(new QLabel(QStringLiteral("To"), this));
+    filterRow->addWidget(new QLabel(tr("To"), this));
     filterRow->addWidget(m_toEdit);
     filterRow->addStretch();
 
     // Its own row: the field grows as Members are added.
     auto *memberRow = new QHBoxLayout;
-    auto *memberLabel = new QLabel(QStringLiteral("Members"), this);
+    auto *memberLabel = new QLabel(tr("Members"), this);
     memberRow->addWidget(memberLabel, 0, Qt::AlignTop);
     memberRow->addWidget(m_memberField, 1);
     memberLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
@@ -169,7 +174,7 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     m_sundayList = new QListWidget(this);
     m_sundayList->setFixedWidth(230);
     connect(m_sundayList, &QListWidget::currentRowChanged, this, &ReportsView::selectionChanged);
-    auto *sundayBox = new QGroupBox(QStringLiteral("Sundays"), this);
+    auto *sundayBox = new QGroupBox(tr("Sundays"), this);
     auto *sundayLayout = new QVBoxLayout(sundayBox);
     sundayLayout->addWidget(m_sundayList);
 
@@ -178,12 +183,12 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     // Tables are sized to the view's width; cell padding can push them a
     // few pixels past it, which isn't worth a scroll bar.
     m_reportView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_saveButton = new QPushButton(QStringLiteral("Save Report..."), this);
+    m_saveButton = new QPushButton(tr("Save Report..."), this);
     m_saveButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(m_saveButton, &QPushButton::clicked, this, &ReportsView::saveClicked);
     m_statusLabel = new QLabel(this);
     m_statusLabel->setObjectName(QStringLiteral("mutedLabel"));
-    auto *reportBox = new QGroupBox(QStringLiteral("Report"), this);
+    auto *reportBox = new QGroupBox(tr("Report"), this);
     auto *reportLayout = new QVBoxLayout(reportBox);
     reportLayout->addWidget(m_reportView, 1);
     reportLayout->addWidget(m_statusLabel);
@@ -192,13 +197,13 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     auto *actionBar = new ActionBar(this);
     actionBar->addWidget(m_saveButton);
     actionBar->addSeparator();
-    auto *rangeHeading = new QLabel(QStringLiteral("Quick range"), this);
+    auto *rangeHeading = new QLabel(tr("Quick range"), this);
     rangeHeading->setObjectName(QStringLiteral("mutedLabel"));
     actionBar->addWidget(rangeHeading);
     const QList<QPair<QString, int>> presets = {
-        {QStringLiteral("Last month"), 1},
-        {QStringLiteral("Last 3 months"), 3},
-        {QStringLiteral("Last year"), 12},
+        {tr("Last month"), 1},
+        {tr("Last 3 months"), 3},
+        {tr("Last year"), 12},
     };
     for (const auto &preset : presets) {
         auto *button = new QPushButton(preset.first, this);
@@ -279,7 +284,7 @@ void ReportsView::populateSundayList()
 
     m_sundayList->blockSignals(true);
     m_sundayList->clear();
-    auto *summary = new QListWidgetItem(QStringLiteral("All Sundays in range"), m_sundayList);
+    auto *summary = new QListWidgetItem(tr("All Sundays in range"), m_sundayList);
     summary->setData(Qt::UserRole, kSummaryKey);
     QFont bold = summary->font();
     bold.setBold(true);
@@ -299,7 +304,7 @@ void ReportsView::populateSundayList()
         const int count = countByDate.value(date);
         auto *item = new QListWidgetItem(
             QStringLiteral("%1  ·  %2 %3").arg(formatSunday(date)).arg(count)
-                .arg(count == 1 ? QStringLiteral("duty") : QStringLiteral("duties")),
+                .arg(count == 1 ? tr("duty") : tr("duties")),
             m_sundayList);
         item->setData(Qt::UserRole, date);
         if (date == previouslySelected) {
@@ -343,7 +348,7 @@ QString ReportsView::filterDescription() const
     if (from > to) {
         std::swap(from, to);
     }
-    QString text = QStringLiteral("%1 – %2").arg(from.toString(QStringLiteral("d MMM yyyy")), to.toString(QStringLiteral("d MMM yyyy")));
+    QString text = QStringLiteral("%1 – %2").arg(QLocale().toString(from, QStringLiteral("d MMM yyyy")), QLocale().toString(to, QStringLiteral("d MMM yyyy")));
     const QStringList members = m_memberField->selectedNames();
     if (!members.isEmpty()) {
         text += QStringLiteral("  ·  %1").arg(members.join(QStringLiteral(", ")));
@@ -357,8 +362,8 @@ void ReportsView::selectionChanged()
 
     const int sundays = m_sundayList->count() - 1;
     m_statusLabel->setText(sundays == 0
-        ? QStringLiteral("No schedules in this range.")
-        : QStringLiteral("%1 Sunday(s) with a schedule in this range.").arg(sundays));
+        ? tr("No schedules in this range.")
+        : tr("%1 Sunday(s) with a schedule in this range.").arg(sundays));
     m_saveButton->setEnabled(!m_rows.isEmpty());
 }
 
@@ -371,12 +376,12 @@ QString ReportsView::currentReportHtml(bool darkColors) const
 {
     const QDate sunday = selectedSunday();
     if (!sunday.isValid()) {
-        return wrapHtml(QStringLiteral("Sunday Serving Report"), filterDescription(), rangeHtml(darkColors), darkColors);
+        return wrapHtml(tr("Sunday Serving Report"), filterDescription(), rangeHtml(darkColors), darkColors);
     }
     const QStringList members = m_memberField->selectedNames();
     const QString subtitle = !members.isEmpty()
-        ? QStringLiteral("Only showing %1").arg(members.join(QStringLiteral(", ")))
-        : QStringLiteral("Sunday line-up");
+        ? tr("Only showing %1").arg(members.join(QStringLiteral(", ")))
+        : tr("Sunday line-up");
     return wrapHtml(formatSunday(sunday), subtitle, sundayHtml(sunday, darkColors), darkColors);
 }
 
@@ -409,7 +414,7 @@ QString ReportsView::sundayHtml(const QDate &date, bool darkColors) const
     const ReportColors c = reportColors(darkColors);
     QString html;
     if (date > QDate::currentDate()) {
-        html += QStringLiteral("<p style='color:%1;'>This Sunday is still ahead, so this is the current plan.</p>").arg(c.warn);
+        html += tr("<p style='color:%1;'>This Sunday is still ahead, so this is the current plan.</p>").arg(c.warn);
     }
     return html + lineupTable(visibleRows(), c);
 }
@@ -418,7 +423,7 @@ QString ReportsView::rangeHtml(bool darkColors) const
 {
     const ReportColors c = reportColors(darkColors);
     if (m_rows.isEmpty()) {
-        return QStringLiteral("<p style='color:%1;'>No Sunday schedules in this date range. "
+        return tr("<p style='color:%1;'>No Sunday schedules in this date range. "
                               "Try a wider range from Quick range on the right.</p>").arg(c.muted);
     }
 
@@ -439,8 +444,17 @@ QString ReportsView::rangeHtml(bool darkColors) const
     return html;
 }
 
+void ReportsView::setCanSave(bool canSave)
+{
+    m_canSave = canSave;
+    m_saveButton->setVisible(canSave);
+}
+
 void ReportsView::saveClicked()
 {
+    if (!m_canSave) {
+        return;
+    }
     const QDate sunday = selectedSunday();
     const QString baseName = sunday.isValid()
         ? QStringLiteral("schedule-%1").arg(sunday.toString(Qt::ISODate))
@@ -450,15 +464,15 @@ void ReportsView::saveClicked()
     const QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
         + QLatin1Char('/') + baseName + QStringLiteral(".html");
     QString selectedFilter;
-    const QString path = QFileDialog::getSaveFileName(this, QStringLiteral("Save Report"), defaultPath,
-        QStringLiteral("Web page (*.html);;Spreadsheet (*.csv)"), &selectedFilter);
+    const QString path = QFileDialog::getSaveFileName(this, tr("Save Report"), defaultPath,
+        tr("Web page (*.html);;Spreadsheet (*.csv)"), &selectedFilter);
     if (path.isEmpty()) {
         return;
     }
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        QMessageBox::critical(this, QStringLiteral("Save Report"), file.errorString());
+        QMessageBox::critical(this, tr("Save Report"), file.errorString());
         return;
     }
     QTextStream out(&file);
@@ -470,7 +484,7 @@ void ReportsView::saveClicked()
         for (const ScheduleReportRow &row : visibleRows()) {
             out << csvField(row.serviceDate.toString(Qt::ISODate)) << ','
                 << csvField(row.dutyTypeName) << ','
-                << csvField(row.memberName.isEmpty() ? QStringLiteral("Unfilled") : row.memberName) << ','
+                << csvField(row.memberName.isEmpty() ? tr("Unfilled") : row.memberName) << ','
                 << csvField(row.supportMemberName) << ','
                 << csvField(row.notes) << ','
                 << csvField(availabilityNote(row)) << '\n';
@@ -479,5 +493,5 @@ void ReportsView::saveClicked()
         out << currentReportHtml(false);
     }
     file.close();
-    m_statusLabel->setText(QStringLiteral("Saved to %1").arg(QDir::toNativeSeparators(path)));
+    m_statusLabel->setText(tr("Saved to %1").arg(QDir::toNativeSeparators(path)));
 }

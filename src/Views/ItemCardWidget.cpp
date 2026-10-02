@@ -69,7 +69,7 @@ ItemCardWidget::ItemCardWidget(const Item &item, const QString &categoryName, co
     setAttribute(Qt::WA_StyledBackground, true);
     setFixedWidth(PhotoSize + 24);
     setCursor(Qt::PointingHandCursor);
-    setToolTip(QStringLiteral("Double-click for details"));
+    setToolTip(tr("Double-click for details"));
 
     auto *photoLabel = new QLabel(this);
     photoLabel->setFixedSize(PhotoSize, PhotoSize);
@@ -77,7 +77,7 @@ ItemCardWidget::ItemCardWidget(const Item &item, const QString &categoryName, co
     photoLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
     if (photo.isNull()) {
         photoLabel->setObjectName(QStringLiteral("cardPhotoPlaceholder"));
-        photoLabel->setText(QStringLiteral("No Photo"));
+        photoLabel->setText(tr("No Photo"));
     } else {
         photoLabel->setPixmap(roundedCorners(coverScaled(photo, PhotoSize), PhotoCornerRadius));
     }
@@ -88,12 +88,12 @@ ItemCardWidget::ItemCardWidget(const Item &item, const QString &categoryName, co
     nameLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
     nameLabel->setText(item.name());
 
-    auto *quantityLabel = new QLabel(QStringLiteral("Qty %1").arg(item.quantity()), this);
+    auto *quantityLabel = new QLabel(tr("Qty %1").arg(item.quantity()), this);
     quantityLabel->setObjectName(QStringLiteral("cardQuantity"));
     quantityLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 
     auto *metaRow = new QHBoxLayout;
-    metaRow->addWidget(Badge::make(capitalize(itemStatusToString(item.status())), Badge::statusColor(item.status()), this));
+    metaRow->addWidget(Badge::make(Badge::statusName(item.status()), Badge::statusColor(item.status()), this));
     metaRow->addStretch();
     metaRow->addWidget(quantityLabel);
 

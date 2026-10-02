@@ -10,7 +10,7 @@ ActionBar::ActionBar(QWidget *parent)
     setObjectName(QStringLiteral("actionBar"));
     setFixedWidth(196);
 
-    auto *heading = new QLabel(QStringLiteral("Actions"), this);
+    auto *heading = new QLabel(tr("Actions"), this);
     heading->setObjectName(QStringLiteral("actionBarHeading"));
 
     m_layout = new QVBoxLayout(this);

@@ -20,6 +20,7 @@
 #include <QStyle>
 #include <QVBoxLayout>
 
+#include "Badge.h"
 #include "Controllers/CategoryController.h"
 #include "Controllers/TagController.h"
 #include "ClickableLabel.h"
@@ -39,15 +40,15 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     , m_networkManager(new QNetworkAccessManager(this))
 {
     m_nameEdit = new QLineEdit(this);
-    m_nameEdit->setPlaceholderText(QStringLiteral("e.g. Folding Table"));
+    m_nameEdit->setPlaceholderText(tr("e.g. Folding Table"));
     m_descriptionEdit = new QPlainTextEdit(this);
     m_descriptionEdit->setFixedHeight(64);
-    m_descriptionEdit->setPlaceholderText(QStringLiteral("Optional notes about this item"));
+    m_descriptionEdit->setPlaceholderText(tr("Optional notes about this item"));
     m_quantitySpin = new QSpinBox(this);
     m_quantitySpin->setRange(0, 1000000);
     m_quantitySpin->setValue(1);
     m_locationEdit = new QLineEdit(this);
-    m_locationEdit->setPlaceholderText(QStringLiteral("e.g. Storage Room B, Shelf 3"));
+    m_locationEdit->setPlaceholderText(tr("e.g. Storage Room B, Shelf 3"));
     if (autoFillLocation) {
         const QString street = LocationLookup::currentStreetName(*m_networkManager);
         if (!street.isEmpty()) {
@@ -56,7 +57,7 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     }
     m_statusCombo = new QComboBox(this);
     for (ItemStatus status : allItemStatuses()) {
-        m_statusCombo->addItem(capitalize(itemStatusToString(status)), static_cast<int>(status));
+        m_statusCombo->addItem(Badge::statusName(status), static_cast<int>(status));
     }
     m_categoryCombo = new QComboBox(this);
 
@@ -67,14 +68,14 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     auto *detailsForm = new QFormLayout;
     detailsForm->setSpacing(10);
     detailsForm->setLabelAlignment(Qt::AlignRight);
-    detailsForm->addRow(QStringLiteral("Name"), m_nameEdit);
+    detailsForm->addRow(tr("Name"), m_nameEdit);
     detailsForm->addRow(QString(), m_nameError);
-    detailsForm->addRow(QStringLiteral("Description"), m_descriptionEdit);
-    detailsForm->addRow(QStringLiteral("Quantity"), m_quantitySpin);
-    detailsForm->addRow(QStringLiteral("Location"), m_locationEdit);
-    detailsForm->addRow(QStringLiteral("Status"), m_statusCombo);
-    detailsForm->addRow(QStringLiteral("Category"), m_categoryCombo);
-    auto *detailsBox = new QGroupBox(QStringLiteral("Item Details"), this);
+    detailsForm->addRow(tr("Description"), m_descriptionEdit);
+    detailsForm->addRow(tr("Quantity"), m_quantitySpin);
+    detailsForm->addRow(tr("Location"), m_locationEdit);
+    detailsForm->addRow(tr("Status"), m_statusCombo);
+    detailsForm->addRow(tr("Category"), m_categoryCombo);
+    auto *detailsBox = new QGroupBox(tr("Item Details"), this);
     detailsBox->setLayout(detailsForm);
 
     // --- Photo -----------------------------------------------------------
@@ -84,10 +85,10 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     m_imagePreview->setObjectName(QStringLiteral("photoTile"));
     m_imagePreview->setFixedSize(180, 180);
     m_imagePreview->setAlignment(Qt::AlignCenter);
-    m_imagePreview->setToolTip(QStringLiteral("Click to choose a photo"));
+    m_imagePreview->setToolTip(tr("Click to choose a photo"));
     connect(m_imagePreview, &ClickableLabel::clicked, this, &ItemFormWidget::choosePhotoClicked);
 
-    m_autofillButton = new QPushButton(QStringLiteral("Fill In Name && Description from Photo (AI)"), this);
+    m_autofillButton = new QPushButton(tr("Fill In Name && Description from Photo (AI)"), this);
     m_autofillButton->setEnabled(false);
     connect(m_autofillButton, &QPushButton::clicked, this, &ItemFormWidget::autofillFromPhotoClicked);
 
@@ -103,7 +104,7 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     auto *photoLayout = new QHBoxLayout;
     photoLayout->addWidget(m_imagePreview);
     photoLayout->addLayout(photoButtonsLayout, 1);
-    auto *photoBox = new QGroupBox(QStringLiteral("Photo"), this);
+    auto *photoBox = new QGroupBox(tr("Photo"), this);
     photoBox->setLayout(photoLayout);
 
     m_tagList = new QListWidget(this);
@@ -111,8 +112,8 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     m_tagList->setAlternatingRowColors(true);
 
     m_newTagEdit = new QLineEdit(this);
-    m_newTagEdit->setPlaceholderText(QStringLiteral("New tag name"));
-    auto *addTagButton = new QPushButton(QStringLiteral("Add Tag"), this);
+    m_newTagEdit->setPlaceholderText(tr("New tag name"));
+    auto *addTagButton = new QPushButton(tr("Add Tag"), this);
     connect(addTagButton, &QPushButton::clicked, this, &ItemFormWidget::createTagClicked);
 
     auto *newTagRow = new QHBoxLayout;
@@ -123,7 +124,7 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     tagsLayout->setSpacing(8);
     tagsLayout->addWidget(m_tagList);
     tagsLayout->addLayout(newTagRow);
-    auto *tagsBox = new QGroupBox(QStringLiteral("Tags"), this);
+    auto *tagsBox = new QGroupBox(tr("Tags"), this);
     tagsBox->setLayout(tagsLayout);
 
     auto *layout = new QVBoxLayout(this);
@@ -141,7 +142,7 @@ void ItemFormWidget::refreshCategories()
 {
     const int previousId = m_categoryCombo->currentData().toInt();
     m_categoryCombo->clear();
-    m_categoryCombo->addItem(QStringLiteral("None"), -1);
+    m_categoryCombo->addItem(tr("None"), -1);
     for (const Category &category : m_categoryController->allCategories()) {
         m_categoryCombo->addItem(category.name(), category.id());
     }
@@ -184,7 +185,7 @@ void ItemFormWidget::createTagClicked()
 void ItemFormWidget::choosePhotoClicked()
 {
     const QString path = QFileDialog::getOpenFileName(
-        this, QStringLiteral("Choose Photo"), QString(),
+        this, tr("Choose Photo"), QString(),
         QStringLiteral("Images (*.png *.jpg *.jpeg *.gif *.webp)"));
     if (path.isEmpty()) {
         return;
@@ -192,7 +193,7 @@ void ItemFormWidget::choosePhotoClicked()
 
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::warning(this, QStringLiteral("Choose Photo"), QStringLiteral("Could not open that file."));
+        QMessageBox::warning(this, tr("Choose Photo"), tr("Could not open that file."));
         return;
     }
 
@@ -217,7 +218,7 @@ void ItemFormWidget::autofillFromPhotoClicked()
         return;
     }
     m_autofillButton->setEnabled(false);
-    m_autofillStatus->setText(QStringLiteral("Analyzing photo…"));
+    m_autofillStatus->setText(tr("Analyzing photo…"));
     m_autofillStatus->show();
     qApp->processEvents();
 
@@ -227,7 +228,7 @@ void ItemFormWidget::autofillFromPhotoClicked()
 
     if (suggestion.isEmpty()) {
         m_autofillStatus->hide();
-        QMessageBox::warning(this, QStringLiteral("Fill In From Photo"), errorMessage);
+        QMessageBox::warning(this, tr("Fill In From Photo"), errorMessage);
     } else {
         if (suggestion.contains(QStringLiteral("name"))) {
             m_nameEdit->setText(suggestion.value(QStringLiteral("name")).toString());
@@ -235,7 +236,7 @@ void ItemFormWidget::autofillFromPhotoClicked()
         if (suggestion.contains(QStringLiteral("description"))) {
             m_descriptionEdit->setPlainText(suggestion.value(QStringLiteral("description")).toString());
         }
-        m_autofillStatus->setText(QStringLiteral("Filled in from photo — review before saving."));
+        m_autofillStatus->setText(tr("Filled in from photo — review before saving."));
     }
     m_autofillButton->setEnabled(true);
 }
@@ -246,7 +247,7 @@ void ItemFormWidget::updatePreview()
     if (!hasImage) {
         // setPixmap() internally clears any text, so only ever call one of
         // setText/setPixmap depending on state (never both).
-        m_imagePreview->setText(QStringLiteral("+ Add Photo"));
+        m_imagePreview->setText(tr("+ Add Photo"));
     } else {
         QPixmap pixmap;
         pixmap.loadFromData(m_imageData);
@@ -269,7 +270,7 @@ void ItemFormWidget::setExistingImage(const QByteArray &data, const QString &mim
 bool ItemFormWidget::validate()
 {
     if (m_nameEdit->text().trimmed().isEmpty()) {
-        m_nameError->setText(QStringLiteral("Name is required."));
+        m_nameError->setText(tr("Name is required."));
         return false;
     }
     return true;

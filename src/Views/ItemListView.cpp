@@ -108,30 +108,30 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     auto *listViewButton = new QToolButton(this);
     listViewButton->setObjectName(QStringLiteral("viewToggleButton"));
     listViewButton->setProperty("position", QStringLiteral("first"));
-    listViewButton->setText(QStringLiteral("List"));
+    listViewButton->setText(tr("List"));
     listViewButton->setCheckable(true);
-    listViewButton->setToolTip(QStringLiteral("List view"));
+    listViewButton->setToolTip(tr("List view"));
 
     auto *gridViewButton = new QToolButton(this);
     gridViewButton->setObjectName(QStringLiteral("viewToggleButton"));
     gridViewButton->setProperty("position", QStringLiteral("last"));
-    gridViewButton->setText(QStringLiteral("Cards"));
+    gridViewButton->setText(tr("Cards"));
     gridViewButton->setCheckable(true);
-    gridViewButton->setToolTip(QStringLiteral("Card view"));
+    gridViewButton->setToolTip(tr("Card view"));
 
     auto *viewToggleRow = new QHBoxLayout;
     viewToggleRow->setSpacing(0);
     viewToggleRow->addWidget(listViewButton);
     viewToggleRow->addWidget(gridViewButton);
 
-    auto *title = new QLabel(QStringLiteral("Inventory"), this);
+    auto *title = new QLabel(tr("Inventory"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
-    auto *subtitle = new QLabel(QStringLiteral("Select a row to edit, delete, add a tag, or change status."), this);
+    auto *subtitle = new QLabel(tr("Select a row to edit, delete, add a tag, or change status."), this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
     subtitle->setWordWrap(true);
 
-    auto *addItemButton = new QPushButton(QStringLiteral("+  Add Item"), this);
-    connect(addItemButton, &QPushButton::clicked, this, &ItemListView::addItemClicked);
+    m_addItemButton = new QPushButton(tr("+  Add Item"), this);
+    connect(m_addItemButton, &QPushButton::clicked, this, &ItemListView::addItemClicked);
 
     auto *titleColumn = new QVBoxLayout;
     titleColumn->setSpacing(2);
@@ -147,7 +147,7 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     // --- Search / question row ------------------------------------------
     m_searchEdit = new QLineEdit(this);
     m_searchEdit->setObjectName(QStringLiteral("searchEdit"));
-    m_searchEdit->setPlaceholderText(QStringLiteral("Search items..."));
+    m_searchEdit->setPlaceholderText(tr("Search items..."));
     connect(m_searchEdit, &QLineEdit::textChanged, this, &ItemListView::searchTextChanged);
     connect(m_searchEdit, &QLineEdit::returnPressed, this, &ItemListView::searchSubmitted);
 
@@ -155,7 +155,7 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     m_questionModeButton->setObjectName(QStringLiteral("questionModeButton"));
     m_questionModeButton->setText(QStringLiteral("?"));
     m_questionModeButton->setCheckable(true);
-    m_questionModeButton->setToolTip(QStringLiteral("Ask a question instead of typing keywords"));
+    m_questionModeButton->setToolTip(tr("Ask a question instead of typing keywords"));
     connect(m_questionModeButton, &QToolButton::toggled, this, &ItemListView::questionModeToggled);
 
     m_networkStatusLabel = new QLabel(this);
@@ -177,8 +177,8 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     m_table = new QTableWidget(this);
     m_table->setColumnCount(ColumnCount);
     m_table->setHorizontalHeaderLabels(
-        {QString(), QStringLiteral("Photo"), QStringLiteral("Name"), QStringLiteral("Quantity"), QStringLiteral("Location"),
-         QStringLiteral("Status"), QStringLiteral("Category"), QStringLiteral("Tags")});
+        {QString(), tr("Photo"), tr("Name"), tr("Quantity"), tr("Location"),
+         tr("Status"), tr("Category"), tr("Tags")});
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->horizontalHeader()->setSectionResizeMode(ColumnSelect, QHeaderView::Fixed);
     m_table->horizontalHeader()->resizeSection(ColumnSelect, 32);
@@ -234,27 +234,27 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     });
     listViewButton->setChecked(true);
 
-    auto *editButton = new QPushButton(QStringLiteral("Edit"), this);
-    auto *addTagButton = new QPushButton(QStringLiteral("Add Tag"), this);
-    auto *setStatusButton = new QPushButton(QStringLiteral("Set Status"), this);
-    editButton->setObjectName(QStringLiteral("secondaryButton"));
-    addTagButton->setObjectName(QStringLiteral("secondaryButton"));
-    setStatusButton->setObjectName(QStringLiteral("secondaryButton"));
-    auto *deleteButton = new QPushButton(QStringLiteral("Delete"), this);
-    deleteButton->setObjectName(QStringLiteral("dangerButton"));
-    connect(editButton, &QPushButton::clicked, this, &ItemListView::editClicked);
-    connect(deleteButton, &QPushButton::clicked, this, &ItemListView::deleteClicked);
-    connect(addTagButton, &QPushButton::clicked, this, &ItemListView::addTagClicked);
-    connect(setStatusButton, &QPushButton::clicked, this, &ItemListView::setStatusClicked);
+    m_editButton = new QPushButton(tr("Edit"), this);
+    m_addTagButton = new QPushButton(tr("Add Tag"), this);
+    m_setStatusButton = new QPushButton(tr("Set Status"), this);
+    m_editButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_addTagButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_setStatusButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_deleteButton = new QPushButton(tr("Delete"), this);
+    m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
+    connect(m_editButton, &QPushButton::clicked, this, &ItemListView::editClicked);
+    connect(m_deleteButton, &QPushButton::clicked, this, &ItemListView::deleteClicked);
+    connect(m_addTagButton, &QPushButton::clicked, this, &ItemListView::addTagClicked);
+    connect(m_setStatusButton, &QPushButton::clicked, this, &ItemListView::setStatusClicked);
 
     auto *actionBar = new ActionBar(this);
-    actionBar->addWidget(addItemButton);
+    actionBar->addWidget(m_addItemButton);
     actionBar->addSeparator();
-    actionBar->addWidget(editButton);
-    actionBar->addWidget(addTagButton);
-    actionBar->addWidget(setStatusButton);
+    actionBar->addWidget(m_editButton);
+    actionBar->addWidget(m_addTagButton);
+    actionBar->addWidget(m_setStatusButton);
     actionBar->addStretch();
-    actionBar->addWidget(deleteButton);
+    actionBar->addWidget(m_deleteButton);
 
     auto *content = new QVBoxLayout;
     content->setSpacing(12);
@@ -269,7 +269,18 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     layout->addLayout(content, 1);
     layout->addWidget(actionBar);
 
+    setAccess(SectionAccess());
     refresh();
+}
+
+void ItemListView::setAccess(const SectionAccess &access)
+{
+    m_access = access;
+    m_addItemButton->setVisible(access.create);
+    m_editButton->setVisible(access.update);
+    m_addTagButton->setVisible(access.update);
+    m_setStatusButton->setVisible(access.update);
+    m_deleteButton->setVisible(access.remove);
 }
 
 void ItemListView::refresh()
@@ -334,11 +345,11 @@ void ItemListView::rebuildTable()
         auto *statusCell = new QWidget(m_table);
         auto *statusLayout = new QHBoxLayout(statusCell);
         statusLayout->setContentsMargins(6, 4, 6, 4);
-        statusLayout->addWidget(Badge::make(capitalize(itemStatusToString(item.status())), Badge::statusColor(item.status()), statusCell));
+        statusLayout->addWidget(Badge::make(Badge::statusName(item.status()), Badge::statusColor(item.status()), statusCell));
         statusLayout->addStretch();
         m_table->setCellWidget(row, ColumnStatus, statusCell);
 
-        m_table->setItem(row, ColumnCategory, new QTableWidgetItem(m_categoryNames.value(item.categoryId(), QStringLiteral("None"))));
+        m_table->setItem(row, ColumnCategory, new QTableWidgetItem(m_categoryNames.value(item.categoryId(), tr("None"))));
 
         auto *tagsCell = new QWidget(m_table);
         auto *tagsFlow = new FlowLayout(tagsCell, 4, 6, 6);
@@ -366,7 +377,7 @@ void ItemListView::rebuildCardGrid(const QVector<Item> &items)
                 itemTags << m_tagsById.value(tagId);
             }
         }
-        auto *card = new ItemCardWidget(item, m_categoryNames.value(item.categoryId(), QStringLiteral("None")),
+        auto *card = new ItemCardWidget(item, m_categoryNames.value(item.categoryId(), tr("None")),
                                           itemTags, m_photoCache.value(item.id()), m_cardContainer);
         connect(card, &ItemCardWidget::doubleClicked, this, &ItemListView::openItemDetails);
         flow->addWidget(card);
@@ -565,8 +576,8 @@ void ItemListView::questionModeToggled(bool enabled)
 {
     m_questionMode = enabled;
     m_searchEdit->setPlaceholderText(enabled
-        ? QStringLiteral("Ask a question, e.g. \"broken items in storage\" — press Enter")
-        : QStringLiteral("Search items..."));
+        ? tr("Ask a question, e.g. \"broken items in storage\" — press Enter")
+        : tr("Search items..."));
     if (!enabled) {
         m_structuredFilterActive = false;
         applyFilter();
@@ -580,8 +591,8 @@ void ItemListView::updateNetworkStatus()
     m_networkStatusLabel->setStyleSheet(QStringLiteral("background: %1; border-radius: 5px;")
         .arg(online ? QStringLiteral("#1f8a4c") : QStringLiteral("#9aa0ab")));
     m_networkStatusLabel->setToolTip(online
-        ? QStringLiteral("Online — questions are answered with AI")
-        : QStringLiteral("Offline — questions use local keyword matching"));
+        ? tr("Online — questions are answered with AI")
+        : tr("Offline — questions use local keyword matching"));
 }
 
 int ItemListView::selectedItemId() const
@@ -595,6 +606,9 @@ int ItemListView::selectedItemId() const
 
 void ItemListView::addItemClicked()
 {
+    if (!m_access.create) {
+        return;
+    }
     ItemAddDialog dialog(m_itemController, m_tagController, m_categoryController, this);
     if (dialog.exec() == QDialog::Accepted) {
         refresh();
@@ -613,16 +627,19 @@ void ItemListView::openItemDetails(int id)
             itemTags << m_tagsById.value(tagId);
         }
     }
-    ItemDetailsDialog dialog(item, m_categoryNames.value(item.categoryId(), QStringLiteral("None")),
+    ItemDetailsDialog dialog(item, m_categoryNames.value(item.categoryId(), tr("None")),
                               itemTags, m_photoCache.value(id), this);
     dialog.exec();
 }
 
 void ItemListView::editClicked()
 {
+    if (!m_access.update) {
+        return;
+    }
     const int id = selectedItemId();
     if (id < 0) {
-        QMessageBox::information(this, QStringLiteral("Edit Item"), QStringLiteral("Select an item first."));
+        QMessageBox::information(this, tr("Edit Item"), tr("Select an item first."));
         return;
     }
     ItemEditDialog dialog(m_itemController->itemById(id), m_itemController, m_tagController, m_categoryController, this);
@@ -633,27 +650,33 @@ void ItemListView::editClicked()
 
 void ItemListView::deleteClicked()
 {
-    const int id = selectedItemId();
-    if (id < 0) {
-        QMessageBox::information(this, QStringLiteral("Delete Item"), QStringLiteral("Select an item first."));
+    if (!m_access.remove) {
         return;
     }
-    if (QMessageBox::question(this, QStringLiteral("Delete Item"), QStringLiteral("Delete this item?"))
+    const int id = selectedItemId();
+    if (id < 0) {
+        QMessageBox::information(this, tr("Delete Item"), tr("Select an item first."));
+        return;
+    }
+    if (QMessageBox::question(this, tr("Delete Item"), tr("Delete this item?"))
         != QMessageBox::Yes) {
         return;
     }
     if (m_itemController->removeItem(id)) {
         refresh();
     } else {
-        QMessageBox::critical(this, QStringLiteral("Delete Item"), m_itemController->lastError());
+        QMessageBox::critical(this, tr("Delete Item"), m_itemController->lastError());
     }
 }
 
 void ItemListView::addTagClicked()
 {
+    if (!m_access.update) {
+        return;
+    }
     const int id = selectedItemId();
     if (id < 0) {
-        QMessageBox::information(this, QStringLiteral("Add Tag"), QStringLiteral("Select an item first."));
+        QMessageBox::information(this, tr("Add Tag"), tr("Select an item first."));
         return;
     }
 
@@ -663,13 +686,13 @@ void ItemListView::addTagClicked()
         names << tag.name();
     }
     if (names.isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("Add Tag"),
-                                  QStringLiteral("No tags exist yet. Create one from the Tags & Categories tab."));
+        QMessageBox::information(this, tr("Add Tag"),
+                                  tr("No tags exist yet. Create one from the Tags & Categories tab."));
         return;
     }
 
     bool ok = false;
-    const QString chosen = QInputDialog::getItem(this, QStringLiteral("Add Tag"), QStringLiteral("Tag"), names, 0, false, &ok);
+    const QString chosen = QInputDialog::getItem(this, tr("Add Tag"), tr("Tag"), names, 0, false, &ok);
     if (!ok) {
         return;
     }
@@ -678,7 +701,7 @@ void ItemListView::addTagClicked()
         return;
     }
     if (!m_itemController->addTagToItem(id, tags[index].id())) {
-        QMessageBox::critical(this, QStringLiteral("Add Tag"), m_itemController->lastError());
+        QMessageBox::critical(this, tr("Add Tag"), m_itemController->lastError());
         return;
     }
     refresh();
@@ -686,20 +709,23 @@ void ItemListView::addTagClicked()
 
 void ItemListView::setStatusClicked()
 {
+    if (!m_access.update) {
+        return;
+    }
     const int id = selectedItemId();
     if (id < 0) {
-        QMessageBox::information(this, QStringLiteral("Set Status"), QStringLiteral("Select an item first."));
+        QMessageBox::information(this, tr("Set Status"), tr("Select an item first."));
         return;
     }
 
     const QVector<ItemStatus> statuses = allItemStatuses();
     QStringList names;
     for (ItemStatus status : statuses) {
-        names << capitalize(itemStatusToString(status));
+        names << Badge::statusName(status);
     }
 
     bool ok = false;
-    const QString chosen = QInputDialog::getItem(this, QStringLiteral("Set Status"), QStringLiteral("Status"), names, 0, false, &ok);
+    const QString chosen = QInputDialog::getItem(this, tr("Set Status"), tr("Status"), names, 0, false, &ok);
     if (!ok) {
         return;
     }
@@ -708,7 +734,7 @@ void ItemListView::setStatusClicked()
         return;
     }
     if (!m_itemController->setItemStatus(id, statuses[index])) {
-        QMessageBox::critical(this, QStringLiteral("Set Status"), m_itemController->lastError());
+        QMessageBox::critical(this, tr("Set Status"), m_itemController->lastError());
         return;
     }
     refresh();

@@ -1,5 +1,6 @@
 #include "AddToScheduleDialog.h"
 
+#include <QLocale>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
@@ -22,11 +23,11 @@ AddToScheduleDialog::AddToScheduleDialog(
     , m_serviceDate(serviceDate)
 {
     const bool isEdit = !existingDuties.isEmpty();
-    const QString title = isEdit ? QStringLiteral("Edit Member on Schedule") : QStringLiteral("Add Member to Schedule");
+    const QString title = isEdit ? tr("Edit Member on Schedule") : tr("Add Member to Schedule");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
-    auto *dateLabel = new QLabel(serviceDate.toString(QStringLiteral("dddd d MMMM yyyy")), this);
+    auto *dateLabel = new QLabel(QLocale().toString(serviceDate, QStringLiteral("dddd d MMMM yyyy")), this);
     dateLabel->setObjectName(QStringLiteral("pageSubtitle"));
 
     QList<QPair<int, QString>> memberItems;
@@ -35,30 +36,30 @@ AddToScheduleDialog::AddToScheduleDialog(
     }
     m_memberEdit = new SuggestLineEdit(this);
     m_memberEdit->setItems(memberItems);
-    m_memberEdit->setPlaceholderText(QStringLiteral("Type the member's name"));
+    m_memberEdit->setPlaceholderText(tr("Type the member's name"));
 
     QList<QPair<int, QString>> dutyItems;
     for (const DutyType &dutyType : dutyTypeController->allDutyTypes()) {
         dutyItems.append({dutyType.id(), dutyType.iconAndName()});
     }
     m_dutyPicker = new MemberPickerField(this);
-    m_dutyPicker->setPlaceholders(QStringLiteral("Type a duty to add it"), QStringLiteral("Add another duty..."));
+    m_dutyPicker->setPlaceholders(tr("Type a duty to add it"), tr("Add another duty..."));
     m_dutyPicker->setMembers(dutyItems);
     m_dutyPicker->setMinimumWidth(340);
 
     m_backupEdit = new SuggestLineEdit(this);
     m_backupEdit->setItems(memberItems);
-    m_backupEdit->setPlaceholderText(QStringLiteral("Covers if they're not around (optional)"));
+    m_backupEdit->setPlaceholderText(tr("Covers if they're not around (optional)"));
 
     m_notesEdit = new QPlainTextEdit(this);
     m_notesEdit->setFixedHeight(60);
-    m_notesEdit->setPlaceholderText(QStringLiteral("Optional notes"));
+    m_notesEdit->setPlaceholderText(tr("Optional notes"));
 
     auto *form = new QFormLayout;
-    form->addRow(QStringLiteral("Member"), m_memberEdit);
-    form->addRow(QStringLiteral("Duties"), m_dutyPicker);
-    form->addRow(QStringLiteral("Backup"), m_backupEdit);
-    form->addRow(QStringLiteral("Notes"), m_notesEdit);
+    form->addRow(tr("Member"), m_memberEdit);
+    form->addRow(tr("Duties"), m_dutyPicker);
+    form->addRow(tr("Backup"), m_backupEdit);
+    form->addRow(tr("Notes"), m_notesEdit);
 
     m_errorLabel = new QLabel(this);
     m_errorLabel->setObjectName(QStringLiteral("fieldError"));
@@ -80,19 +81,19 @@ AddToScheduleDialog::AddToScheduleDialog(
         }
         m_dutyPicker->setSelectedIds(dutyTypeIds);
         if (m_mixedBackups) {
-            m_backupEdit->setPlaceholderText(QStringLiteral("Differs per duty -- leave empty to keep each one's backup"));
+            m_backupEdit->setPlaceholderText(tr("Differs per duty -- leave empty to keep each one's backup"));
         } else {
             m_backupEdit->setCurrentId(first.supportMemberId());
         }
         if (m_mixedNotes) {
-            m_notesEdit->setPlaceholderText(QStringLiteral("Differs per duty -- leave empty to keep each one's notes"));
+            m_notesEdit->setPlaceholderText(tr("Differs per duty -- leave empty to keep each one's notes"));
         } else {
             m_notesEdit->setPlainText(first.notes());
         }
     }
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-    buttons->button(QDialogButtonBox::Save)->setText(isEdit ? QStringLiteral("Save Changes") : QStringLiteral("Add to Schedule"));
+    buttons->button(QDialogButtonBox::Save)->setText(isEdit ? tr("Save Changes") : tr("Add to Schedule"));
     connect(buttons, &QDialogButtonBox::accepted, this, &AddToScheduleDialog::saveClicked);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -109,23 +110,23 @@ void AddToScheduleDialog::saveClicked()
     const int memberId = m_memberEdit->currentId();
     if (memberId < 0) {
         m_errorLabel->setText(m_memberEdit->text().trimmed().isEmpty()
-            ? QStringLiteral("Pick the member to add.")
-            : QStringLiteral("No member is called \"%1\" -- pick one from the suggestions.").arg(m_memberEdit->text().trimmed()));
+            ? tr("Pick the member to add.")
+            : tr("No member is called \"%1\" -- pick one from the suggestions.").arg(m_memberEdit->text().trimmed()));
         m_memberEdit->setFocus();
         return;
     }
     if (m_dutyPicker->selectedIds().isEmpty()) {
-        m_errorLabel->setText(QStringLiteral("Add at least one duty for them."));
+        m_errorLabel->setText(tr("Add at least one duty for them."));
         return;
     }
     if (m_backupEdit->hasUnknownText()) {
-        m_errorLabel->setText(QStringLiteral("No member is called \"%1\" -- pick a backup from the suggestions, "
+        m_errorLabel->setText(tr("No member is called \"%1\" -- pick a backup from the suggestions, "
                                              "or leave it empty.").arg(m_backupEdit->text().trimmed()));
         m_backupEdit->setFocus();
         return;
     }
     if (m_backupEdit->currentId() == memberId) {
-        m_errorLabel->setText(QStringLiteral("The backup has to be someone else."));
+        m_errorLabel->setText(tr("The backup has to be someone else."));
         m_backupEdit->setFocus();
         return;
     }

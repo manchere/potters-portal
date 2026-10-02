@@ -3,6 +3,7 @@
 #include <QVector>
 #include <QWidget>
 
+#include "Models/AccessRights.h"
 #include "Models/Category.h"
 #include "Models/DutyType.h"
 #include "Models/Tag.h"
@@ -35,11 +36,11 @@ class UserController;
 // "+ Add Team" creates a team; Members are put on one from the Team field
 // of Add/Edit Member, and each Member row shows their team.
 //
-// Adding/editing a Member or a Team is Admin-only (gated the same way the Schedule tab
-// is); Tags, Categories, and Duty Types stay open to everyone, as
-// before. So is changing a Member's role: the "Make Admin" / "Remove
-// Admin" button only exists in Admin mode, and UserController::setAdminRole
-// re-checks that the acting account is still an Admin.
+// Adding, editing and deleting (any list) follow the Taxonomy rights set in
+// Settings > Access Rights. Two things stay Admin-only whatever those say:
+// changing a Member's role (the "Make Admin" / "Remove Admin" button, with
+// UserController::setAdminRole re-checking the acting account), and
+// editing or deleting an Admin's own profile.
 class AdminOverviewView : public QWidget
 {
     Q_OBJECT
@@ -58,11 +59,10 @@ public slots:
     // controllers and rebuilds whichever list is currently shown.
     void refresh();
 
-    // Gates the Member add button, double-click-to-edit on Member rows, and
-    // the Admin role toggle -- Tags/Categories/Duty Types management
-    // stays open to everyone. adminUserId is the logged-in Admin (-1 when
-    // logged out), passed to UserController::setAdminRole for the check.
-    void setAdminMode(bool isAdmin, int adminUserId);
+    // What the signed-in person may do here (see the class comment).
+    // userId is who's signed in (-1 when nobody is), passed to
+    // UserController::setAdminRole for the check.
+    void setAccess(const SectionAccess &access, bool isAdmin, int userId);
 
 private slots:
     void kindButtonClicked();
@@ -91,6 +91,12 @@ private:
     DutyTypeController *m_dutyTypeController = nullptr;
     UserController *m_userController = nullptr;
     TeamController *m_teamController = nullptr;
+    // False when someone isn't allowed `action`, after telling them so.
+    bool checkAllowed(AccessAction action);
+    // Only an Admin may change an Admin's profile.
+    bool canChangeMember(int memberId);
+
+    SectionAccess m_access;
     bool m_isAdmin = false;
     int m_adminUserId = -1;
     Kind m_kind = Kind::Members;

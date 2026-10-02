@@ -22,6 +22,8 @@ set(CORE_SOURCES
   "Models/ScheduleReportRow.h"
   "Models/DutyType.h" "Models/DutyType.cpp"
   "Models/Team.h" "Models/Team.cpp"
+  "Models/Feedback.h" "Models/Feedback.cpp"
+  "Models/AccessRights.h" "Models/AccessRights.cpp"
   "Models/Song.h" "Models/Song.cpp"
   "Models/AvailabilityMark.h" "Models/AvailabilityMark.cpp"
   "Models/NonAvailabilityRequest.h" "Models/NonAvailabilityRequest.cpp"
@@ -34,6 +36,8 @@ set(CORE_SOURCES
   "Controllers/DutyController.h" "Controllers/DutyController.cpp"
   "Controllers/DutyTypeController.h" "Controllers/DutyTypeController.cpp"
   "Controllers/TeamController.h" "Controllers/TeamController.cpp"
+  "Controllers/FeedbackController.h" "Controllers/FeedbackController.cpp"
+  "Controllers/AccessController.h" "Controllers/AccessController.cpp"
   "Controllers/SongController.h" "Controllers/SongController.cpp"
   "Controllers/AvailabilityController.h" "Controllers/AvailabilityController.cpp"
   "Controllers/NonAvailabilityRequestController.h" "Controllers/NonAvailabilityRequestController.cpp"
@@ -44,6 +48,7 @@ set(CORE_SOURCES
 add_executable (PottersPortal
   "Portal.cpp" "Portal.h"
   "Style.h" "Style.cpp"
+  "Language.h" "Language.cpp"
   ${CORE_SOURCES}
   "Views/MainWindow.h" "Views/MainWindow.cpp"
   "Views/FramelessDialog.h" "Views/FramelessDialog.cpp"
@@ -74,6 +79,8 @@ add_executable (PottersPortal
   "Views/MemberEditDialog.h" "Views/MemberEditDialog.cpp"
   "Views/DutyTypeEditDialog.h" "Views/DutyTypeEditDialog.cpp"
   "Views/TeamEditDialog.h" "Views/TeamEditDialog.cpp"
+  "Views/FeedbackView.h" "Views/FeedbackView.cpp"
+  "Views/AccessRightsDialog.h" "Views/AccessRightsDialog.cpp"
   "Views/SongsView.h" "Views/SongsView.cpp"
   "Views/ReportsView.h" "Views/ReportsView.cpp"
   "Views/MemberPickerField.h" "Views/MemberPickerField.cpp"
@@ -106,9 +113,18 @@ endif()
 # Find Qt6 Widgets + Sql (Postgres access via the QPSQL driver) + HttpServer +
 # Network (outbound HTTPS call to Groq for the photo auto-fill feature, used
 # by both the desktop app directly and the REST server's /api/vision route)
-find_package(Qt6 COMPONENTS Widgets Sql HttpServer Network REQUIRED)
+find_package(Qt6 COMPONENTS Widgets Sql HttpServer Network LinguistTools REQUIRED)
 target_link_libraries(PottersPortal PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network)
 target_link_libraries(PottersPortalServer PRIVATE Qt6::Sql Qt6::HttpServer Qt6::Network)
+
+# French UI text (Settings > Language). The .ts file holds every tr() string
+# with its French version; it's compiled to a .qm and built into the desktop
+# app as :/i18n/pottersportal_fr.qm (see Language.cpp). After changing UI
+# text, build the "update_translations" target to pick up new strings, then
+# fill in their French in the .ts file.
+qt_add_translations(PottersPortal
+  TS_FILES "${CMAKE_CURRENT_SOURCE_DIR}/translations/pottersportal_fr.ts"
+  LUPDATE_OPTIONS -no-obsolete -locations none)
 
 # LocationClient (desktop-only) reads the device's actual position via the
 # WinRT Geolocation API (Windows Location Services) to pre-fill the Add Item

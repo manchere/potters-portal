@@ -170,7 +170,7 @@ bool UserController::changePassword(int userId, const QString &newPassword)
         return false;
     }
     if (query.numRowsAffected() != 1) {
-        m_lastError = QStringLiteral("That account no longer exists.");
+        m_lastError = tr("That account no longer exists.");
         return false;
     }
     emit usersChanged();
@@ -193,8 +193,8 @@ bool UserController::removeUser(int id)
     }
     if (query.numRowsAffected() == 0) {
         m_lastError = userById(id).id() < 0
-            ? QStringLiteral("This member no longer exists.")
-            : QStringLiteral("This is the last Admin account and can't be deleted. Make someone else an Admin first.");
+            ? tr("This member no longer exists.")
+            : tr("This is the last Admin account and can't be deleted. Make someone else an Admin first.");
         return false;
     }
     emit usersChanged();
@@ -204,12 +204,12 @@ bool UserController::removeUser(int id)
 bool UserController::setAdminRole(int actingUserId, int targetUserId, bool makeAdmin)
 {
     if (!makeAdmin && actingUserId == targetUserId) {
-        m_lastError = QStringLiteral("You can't remove your own Admin role. Ask another Admin to do it.");
+        m_lastError = tr("You can't remove your own Admin role. Ask another Admin to do it.");
         return false;
     }
     const User actingUser = userById(actingUserId);
     if (actingUser.id() < 0 || !actingUser.isAdmin()) {
-        m_lastError = QStringLiteral("Only a current Admin can change member roles.");
+        m_lastError = tr("Only a current Admin can change member roles.");
         return false;
     }
 
@@ -229,8 +229,8 @@ bool UserController::setAdminRole(int actingUserId, int targetUserId, bool makeA
     }
     if (query.numRowsAffected() == 0) {
         m_lastError = userById(targetUserId).id() < 0
-            ? QStringLiteral("This member no longer exists.")
-            : QStringLiteral("There must always be at least one Admin.");
+            ? tr("This member no longer exists.")
+            : tr("There must always be at least one Admin.");
         return false;
     }
     emit usersChanged();

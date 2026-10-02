@@ -13,8 +13,8 @@ ItemEditDialog::ItemEditDialog(const Item &item, ItemController *itemController,
     : FramelessDialog(parent)
     , m_itemController(itemController)
 {
-    setWindowTitle(QStringLiteral("Edit Item"));
-    auto *heading = new QLabel(QStringLiteral("Edit Item"), this);
+    setWindowTitle(tr("Edit Item"));
+    auto *heading = new QLabel(tr("Edit Item"), this);
     heading->setObjectName(QStringLiteral("pageTitle"));
 
     m_form = new ItemFormWidget(tagController, categoryController, /*autoFillLocation=*/false, this);
@@ -45,12 +45,12 @@ void ItemEditDialog::saveClicked()
     }
     Item item = m_form->toItem();
     if (!m_itemController->updateItem(item)) {
-        QMessageBox::critical(this, QStringLiteral("Edit Item"), m_itemController->lastError());
+        QMessageBox::critical(this, tr("Edit Item"), m_itemController->lastError());
         return;
     }
     if (m_form->imageChanged() && !m_itemController->setItemImage(item.id(), m_form->imageData(), m_form->imageMime())) {
-        QMessageBox::warning(this, QStringLiteral("Edit Item"),
-                              QStringLiteral("Item was saved, but the photo could not be updated: %1")
+        QMessageBox::warning(this, tr("Edit Item"),
+                              tr("Item was saved, but the photo could not be updated: %1")
                                   .arg(m_itemController->lastError()));
     }
     accept();

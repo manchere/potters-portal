@@ -14,13 +14,13 @@ TagEditDialog::TagEditDialog(const Tag &tag, QWidget *parent)
     , m_id(tag.id())
     , m_color(tag.color().isEmpty() ? QStringLiteral("#3b82f6") : tag.color())
 {
-    const QString title = tag.id() < 0 ? QStringLiteral("Add Tag") : QStringLiteral("Edit Tag");
+    const QString title = tag.id() < 0 ? tr("Add Tag") : tr("Edit Tag");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
 
     m_nameEdit = new QLineEdit(tag.name(), this);
-    m_nameEdit->setPlaceholderText(QStringLiteral("e.g. Electronics"));
+    m_nameEdit->setPlaceholderText(tr("e.g. Electronics"));
     connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
     m_nameError = new QLabel(this);
     m_nameError->setObjectName(QStringLiteral("fieldError"));
@@ -32,13 +32,13 @@ TagEditDialog::TagEditDialog(const Tag &tag, QWidget *parent)
 
     m_descriptionEdit = new QPlainTextEdit(tag.description(), this);
     m_descriptionEdit->setFixedHeight(60);
-    m_descriptionEdit->setPlaceholderText(QStringLiteral("Optional notes about what this tag means"));
+    m_descriptionEdit->setPlaceholderText(tr("Optional notes about what this tag means"));
 
     auto *form = new QFormLayout;
-    form->addRow(QStringLiteral("Name"), m_nameEdit);
+    form->addRow(tr("Name"), m_nameEdit);
     form->addRow(QString(), m_nameError);
-    form->addRow(QStringLiteral("Color"), m_colorButton);
-    form->addRow(QStringLiteral("Description"), m_descriptionEdit);
+    form->addRow(tr("Color"), m_colorButton);
+    form->addRow(tr("Description"), m_descriptionEdit);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &TagEditDialog::saveClicked);
@@ -52,7 +52,7 @@ TagEditDialog::TagEditDialog(const Tag &tag, QWidget *parent)
 
 void TagEditDialog::pickColor()
 {
-    const QColor chosen = QColorDialog::getColor(QColor(m_color), this, QStringLiteral("Tag Color"));
+    const QColor chosen = QColorDialog::getColor(QColor(m_color), this, tr("Tag Color"));
     if (chosen.isValid()) {
         m_color = chosen.name();
         updateColorSwatch();
@@ -68,7 +68,7 @@ void TagEditDialog::updateColorSwatch()
 void TagEditDialog::saveClicked()
 {
     if (m_nameEdit->text().trimmed().isEmpty()) {
-        m_nameError->setText(QStringLiteral("Name is required."));
+        m_nameError->setText(tr("Name is required."));
         return;
     }
     accept();

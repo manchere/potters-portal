@@ -44,6 +44,13 @@ void Sidebar::addPage(const QString &icon, const QString &label)
     }
 }
 
+void Sidebar::setPageVisible(int index, bool visible)
+{
+    if (QAbstractButton *button = m_group->button(index)) {
+        button->setVisible(visible);
+    }
+}
+
 int Sidebar::currentIndex() const
 {
     return m_group->checkedId();

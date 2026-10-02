@@ -46,31 +46,31 @@ TitleBar::TitleBar(QWidget *parent)
     m_appIcon = new QLabel(this);
     m_appIcon->setPixmap(loadAppIcon(28));
     m_appIcon->setFixedSize(28, 28);
-    m_appIcon->setToolTip(QStringLiteral("Potters Portal"));
+    m_appIcon->setToolTip(tr("Potters Portal"));
 
-    m_appName = new QLabel(QStringLiteral("Potters Portal"), this);
+    m_appName = new QLabel(tr("Potters Portal"), this);
     m_appName->setObjectName(QStringLiteral("titleBarAppName"));
 
     m_adminButton = new QToolButton(this);
     m_adminButton->setObjectName(QStringLiteral("titleBarButton"));
     connect(m_adminButton, &QToolButton::clicked, this, &TitleBar::adminButtonClicked);
-    setAdminLoggedIn(false);
+    setSignedIn(QString(), false);
 
     m_minimizeButton = new QToolButton(this);
     m_minimizeButton->setObjectName(QStringLiteral("titleBarButton"));
     m_minimizeButton->setText(QStringLiteral("─"));
-    m_minimizeButton->setToolTip(QStringLiteral("Minimize"));
+    m_minimizeButton->setToolTip(tr("Minimize"));
     connect(m_minimizeButton, &QToolButton::clicked, this, &TitleBar::minimizeClicked);
 
     m_maximizeButton = new QToolButton(this);
     m_maximizeButton->setObjectName(QStringLiteral("titleBarButton"));
-    m_maximizeButton->setToolTip(QStringLiteral("Maximize"));
+    m_maximizeButton->setToolTip(tr("Maximize"));
     connect(m_maximizeButton, &QToolButton::clicked, this, &TitleBar::maximizeClicked);
 
     m_closeButton = new QToolButton(this);
     m_closeButton->setObjectName(QStringLiteral("titleBarCloseButton"));
     m_closeButton->setText(QStringLiteral("✕"));
-    m_closeButton->setToolTip(QStringLiteral("Close"));
+    m_closeButton->setToolTip(tr("Close"));
     connect(m_closeButton, &QToolButton::clicked, this, &TitleBar::closeClicked);
 
     setMaximized(false);
@@ -88,17 +88,20 @@ TitleBar::TitleBar(QWidget *parent)
     layout->addWidget(m_closeButton);
 }
 
-void TitleBar::setAdminLoggedIn(bool loggedIn)
+void TitleBar::setSignedIn(const QString &name, bool isAdmin)
 {
-    m_adminButton->setText(loggedIn ? QStringLiteral("\U0001F513") : QStringLiteral("\U0001F512")); // 🔓 / 🔒
-    m_adminButton->setToolTip(loggedIn ? QStringLiteral("Admin mode -- click to log out") : QStringLiteral("Admin Login"));
+    const bool signedIn = !name.isEmpty();
+    m_adminButton->setText(signedIn ? QStringLiteral("\U0001F513") : QStringLiteral("\U0001F512")); // 🔓 / 🔒
+    m_adminButton->setToolTip(!signedIn ? tr("Sign in")
+        : isAdmin ? tr("Signed in as %1 (Admin) -- click to sign out").arg(name)
+                  : tr("Signed in as %1 -- click to sign out").arg(name));
 }
 
 void TitleBar::setMaximized(bool maximized)
 {
     m_maximized = maximized;
     m_maximizeButton->setText(maximized ? QStringLiteral("❏") : QStringLiteral("□"));
-    m_maximizeButton->setToolTip(maximized ? QStringLiteral("Restore") : QStringLiteral("Maximize"));
+    m_maximizeButton->setToolTip(maximized ? tr("Restore") : tr("Maximize"));
 }
 
 void TitleBar::mousePressEvent(QMouseEvent *event)

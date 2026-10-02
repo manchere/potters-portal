@@ -40,6 +40,10 @@ public slots:
     // users change).
     void refresh();
 
+    // Save Report follows the Reports "Create" right in Settings >
+    // Access Rights.
+    void setCanSave(bool canSave);
+
     // Re-renders the on-screen report in the current theme's colors;
     // called after the theme is switched.
     void restyleReport();
@@ -80,5 +84,6 @@ private:
     QListWidget *m_sundayList = nullptr;
     QTextBrowser *m_reportView = nullptr;
     QPushButton *m_saveButton = nullptr;
+    bool m_canSave = false;
     QLabel *m_statusLabel = nullptr;
 };

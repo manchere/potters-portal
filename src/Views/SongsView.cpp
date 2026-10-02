@@ -1,5 +1,6 @@
 #include "SongsView.h"
 
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -26,7 +27,7 @@ namespace
             parts << song.artist();
         }
         if (!song.songKey().isEmpty()) {
-            parts << QStringLiteral("Key of %1").arg(song.songKey());
+            parts << QCoreApplication::translate("SongsView", "Key of %1").arg(song.songKey());
         }
         return parts.join(QStringLiteral("  ·  "));
     }
@@ -36,20 +37,20 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     : QWidget(parent)
     , m_songController(songController)
 {
-    auto *title = new QLabel(QStringLiteral("Songs"), this);
+    auto *title = new QLabel(tr("Songs"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        QStringLiteral("The church's song library. Pick a song to see its key and lyrics, "
+        tr("The church's song library. Pick a song to see its key and lyrics, "
                         "or press Play to open it."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
     subtitle->setWordWrap(true);
 
     m_searchEdit = new QLineEdit(this);
-    m_searchEdit->setPlaceholderText(QStringLiteral("Search by title or artist..."));
+    m_searchEdit->setPlaceholderText(tr("Search by title or artist..."));
     connect(m_searchEdit, &QLineEdit::textChanged, this, &SongsView::rebuildList);
 
-    m_addButton = new QPushButton(QStringLiteral("+  Add Song"), this);
+    m_addButton = new QPushButton(tr("+  Add Song"), this);
     connect(m_addButton, &QPushButton::clicked, this, &SongsView::addClicked);
 
 
@@ -57,13 +58,13 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     m_list->setAlternatingRowColors(true);
     connect(m_list, &QListWidget::currentRowChanged, this, &SongsView::selectionChanged);
     connect(m_list, &QListWidget::itemDoubleClicked, this, [this]() {
-        if (m_isAdmin) {
+        if (m_access.update) {
             editClicked();
         } else {
             playClicked();
         }
     });
-    auto *listBox = new QGroupBox(QStringLiteral("Library"), this);
+    auto *listBox = new QGroupBox(tr("Library"), this);
     auto *listLayout = new QVBoxLayout(listBox);
     listLayout->addWidget(m_list);
     listBox->setMinimumWidth(280);
@@ -76,16 +77,16 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     m_titleLabel->setWordWrap(true);
     m_metaLabel = new QLabel(m_detailPanel);
     m_metaLabel->setObjectName(QStringLiteral("mutedLabel"));
-    m_playButton = new QPushButton(QStringLiteral("▶  Play"), m_detailPanel);
+    m_playButton = new QPushButton(tr("▶  Play"), m_detailPanel);
     connect(m_playButton, &QPushButton::clicked, this, &SongsView::playClicked);
     m_lyricsView = new QPlainTextEdit(m_detailPanel);
     m_lyricsView->setReadOnly(true);
-    m_lyricsView->setPlaceholderText(QStringLiteral("No lyrics added for this song."));
+    m_lyricsView->setPlaceholderText(tr("No lyrics added for this song."));
 
-    m_editButton = new QPushButton(QStringLiteral("Edit"), m_detailPanel);
+    m_editButton = new QPushButton(tr("Edit"), m_detailPanel);
     m_editButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(m_editButton, &QPushButton::clicked, this, &SongsView::editClicked);
-    m_deleteButton = new QPushButton(QStringLiteral("Delete"), m_detailPanel);
+    m_deleteButton = new QPushButton(tr("Delete"), m_detailPanel);
     m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
     connect(m_deleteButton, &QPushButton::clicked, this, &SongsView::deleteClicked);
 
@@ -103,11 +104,11 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     detailLayout->addWidget(m_metaLabel);
     detailLayout->addWidget(m_lyricsView, 1);
 
-    m_emptyLabel = new QLabel(QStringLiteral("Select a song to see its details."), this);
+    m_emptyLabel = new QLabel(tr("Select a song to see its details."), this);
     m_emptyLabel->setAlignment(Qt::AlignCenter);
     m_emptyLabel->setObjectName(QStringLiteral("mutedLabel"));
 
-    auto *detailBox = new QGroupBox(QStringLiteral("Song"), this);
+    auto *detailBox = new QGroupBox(tr("Song"), this);
     auto *detailBoxLayout = new QVBoxLayout(detailBox);
     detailBoxLayout->addWidget(m_emptyLabel, 1);
     detailBoxLayout->addWidget(m_detailPanel, 1);
@@ -131,16 +132,16 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     layout->addLayout(content, 1);
     layout->addWidget(actionBar);
 
-    setAdminMode(false);
+    setAccess(SectionAccess());
     refresh();
 }
 
-void SongsView::setAdminMode(bool isAdmin)
+void SongsView::setAccess(const SectionAccess &access)
 {
-    m_isAdmin = isAdmin;
-    m_addButton->setVisible(isAdmin);
-    m_editButton->setVisible(isAdmin);
-    m_deleteButton->setVisible(isAdmin);
+    m_access = access;
+    m_addButton->setVisible(access.create);
+    m_editButton->setVisible(access.update);
+    m_deleteButton->setVisible(access.remove);
 }
 
 void SongsView::refresh()
@@ -171,7 +172,7 @@ void SongsView::rebuildList()
     }
     if (m_list->count() == 0) {
         auto *item = new QListWidgetItem(
-            m_songs.isEmpty() ? QStringLiteral("No songs yet.") : QStringLiteral("No songs match your search."),
+            m_songs.isEmpty() ? tr("No songs yet.") : tr("No songs match your search."),
             m_list);
         item->setFlags(Qt::NoItemFlags);
         item->setData(Qt::UserRole, -1);
@@ -229,7 +230,7 @@ void SongsView::showSong(const Song &song)
     m_playButton->setEnabled(!song.link().isEmpty());
     m_editButton->setEnabled(true);
     m_deleteButton->setEnabled(true);
-    m_playButton->setToolTip(song.link().isEmpty() ? QStringLiteral("No play link added") : song.link());
+    m_playButton->setToolTip(song.link().isEmpty() ? tr("No play link added") : song.link());
     m_lyricsView->setPlainText(song.lyrics());
 }
 
@@ -241,7 +242,7 @@ void SongsView::playClicked()
             continue;
         }
         if (!QDesktopServices::openUrl(QUrl(song.link()))) {
-            QMessageBox::warning(this, QStringLiteral("Play"), QStringLiteral("Couldn't open %1").arg(song.link()));
+            QMessageBox::warning(this, tr("Play"), tr("Couldn't open %1").arg(song.link()));
         }
         return;
     }
@@ -249,7 +250,7 @@ void SongsView::playClicked()
 
 void SongsView::addClicked()
 {
-    if (!m_isAdmin) {
+    if (!m_access.create) {
         return;
     }
     SongEditDialog dialog(Song(), this);
@@ -258,7 +259,7 @@ void SongsView::addClicked()
     }
     Song newSong = dialog.song();
     if (!m_songController->addSong(newSong)) {
-        QMessageBox::critical(this, QStringLiteral("Add Song"), m_songController->lastError());
+        QMessageBox::critical(this, tr("Add Song"), m_songController->lastError());
         return;
     }
     // Clear any filter so the new song is visible, then select it.
@@ -271,7 +272,7 @@ void SongsView::addClicked()
 
 void SongsView::editClicked()
 {
-    if (!m_isAdmin) {
+    if (!m_access.update) {
         return;
     }
     const Song existing = m_songController->songById(selectedSongId());
@@ -283,7 +284,7 @@ void SongsView::editClicked()
         return;
     }
     if (!m_songController->updateSong(dialog.song())) {
-        QMessageBox::critical(this, QStringLiteral("Edit Song"), m_songController->lastError());
+        QMessageBox::critical(this, tr("Edit Song"), m_songController->lastError());
         return;
     }
     refresh();
@@ -291,20 +292,20 @@ void SongsView::editClicked()
 
 void SongsView::deleteClicked()
 {
-    if (!m_isAdmin) {
+    if (!m_access.remove) {
         return;
     }
     const Song existing = m_songController->songById(selectedSongId());
     if (existing.id() < 0) {
         return;
     }
-    if (QMessageBox::question(this, QStringLiteral("Delete Song"),
-            QStringLiteral("Delete \"%1\" from the song library?").arg(existing.title()))
+    if (QMessageBox::question(this, tr("Delete Song"),
+            tr("Delete \"%1\" from the song library?").arg(existing.title()))
         != QMessageBox::Yes) {
         return;
     }
     if (!m_songController->removeSong(existing.id())) {
-        QMessageBox::critical(this, QStringLiteral("Delete Song"), m_songController->lastError());
+        QMessageBox::critical(this, tr("Delete Song"), m_songController->lastError());
         return;
     }
     refresh();

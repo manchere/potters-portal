@@ -205,7 +205,7 @@ void MemberPickerField::rebuildChips()
         auto *remove = new QToolButton(chip);
         remove->setObjectName(QStringLiteral("memberChipRemove"));
         remove->setText(QStringLiteral("×"));
-        remove->setToolTip(QStringLiteral("Remove %1").arg(nameOf(id)));
+        remove->setToolTip(tr("Remove %1").arg(nameOf(id)));
         remove->setCursor(Qt::PointingHandCursor);
         connect(remove, &QToolButton::clicked, this, [this, id]() { removeMember(id); });
         chipLayout->addWidget(label);

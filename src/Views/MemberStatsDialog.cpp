@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <QLocale>
 #include <QDialogButtonBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -21,14 +22,14 @@ MemberStatsDialog::MemberStatsDialog(
     QWidget *parent)
     : FramelessDialog(parent)
 {
-    setWindowTitle(QStringLiteral("%1 — Responsibilities").arg(user.name()));
+    setWindowTitle(tr("%1 — Responsibilities").arg(user.name()));
 
     auto *badge = MemberBadge::make(user.name(), user.color(), 64, this);
 
     auto *nameLabel = new QLabel(user.name(), this);
     nameLabel->setObjectName(QStringLiteral("pageTitle"));
     auto *countLabel = new QLabel(
-        QStringLiteral("%1 %2 total").arg(duties.size()).arg(duties.size() == 1 ? QStringLiteral("duty") : QStringLiteral("duties")),
+        tr("%1 %2 total").arg(duties.size()).arg(duties.size() == 1 ? tr("duty") : tr("duties")),
         this);
     countLabel->setObjectName(QStringLiteral("pageSubtitle"));
 
@@ -59,10 +60,10 @@ MemberStatsDialog::MemberStatsDialog(
         breakdownLayout->addWidget(pill);
     }
     if (!anyCounted) {
-        breakdownLayout->addWidget(new QLabel(QStringLiteral("No duties yet."), this));
+        breakdownLayout->addWidget(new QLabel(tr("No duties yet."), this));
     }
     breakdownLayout->addStretch();
-    auto *breakdownBox = new QGroupBox(QStringLiteral("By Duty"), this);
+    auto *breakdownBox = new QGroupBox(tr("By Duty"), this);
     breakdownBox->setLayout(breakdownLayout);
 
     QVector<Duty> sorted = duties;
@@ -74,13 +75,13 @@ MemberStatsDialog::MemberStatsDialog(
         const bool isSupportOnly = duty.memberId() != user.id() && duty.supportMemberId() == user.id();
         const DutyType dutyType = dutyTypeController->dutyTypeById(duty.dutyTypeId());
         const QString label = QStringLiteral("%1   %2 %3%4")
-            .arg(duty.serviceDate().toString(QStringLiteral("yyyy-MM-dd")))
+            .arg(QLocale().toString(duty.serviceDate(), QStringLiteral("yyyy-MM-dd")))
             .arg(dutyType.icon())
             .arg(dutyType.name())
-            .arg(isSupportOnly ? QStringLiteral("  (support)") : QString());
+            .arg(isSupportOnly ? tr("  (support)") : QString());
         new QListWidgetItem(label, list);
     }
-    auto *listBox = new QGroupBox(QStringLiteral("All Duties"), this);
+    auto *listBox = new QGroupBox(tr("All Duties"), this);
     auto *listLayout = new QVBoxLayout;
     listLayout->addWidget(list);
     listBox->setLayout(listLayout);
