@@ -73,16 +73,22 @@ AddToScheduleDialog::AddToScheduleDialog(
         m_memberEdit->setCurrentId(first.memberId());
         m_memberEdit->setReadOnly(true);
         QVector<int> dutyTypeIds;
-        int backupId = -1;
         for (const Duty &duty : existingDuties) {
             dutyTypeIds.append(duty.dutyTypeId());
-            if (backupId < 0) {
-                backupId = duty.supportMemberId();
-            }
+            m_mixedBackups = m_mixedBackups || duty.supportMemberId() != first.supportMemberId();
+            m_mixedNotes = m_mixedNotes || duty.notes() != first.notes();
         }
         m_dutyPicker->setSelectedIds(dutyTypeIds);
-        m_backupEdit->setCurrentId(backupId);
-        m_notesEdit->setPlainText(first.notes());
+        if (m_mixedBackups) {
+            m_backupEdit->setPlaceholderText(QStringLiteral("Differs per duty -- leave empty to keep each one's backup"));
+        } else {
+            m_backupEdit->setCurrentId(first.supportMemberId());
+        }
+        if (m_mixedNotes) {
+            m_notesEdit->setPlaceholderText(QStringLiteral("Differs per duty -- leave empty to keep each one's notes"));
+        } else {
+            m_notesEdit->setPlainText(first.notes());
+        }
     }
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
@@ -124,6 +130,16 @@ void AddToScheduleDialog::saveClicked()
         return;
     }
     accept();
+}
+
+bool AddToScheduleDialog::keepsEachBackup() const
+{
+    return m_mixedBackups && m_backupEdit->text().trimmed().isEmpty();
+}
+
+bool AddToScheduleDialog::keepsEachNotes() const
+{
+    return m_mixedNotes && m_notesEdit->toPlainText().trimmed().isEmpty();
 }
 
 QVector<Duty> AddToScheduleDialog::duties() const

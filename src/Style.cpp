@@ -481,18 +481,18 @@ QLabel#statPill {
 }
 QLabel#avatarPlaceholder {
     background: {{subtleHover}};
-    border-radius: 20px;
+    border-radius: 16px;
 }
 
 /* Schedule duty rows (see ScheduleTab::buildRow). */
 QLabel#dutyMemberName {
     color: {{strongText}};
-    font-size: 12pt;
+    font-size: 10pt;
     font-weight: 700;
 }
 QLabel#dutyUnfilled {
     color: {{accentText}};
-    font-size: 12pt;
+    font-size: 10pt;
     font-weight: 700;
     font-style: italic;
 }
@@ -511,6 +511,17 @@ QLabel#dutyCaption {
 QLabel#dutyBackupName {
     color: {{softText}};
     font-weight: 600;
+}
+QToolButton#dutyEditButton {
+    color: {{accentText}};
+    background: transparent;
+    border: 1px solid {{border}};
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-weight: 600;
+}
+QToolButton#dutyEditButton:hover {
+    background: {{subtleHover}};
 }
 
 /* --- Inline field validation errors (below the offending field) -------- */

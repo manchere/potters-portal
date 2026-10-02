@@ -3,6 +3,7 @@
 #include <QDate>
 #include <QHash>
 #include <QSet>
+#include <QVector>
 #include <QWidget>
 
 class QLabel;
@@ -14,6 +15,8 @@ class DutyController;
 class UserController;
 class DutyTypeController;
 class Duty;
+class User;
+class QCheckBox;
 
 // Leftmost tab (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md FR-6/FR-7/FR-8): pick
 // a Sunday from a scrollable list (e.g. "Sun 6 Sep 2026"), see every
@@ -80,6 +83,14 @@ private:
     // tint (if any) or the plain default.
     void applySundayItemStyle(QListWidgetItem *item, bool isSelected) const;
     QWidget *buildRow(const Duty &duty);
+    // "Combine each member's duties" view: one row for a member, with a
+    // line per duty showing that duty's own backup and, for an Admin on
+    // an upcoming Sunday, an Edit button for just that duty.
+    QWidget *buildMemberRow(const User &member, const QVector<Duty> &duties);
+    // Small badge + the duty's backup's name, or a dash.
+    QWidget *buildBackupLine(const Duty &duty, QWidget *parent);
+    // Opens Edit Duty for one duty and saves it.
+    void editDuty(int dutyId);
     // Duties only ever happen on Sundays -- rounds forward to the
     // Sunday of date's week (or date itself, if it's already Sunday).
     static QDate nearestSunday(const QDate &date);
@@ -102,6 +113,7 @@ private:
     QLabel *m_noSundayMatchLabel = nullptr;
     QListWidget *m_sundayList = nullptr;
     QListWidget *m_resultsList = nullptr;
+    QCheckBox *m_combineCheck = nullptr;
     QPushButton *m_assignButton = nullptr;
     QPushButton *m_addMemberButton = nullptr;
     // Top-right: prefills the Member combo with whichever row is
@@ -123,8 +135,11 @@ private:
     // or just the date text when it has none. Built in populateSundayList
     // so typing doesn't hit the database.
     QHash<QDate, QStringList> m_sundaySearchText;
-    // -1 when no row is selected.
+    // -1 when no row is selected. On a combined member row it's that
+    // member's first duty, and m_selectedMemberId is the member (-1 on
+    // a single-duty row), so Edit/Delete act on all their duties.
     int m_selectedDutyId = -1;
+    int m_selectedMemberId = -1;
     // The Sunday whose schedule was last copied; invalid until Copy is
     // used. Only the date is kept -- the paste reads whatever is on that
     // Sunday at paste time.

@@ -24,7 +24,9 @@ class SuggestLineEdit;
 // ("Edit Member on Schedule", opened by double-clicking them): the Member
 // is fixed, and the duties, backup and notes start from what's there.
 // duties() is then the wanted set; ScheduleTab works out what to add,
-// change and remove.
+// change and remove. When those duties have different backups (or notes)
+// the field starts empty, and leaving it empty keeps each duty's own --
+// see keepsEachBackup() -- so they can still differ per duty.
 class AddToScheduleDialog : public FramelessDialog
 {
     Q_OBJECT
@@ -41,6 +43,13 @@ public:
     // Member, backup and notes.
     QVector<Duty> duties() const;
 
+    // True when the existing duties had different backups and the Backup
+    // field was left empty: each kept duty keeps its own backup, and new
+    // duties get none.
+    bool keepsEachBackup() const;
+    // The same for notes.
+    bool keepsEachNotes() const;
+
 private slots:
     void saveClicked();
 
@@ -51,4 +60,6 @@ private:
     SuggestLineEdit *m_backupEdit = nullptr;
     QPlainTextEdit *m_notesEdit = nullptr;
     QLabel *m_errorLabel = nullptr;
+    bool m_mixedBackups = false;
+    bool m_mixedNotes = false;
 };
