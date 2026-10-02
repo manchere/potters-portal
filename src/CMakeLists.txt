@@ -74,6 +74,7 @@ add_executable (PottersPortal
   "Views/SongEditDialog.h" "Views/SongEditDialog.cpp"
   "Views/MemberBadge.h" "Views/MemberBadge.cpp"
   "Views/MemberColorPicker.h" "Views/MemberColorPicker.cpp"
+  "Views/SuggestLineEdit.h" "Views/SuggestLineEdit.cpp"
   "Vision/GroqQueryClient.h" "Vision/GroqQueryClient.cpp"
   "Vision/LocationClient.h" "Vision/LocationClient.cpp"
 )

@@ -8,7 +8,8 @@
 #include "Models/Duty.h"
 #include "Models/User.h"
 
-class QComboBox;
+class QLabel;
+class SuggestLineEdit;
 class QPlainTextEdit;
 class DutyTypeController;
 
@@ -16,8 +17,9 @@ class DutyTypeController;
 // selected on the Schedule tab -- reached via the "Assign Duty" button there
 // rather than a separate tab (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md FR-6,
 // FR-7). Mirrors CategoryEditDialog: pass an existing Duty to edit,
-// or a default-constructed Duty() (id() < 0) for "new". The Duty
-// dropdown is populated from DutyTypeController (admin-manageable duty
+// or a default-constructed Duty() (id() < 0) for "new". The Duty, Member
+// and Support member fields are text fields that suggest as you type; the
+// Duty suggestions come from DutyTypeController (admin-manageable duty
 // types), not a fixed list.
 class AssignDutyDialog : public FramelessDialog
 {
@@ -33,11 +35,15 @@ public:
 
     Duty duty() const;
 
+private slots:
+    void saveClicked();
+
 private:
     int m_id = -1;
     QDate m_serviceDate;
-    QComboBox *m_dutyTypeCombo = nullptr;
-    QComboBox *m_memberCombo = nullptr;
-    QComboBox *m_supportMemberCombo = nullptr;
+    SuggestLineEdit *m_dutyTypeEdit = nullptr;
+    SuggestLineEdit *m_memberEdit = nullptr;
+    SuggestLineEdit *m_supportMemberEdit = nullptr;
+    QLabel *m_errorLabel = nullptr;
     QPlainTextEdit *m_notesEdit = nullptr;
 };
