@@ -24,6 +24,8 @@
 #include "Controllers/UserController.h"
 #include "ActionBar.h"
 #include "MemberPickerField.h"
+#include "Controllers/DutyTypeController.h"
+#include "Controllers/TeamController.h"
 #include "Style.h"
 
 namespace
@@ -131,10 +133,14 @@ namespace
     }
 }
 
-ReportsView::ReportsView(DutyController *dutyController, UserController *userController, QWidget *parent)
+ReportsView::ReportsView(DutyController *dutyController, UserController *userController,
+                         DutyTypeController *dutyTypeController, TeamController *teamController,
+                         QWidget *parent)
     : QWidget(parent)
     , m_dutyController(dutyController)
     , m_userController(userController)
+    , m_dutyTypeController(dutyTypeController)
+    , m_teamController(teamController)
 {
     auto *title = new QLabel(tr("Reports"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
@@ -156,6 +162,12 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
 
     m_memberField = new MemberPickerField(this);
     connect(m_memberField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
+    m_dutyField = new MemberPickerField(this);
+    m_dutyField->setPlaceholders(tr("All duties — type a duty to add"), tr("Add another duty..."));
+    connect(m_dutyField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
+    m_teamField = new MemberPickerField(this);
+    m_teamField->setPlaceholders(tr("All teams — type a team to add"), tr("Add another team..."));
+    connect(m_teamField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
 
     auto *filterRow = new QHBoxLayout;
     filterRow->addWidget(new QLabel(tr("From"), this));
@@ -170,6 +182,19 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     memberRow->addWidget(memberLabel, 0, Qt::AlignTop);
     memberRow->addWidget(m_memberField, 1);
     memberLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
+
+    // Duties and Teams side by side, each growing like Members.
+    auto *dutyTeamRow = new QHBoxLayout;
+    dutyTeamRow->setSpacing(12);
+    auto *dutyLabel = new QLabel(tr("Duties"), this);
+    dutyLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
+    dutyLabel->setMinimumWidth(memberLabel->sizeHint().width());
+    dutyTeamRow->addWidget(dutyLabel, 0, Qt::AlignTop);
+    dutyTeamRow->addWidget(m_dutyField, 1);
+    auto *teamLabel = new QLabel(tr("Teams"), this);
+    teamLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
+    dutyTeamRow->addWidget(teamLabel, 0, Qt::AlignTop);
+    dutyTeamRow->addWidget(m_teamField, 1);
 
     m_sundayList = new QListWidget(this);
     m_sundayList->setFixedWidth(230);
@@ -226,6 +251,7 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     content->addSpacing(6);
     content->addLayout(filterRow);
     content->addLayout(memberRow);
+    content->addLayout(dutyTeamRow);
     content->addLayout(columns, 1);
 
     auto *layout = new QHBoxLayout(this);
@@ -239,20 +265,46 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
 
 void ReportsView::refresh()
 {
-    populateMemberFilter();
+    populateFilters();
     reloadReport();
 }
 
-void ReportsView::populateMemberFilter()
+void ReportsView::populateFilters()
 {
     QList<QPair<int, QString>> members;
     for (const User &user : m_userController->allUsers()) {
         members.append({user.id(), user.name()});
     }
+    QList<QPair<int, QString>> dutyTypes;
+    for (const DutyType &dutyType : m_dutyTypeController->allDutyTypes()) {
+        dutyTypes.append({dutyType.id(), dutyType.iconAndName()});
+    }
+    QList<QPair<int, QString>> teams;
+    for (const Team &team : m_teamController->allTeams()) {
+        teams.append({team.id(), team.name()});
+    }
     // refresh() reloads the report right after, so no signal is needed.
-    m_memberField->blockSignals(true);
+    for (MemberPickerField *field : {m_memberField, m_dutyField, m_teamField}) {
+        field->blockSignals(true);
+    }
     m_memberField->setMembers(members);
-    m_memberField->blockSignals(false);
+    m_dutyField->setMembers(dutyTypes);
+    m_teamField->setMembers(teams);
+    for (MemberPickerField *field : {m_memberField, m_dutyField, m_teamField}) {
+        field->blockSignals(false);
+    }
+}
+
+QString ReportsView::selectionDescription() const
+{
+    QStringList parts;
+    for (const MemberPickerField *field : {m_memberField, m_dutyField, m_teamField}) {
+        const QStringList names = field->selectedNames();
+        if (!names.isEmpty()) {
+            parts.append(names.join(QStringLiteral(", ")));
+        }
+    }
+    return parts.join(QStringLiteral("  ·  "));
 }
 
 void ReportsView::presetClicked(int months)
@@ -274,7 +326,8 @@ void ReportsView::reloadReport()
     if (from > to) {
         std::swap(from, to);
     }
-    m_rows = m_dutyController->scheduleReport(from, to, m_memberField->selectedIds());
+    m_rows = m_dutyController->scheduleReport(from, to, m_memberField->selectedIds(),
+                                              m_dutyField->selectedIds(), m_teamField->selectedIds());
     populateSundayList();
 }
 
@@ -349,9 +402,9 @@ QString ReportsView::filterDescription() const
         std::swap(from, to);
     }
     QString text = QStringLiteral("%1 – %2").arg(QLocale().toString(from, QStringLiteral("d MMM yyyy")), QLocale().toString(to, QStringLiteral("d MMM yyyy")));
-    const QStringList members = m_memberField->selectedNames();
-    if (!members.isEmpty()) {
-        text += QStringLiteral("  ·  %1").arg(members.join(QStringLiteral(", ")));
+    const QString selection = selectionDescription();
+    if (!selection.isEmpty()) {
+        text += QStringLiteral("  ·  %1").arg(selection);
     }
     return text;
 }
@@ -378,9 +431,9 @@ QString ReportsView::currentReportHtml(bool darkColors) const
     if (!sunday.isValid()) {
         return wrapHtml(tr("Sunday Serving Report"), filterDescription(), rangeHtml(darkColors), darkColors);
     }
-    const QStringList members = m_memberField->selectedNames();
-    const QString subtitle = !members.isEmpty()
-        ? tr("Only showing %1").arg(members.join(QStringLiteral(", ")))
+    const QString selection = selectionDescription();
+    const QString subtitle = !selection.isEmpty()
+        ? tr("Only showing %1").arg(selection)
         : tr("Sunday line-up");
     return wrapHtml(formatSunday(sunday), subtitle, sundayHtml(sunday, darkColors), darkColors);
 }

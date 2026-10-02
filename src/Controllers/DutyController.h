@@ -41,11 +41,16 @@ public:
 
     // Every duty from fromDate to toDate inclusive, newest Sunday
     // first (then by duty type name), with duty type/member names and request /
-    // availability flags resolved -- for the desktop Reports tab. With
-    // memberIds given, only duties where one of those members is primary
-    // or support; empty means everyone.
+    // availability flags resolved -- for the desktop Reports tab. Filters
+    // (each empty means no filter):
+    //  - memberIds / teamIds: duties where one of those members, or anyone
+    //    on one of those teams, is primary or support (the two lists add up
+    //    to one set of people);
+    //  - dutyTypeIds: only those duty types.
     QVector<ScheduleReportRow> scheduleReport(const QDate &fromDate, const QDate &toDate,
-                                              const QVector<int> &memberIds = {}) const;
+                                              const QVector<int> &memberIds = {},
+                                              const QVector<int> &dutyTypeIds = {},
+                                              const QVector<int> &teamIds = {}) const;
 
     QString lastError() const { return m_lastError; }
 

@@ -31,7 +31,7 @@ class UserController;
 // "+ Add Duty" creates a duty *type* (a duty name + icon,
 // e.g. "Ushering" + an emoji) -- it does NOT schedule a Member against a
 // role for a specific Sunday. Scheduling a Member happens exclusively on
-// the Schedule tab ("+ Assign Duty" / "+ Add Member").
+// the Schedule tab ("+ Assign Duty").
 //
 // "+ Add Team" creates a team; Members are put on one from the Team field
 // of Add/Edit Member, and each Member row shows their team.

@@ -1,5 +1,7 @@
 #include "MemberPickerField.h"
 
+#include <algorithm>
+
 #include <QAbstractItemView>
 #include <QCompleter>
 #include <QHBoxLayout>
@@ -15,6 +17,8 @@
 
 MemberPickerField::MemberPickerField(QWidget *parent)
     : QFrame(parent)
+    , m_emptyPlaceholder(tr("All members — type a name to add"))
+    , m_morePlaceholder(tr("Add another member..."))
 {
     setObjectName(QStringLiteral("memberPickerField"));
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
@@ -216,8 +220,9 @@ void MemberPickerField::rebuildChips()
 
     m_edit->setPlaceholderText(m_selected.isEmpty() ? m_emptyPlaceholder : m_morePlaceholder);
     // The flow layout doesn't stretch the edit, so give it room for the
-    // whole placeholder.
-    m_edit->setMinimumWidth(qMax(160, m_edit->fontMetrics().horizontalAdvance(m_edit->placeholderText()) + 48));
+    // placeholder -- up to a point, so a long one (or a French one) doesn't
+    // make the whole page, and with it the window, wider than it needs.
+    m_edit->setMinimumWidth(std::clamp(m_edit->fontMetrics().horizontalAdvance(m_edit->placeholderText()) + 48, 160, 220));
     updateSuggestions();
     updateGeometry();
 }

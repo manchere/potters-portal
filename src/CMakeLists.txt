@@ -49,6 +49,7 @@ add_executable (PottersPortal
   "Portal.cpp" "Portal.h"
   "Style.h" "Style.cpp"
   "Language.h" "Language.cpp"
+  "PottersPortal.rc"
   ${CORE_SOURCES}
   "Views/MainWindow.h" "Views/MainWindow.cpp"
   "Views/FramelessDialog.h" "Views/FramelessDialog.cpp"
@@ -81,6 +82,8 @@ add_executable (PottersPortal
   "Views/TeamEditDialog.h" "Views/TeamEditDialog.cpp"
   "Views/FeedbackView.h" "Views/FeedbackView.cpp"
   "Views/AccessRightsDialog.h" "Views/AccessRightsDialog.cpp"
+  "Views/ElidedLabel.h" "Views/ElidedLabel.cpp"
+  "Views/MemberSundayDialog.h" "Views/MemberSundayDialog.cpp"
   "Views/SongsView.h" "Views/SongsView.cpp"
   "Views/ReportsView.h" "Views/ReportsView.cpp"
   "Views/MemberPickerField.h" "Views/MemberPickerField.cpp"

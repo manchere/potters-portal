@@ -306,7 +306,9 @@ bool DutyController::copySchedule(
 }
 
 QVector<ScheduleReportRow> DutyController::scheduleReport(const QDate &fromDate, const QDate &toDate,
-                                                         const QVector<int> &memberIds) const
+                                                         const QVector<int> &memberIds,
+                                                         const QVector<int> &dutyTypeIds,
+                                                         const QVector<int> &teamIds) const
 {
     QVector<ScheduleReportRow> rows;
     Database::ensureConnected();
@@ -323,14 +325,28 @@ QVector<ScheduleReportRow> DutyController::scheduleReport(const QDate &fromDate,
         "LEFT JOIN users m ON m.id = a.member_id "
         "LEFT JOIN users s ON s.id = a.support_member_id "
         "WHERE a.service_date BETWEEN :from_date AND :to_date ");
-    if (!memberIds.isEmpty()) {
-        // The ids are ints, so they can go into the SQL directly.
-        QStringList ids;
-        for (int id : memberIds) {
-            ids.append(QString::number(id));
+    // The ids are ints, so they can go into the SQL directly.
+    const auto idList = [](const QVector<int> &ids) {
+        QStringList parts;
+        for (int id : ids) {
+            parts.append(QString::number(id));
         }
-        const QString list = ids.join(QLatin1Char(','));
-        sql += QStringLiteral("AND (a.member_id IN (%1) OR a.support_member_id IN (%1)) ").arg(list);
+        return parts.join(QLatin1Char(','));
+    };
+    if (!memberIds.isEmpty() || !teamIds.isEmpty()) {
+        QStringList people;
+        if (!memberIds.isEmpty()) {
+            people.append(QStringLiteral("a.member_id IN (%1) OR a.support_member_id IN (%1)").arg(idList(memberIds)));
+        }
+        if (!teamIds.isEmpty()) {
+            people.append(QStringLiteral(
+                "a.member_id IN (SELECT id FROM users WHERE team_id IN (%1)) "
+                "OR a.support_member_id IN (SELECT id FROM users WHERE team_id IN (%1))").arg(idList(teamIds)));
+        }
+        sql += QStringLiteral("AND (%1) ").arg(people.join(QStringLiteral(" OR ")));
+    }
+    if (!dutyTypeIds.isEmpty()) {
+        sql += QStringLiteral("AND a.duty_type_id IN (%1) ").arg(idList(dutyTypeIds));
     }
     sql += QStringLiteral("ORDER BY a.service_date DESC, LOWER(r.name), a.id");
 

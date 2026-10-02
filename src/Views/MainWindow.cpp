@@ -112,16 +112,17 @@ MainWindow::MainWindow(QWidget *parent)
     setAttribute(Qt::WA_TranslucentBackground);
     setWindowTitle(tr("Potters Portal"));
     resize(1080, 720);
-    setMinimumSize(760, 480);
+    // No fixed minimum: the window can't be made smaller than its pages
+    // need (e.g. a Schedule row), so nothing gets cut off at the edge.
 
     m_itemListView = new ItemListView(&m_itemController, &m_tagController, &m_categoryController, this);
     m_adminOverviewView = new AdminOverviewView(
         &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, &m_teamController, this);
     m_scheduleTab = new ScheduleTab(
-        &m_dutyController, &m_userController, &m_dutyTypeController, this);
+        &m_dutyController, &m_userController, &m_dutyTypeController, &m_teamController, this);
     m_songsView = new SongsView(&m_songController, this);
     m_feedbackView = new FeedbackView(&m_feedbackController, &m_userController, this);
-    m_reportsView = new ReportsView(&m_dutyController, &m_userController, this);
+    m_reportsView = new ReportsView(&m_dutyController, &m_userController, &m_dutyTypeController, &m_teamController, this);
     m_settingsView = new SettingsView(this);
     m_settingsView->setCurrentTheme(currentTheme());
     m_settingsView->setCurrentLanguage(savedLanguage());
@@ -200,6 +201,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_userController, &UserController::usersChanged, m_reportsView, &ReportsView::refresh);
     connect(&m_userController, &UserController::usersChanged, m_feedbackView, &FeedbackView::refresh);
     connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_reportsView, &ReportsView::refresh);
+    connect(&m_teamController, &TeamController::teamsChanged, m_reportsView, &ReportsView::refresh);
 
     applyAccess();
 }

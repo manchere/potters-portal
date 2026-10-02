@@ -7,6 +7,7 @@
 #include <QLocale>
 #include <QBrush>
 #include <QCheckBox>
+#include <QEvent>
 #include <QFont>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -17,12 +18,16 @@
 #include <QPushButton>
 #include <QSet>
 #include <QShortcut>
+#include <QStyle>
 #include <QToolButton>
 #include <QVBoxLayout>
 
 #include "AssignDutyDialog.h"
 #include "ActionBar.h"
 #include "AddToScheduleDialog.h"
+#include "ElidedLabel.h"
+#include "MemberSundayDialog.h"
+#include "Controllers/TeamController.h"
 #include "MemberBadge.h"
 #include "Controllers/DutyController.h"
 #include "Controllers/DutyTypeController.h"
@@ -34,8 +39,8 @@
 
 namespace
 {
-    // The list runs from the upcoming Sunday through the end of October
-    // next year (past Sundays are looked up on the Reports tab).
+    // Upcoming Sundays run through the end of October next year (past
+    // ones are listed only when they had a schedule).
     QDate sundayListEnd(const QDate &today)
     {
         return QDate(today.year() + 1, 10, 31);
@@ -65,28 +70,25 @@ ScheduleTab::ScheduleTab(
     DutyController *dutyController,
     UserController *userController,
     DutyTypeController *dutyTypeController,
+    TeamController *teamController,
     QWidget *parent)
     : QWidget(parent)
     , m_dutyController(dutyController)
     , m_userController(userController)
     , m_dutyTypeController(dutyTypeController)
+    , m_teamController(teamController)
 {
     auto *title = new QLabel(tr("Schedule"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
         tr("Pick a Sunday to see who's serving, and assign duties for it. "
-                        "Double-click a member to edit their duties and backup."),
+           "Double-click a member to see their part in that Sunday."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
     subtitle->setWordWrap(true);
 
     m_assignButton = new QPushButton(tr("+  Assign Duty"), this);
     connect(m_assignButton, &QPushButton::clicked, this, &ScheduleTab::assignClicked);
-    m_addMemberButton = new QPushButton(tr("+  Add Member"), this);
-    m_addMemberButton->setObjectName(QStringLiteral("secondaryButton"));
-    m_addMemberButton->setToolTip(
-        tr("Put a member on this Sunday: their duties and a backup"));
-    connect(m_addMemberButton, &QPushButton::clicked, this, &ScheduleTab::addMemberClicked);
     m_copyButton = new QPushButton(tr("Copy Schedule"), this);
     m_copyButton->setObjectName(QStringLiteral("secondaryButton"));
     m_copyButton->setToolTip(tr("Copy this Sunday's duties (Ctrl+C)"));
@@ -111,6 +113,10 @@ ScheduleTab::ScheduleTab(
 
     m_resultsList = new QListWidget(this);
     m_resultsList->setAlternatingRowColors(true);
+    // Rows always fit the list's width (names shorten instead), so there's
+    // never anything to scroll sideways to.
+    m_resultsList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_resultsList->viewport()->installEventFilter(this);
     connect(m_resultsList, &QListWidget::currentRowChanged, this, [this](int row) {
         QListWidgetItem *item = row >= 0 ? m_resultsList->item(row) : nullptr;
         m_selectedDutyId = item ? item->data(Qt::UserRole).toInt() : -1;
@@ -135,8 +141,6 @@ ScheduleTab::ScheduleTab(
     auto *actionBar = new ActionBar(this);
     actionBar->addWidget(m_assignButton);
     actionBar->addWidget(m_editButton);
-    actionBar->addSeparator();
-    actionBar->addWidget(m_addMemberButton);
     actionBar->addSeparator();
     actionBar->addWidget(m_copyButton);
     actionBar->addWidget(m_pasteButton);
@@ -199,19 +203,11 @@ ScheduleTab::ScheduleTab(
 
 namespace
 {
-    // Every row's member column is this wide (longer names end in "..."),
-    // so the duties start at the same place on each row, clear of the name.
-    constexpr int kMemberColumnWidth = 190;
-    constexpr int kNameToDutyGap = 24;
-
-    // Sets text cut to fit width with a trailing "...", in the label's
-    // styled font; the tooltip keeps the whole text.
-    void setElidedText(QLabel *label, const QString &text, int width)
-    {
-        label->ensurePolished();
-        label->setText(label->fontMetrics().elidedText(text, Qt::ElideRight, width));
-        label->setToolTip(text);
-    }
+    // Name columns never get narrower than this, nor wider than the max;
+    // between the two they follow the longest name on the Sunday.
+    constexpr int kMinNameWidth = 70;
+    constexpr int kMaxNameWidth = 240;
+    constexpr int kNameToDutyGap = 16;
 
     QLabel *makeDutyPill(const QString &text, QWidget *parent)
     {
@@ -225,29 +221,6 @@ namespace
         // run wider than measured) never eat into the padding.
         pill->setFixedSize(pill->sizeHint() + QSize(6, 2));
         return pill;
-    }
-
-    // The member's name (and any notes) in the fixed-width column.
-    QWidget *buildMemberColumn(const QString &name, const QString &nameStyle, const QString &notes, QWidget *parent)
-    {
-        auto *column = new QWidget(parent);
-        column->setFixedWidth(kMemberColumnWidth);
-        auto *layout = new QVBoxLayout(column);
-        layout->setContentsMargins(0, 0, 0, 0);
-        layout->setSpacing(1);
-        layout->addStretch();
-        auto *nameLabel = new QLabel(column);
-        nameLabel->setObjectName(nameStyle);
-        setElidedText(nameLabel, name, kMemberColumnWidth);
-        layout->addWidget(nameLabel);
-        if (!notes.isEmpty()) {
-            auto *notesLabel = new QLabel(column);
-            notesLabel->setObjectName(QStringLiteral("mutedLabel"));
-            setElidedText(notesLabel, notes, kMemberColumnWidth);
-            layout->addWidget(notesLabel);
-        }
-        layout->addStretch();
-        return column;
     }
 
     // Fits the list row to its widget, so nothing (e.g. the backup's
@@ -264,12 +237,94 @@ namespace
     }
 }
 
+QWidget *ScheduleTab::buildMemberColumn(const QString &name, const QString &nameStyle, const QString &notes,
+                                       QWidget *parent)
+{
+    auto *column = new QWidget(parent);
+    column->setFixedWidth(kMinNameWidth); // widened by fitMemberColumns()
+    auto *layout = new QVBoxLayout(column);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(1);
+    layout->addStretch();
+    auto *nameLabel = new ElidedLabel(name, column);
+    nameLabel->setObjectName(nameStyle);
+    nameLabel->ensurePolished();
+    layout->addWidget(nameLabel);
+    int wanted = nameLabel->sizeHint().width();
+    if (!notes.isEmpty()) {
+        auto *notesLabel = new ElidedLabel(notes, column);
+        notesLabel->setObjectName(QStringLiteral("mutedLabel"));
+        notesLabel->ensurePolished();
+        layout->addWidget(notesLabel);
+        wanted = std::max(wanted, notesLabel->sizeHint().width());
+    }
+    layout->addStretch();
+    m_nameColumnWidth = std::clamp(std::max(m_nameColumnWidth, wanted), kMinNameWidth, kMaxNameWidth);
+    m_memberColumns.append(column);
+    return column;
+}
+
+void ScheduleTab::fitMemberColumns()
+{
+    if (m_fitting) {
+        return;
+    }
+    m_fitting = true;
+    const int available = m_resultsList->viewport()->width();
+    // Side by side while the shortest name column still fits beside it.
+    const bool stacked = available < m_rowFixedWidth + kMinNameWidth;
+    if (stacked != m_rowsStacked) {
+        setRowsStacked(stacked);
+    }
+    const int fixed = stacked ? m_rowFixedWidthStacked : m_rowFixedWidth;
+    const int width = std::clamp(available - fixed, kMinNameWidth, std::max(kMinNameWidth, m_nameColumnWidth));
+    for (const QPointer<QWidget> &column : std::as_const(m_memberColumns)) {
+        if (column && column->width() != width) {
+            column->setFixedWidth(width);
+        }
+    }
+    m_fitting = false;
+}
+
+void ScheduleTab::setRowsStacked(bool stacked)
+{
+    m_rowsStacked = stacked;
+    for (const QPointer<QWidget> &content : std::as_const(m_dutyContents)) {
+        if (auto *layout = content ? qobject_cast<QBoxLayout *>(content->layout()) : nullptr) {
+            layout->setDirection(stacked ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+            layout->setSpacing(stacked ? 4 : 12);
+        }
+    }
+    updateRowHeights();
+}
+
+void ScheduleTab::updateRowHeights()
+{
+    for (int i = 0; i < m_resultsList->count(); ++i) {
+        QListWidgetItem *item = m_resultsList->item(i);
+        QWidget *row = m_resultsList->itemWidget(item);
+        if (row && row->layout()) {
+            row->layout()->activate();
+            const int height = std::max(row->sizeHint().height(), row->minimumSizeHint().height());
+            item->setSizeHint(QSize(0, std::max(52, height + 4)));
+        }
+    }
+}
+
+bool ScheduleTab::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == m_resultsList->viewport() && event->type() == QEvent::Resize) {
+        fitMemberColumns();
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
 // "Backup", the backup's small badge and their name on one line (or a
 // dash), so the badge sits level with the caption instead of under it.
+// The name shortens before the badge or caption would be hidden.
 QWidget *ScheduleTab::buildBackupLine(const Duty &duty, QWidget *parent)
 {
     auto *line = new QWidget(parent);
-    line->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     auto *layout = new QHBoxLayout(line);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(6);
@@ -279,10 +334,8 @@ QWidget *ScheduleTab::buildBackupLine(const Duty &duty, QWidget *parent)
     const User backup = duty.supportMemberId() > 0 ? m_userController->userById(duty.supportMemberId()) : User();
     if (backup.id() >= 0) {
         layout->addWidget(MemberBadge::make(backup.name(), backup.color(), 20, line), 0, Qt::AlignVCenter);
-        auto *backupName = new QLabel(backup.name(), line);
+        auto *backupName = new ElidedLabel(backup.name(), line);
         backupName->setObjectName(QStringLiteral("dutyBackupName"));
-        backupName->setToolTip(backup.name());
-        backupName->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
         layout->addWidget(backupName, 1, Qt::AlignVCenter);
     } else {
         auto *none = new QLabel(QStringLiteral("—"), line);
@@ -342,12 +395,23 @@ QWidget *ScheduleTab::buildRow(const Duty &duty)
         ? buildMemberColumn(member.name(), QStringLiteral("dutyMemberName"), duty.notes(), row)
         : buildMemberColumn(tr("Nobody assigned"), QStringLiteral("dutyUnfilled"), duty.notes(), row));
     layout->addSpacing(kNameToDutyGap);
-    layout->addWidget(buildDutyCell(duty, row));
-    layout->addWidget(buildBackupLine(duty, row), 1);
+    layout->addWidget(buildDutyContent(duty, row), 1);
     if (m_isAdmin && selectedSundayEditable()) {
         layout->addWidget(buildEditButton(duty.id(), row));
     }
     return row;
+}
+
+QWidget *ScheduleTab::buildDutyContent(const Duty &duty, QWidget *parent)
+{
+    auto *content = new QWidget(parent);
+    auto *layout = new QBoxLayout(m_rowsStacked ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight, content);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(m_rowsStacked ? 4 : 12);
+    layout->addWidget(buildDutyCell(duty, content));
+    layout->addWidget(buildBackupLine(duty, content), 1);
+    m_dutyContents.append(content);
+    return content;
 }
 
 // One member with all their duties on this Sunday: badge and name (with
@@ -382,8 +446,7 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
         auto *lineLayout = new QHBoxLayout(line);
         lineLayout->setContentsMargins(0, 1, 0, 1);
         lineLayout->setSpacing(12);
-        lineLayout->addWidget(buildDutyCell(duty, line));
-        lineLayout->addWidget(buildBackupLine(duty, line), 1);
+        lineLayout->addWidget(buildDutyContent(duty, line), 1);
         if (canEdit) {
             lineLayout->addWidget(buildEditButton(duty.id(), line));
         }
@@ -398,7 +461,6 @@ void ScheduleTab::setAdminMode(bool isAdmin)
 {
     m_isAdmin = isAdmin;
     m_assignButton->setVisible(isAdmin);
-    m_addMemberButton->setVisible(isAdmin);
     m_editButton->setVisible(isAdmin);
     m_deleteButton->setVisible(isAdmin);
     m_copyButton->setVisible(isAdmin);
@@ -421,7 +483,6 @@ void ScheduleTab::updateActionState()
     const bool editable = m_isAdmin && selectedSundayEditable();
     const bool hasDuty = m_selectedDutyId >= 0;
     m_assignButton->setEnabled(editable);
-    m_addMemberButton->setEnabled(editable);
     m_editButton->setEnabled(editable && hasDuty);
     m_deleteButton->setEnabled(editable && hasDuty);
     // On a combined row they act on the member's whole place this Sunday.
@@ -550,8 +611,23 @@ void ScheduleTab::populateSundayList()
     }
 
     const QDate today = QDate::currentDate();
+    const QDate upcoming = nearestSunday(today);
     const QDate end = sundayListEnd(today);
-    for (QDate sunday = nearestSunday(today); sunday <= end; sunday = sunday.addDays(7)) {
+    // Past Sundays that had a schedule come first, oldest at the top, so
+    // what was served can still be looked at (and copied) from here.
+    QVector<QDate> pastSundays;
+    for (const QDate &date : std::as_const(m_datesWithDuties)) {
+        if (date < upcoming) {
+            pastSundays.append(date);
+        }
+    }
+    std::sort(pastSundays.begin(), pastSundays.end());
+    for (const QDate &sunday : std::as_const(pastSundays)) {
+        auto *item = new QListWidgetItem(formatSunday(sunday), m_sundayList);
+        item->setData(Qt::UserRole, sunday);
+        applySundayItemStyle(item, false);
+    }
+    for (QDate sunday = upcoming; sunday <= end; sunday = sunday.addDays(7)) {
         auto *item = new QListWidgetItem(formatSunday(sunday), m_sundayList);
         item->setData(Qt::UserRole, sunday);
         applySundayItemStyle(item, false);
@@ -627,6 +703,14 @@ void ScheduleTab::applySundayItemStyle(QListWidgetItem *item, bool isSelected) c
             item->setBackground(isDark ? QColor(0x1f, 0x4a, 0x85) : QColor(0x14, 0x33, 0x5c));
             item->setForeground(QColor(Qt::white));
         }
+    } else if (date < nearestSunday(QDate::currentDate())) {
+        // Past: orange.
+        item->setBackground(isDark ? QColor(0x3a, 0x22, 0x10) : QColor(0xfd, 0xec, 0xdc));
+        item->setForeground(isDark ? QColor(0xf0, 0xa3, 0x5e) : QColor(0xb3, 0x54, 0x1e));
+    } else if (hasDuties && date == nearestSunday(QDate::currentDate())) {
+        // The upcoming Sunday, once it has duties: green.
+        item->setBackground(isDark ? QColor(0x12, 0x30, 0x1c) : QColor(0xe3, 0xf4, 0xe8));
+        item->setForeground(isDark ? QColor(0x6f, 0xcf, 0x8a) : QColor(0x1e, 0x7b, 0x3a));
     } else if (hasDuties) {
         item->setBackground(isDark ? QColor(0x2a, 0x22, 0x10) : QColor(0xfa, 0xf3, 0xe0));
         item->setForeground(isDark ? QColor(0xe0, 0xb8, 0x5a) : QColor(0x8a, 0x6a, 0x1a));
@@ -675,6 +759,10 @@ void ScheduleTab::sundaySelectionChanged(QListWidgetItem *current, QListWidgetIt
 void ScheduleTab::rebuildResults()
 {
     m_resultsList->clear();
+    m_memberColumns.clear();
+    m_dutyContents.clear();
+    m_nameColumnWidth = 0;
+    m_rowFixedWidth = 0;
     m_selectedDutyId = -1;
     m_selectedMemberId = -1;
     updateActionState();
@@ -701,6 +789,7 @@ void ScheduleTab::rebuildResults()
             m_resultsList->addItem(item);
             setRowWidget(m_resultsList, item, buildRow(duty));
         }
+        finishRows();
         return;
     }
 
@@ -728,6 +817,35 @@ void ScheduleTab::rebuildResults()
         item->setData(Qt::UserRole + 1, key);
         setRowWidget(m_resultsList, item, buildMemberRow(m_userController->userById(key), memberDuties));
     }
+    finishRows();
+}
+
+void ScheduleTab::finishRows()
+{
+    // How wide each row is besides its name column (taken while the name
+    // columns are at their minimum), side by side and stacked, so
+    // fitMemberColumns knows what's left in each arrangement.
+    const bool wasStacked = m_rowsStacked;
+    auto measure = [this](bool stacked) {
+        setRowsStacked(stacked);
+        int fixed = 0;
+        for (int i = 0; i < m_resultsList->count(); ++i) {
+            QWidget *row = m_resultsList->itemWidget(m_resultsList->item(i));
+            if (row && row->layout()) {
+                row->layout()->activate();
+                fixed = std::max(fixed, row->minimumSizeHint().width() - kMinNameWidth);
+            }
+        }
+        return fixed;
+    };
+    m_rowFixedWidth = measure(false);
+    m_rowFixedWidthStacked = std::min(m_rowFixedWidth, measure(true));
+    setRowsStacked(wasStacked);
+    // The list never gets narrower than a stacked row with the shortest
+    // name column, so the window stops shrinking before anything is cut off.
+    const int scrollBar = m_resultsList->style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+    m_resultsList->setMinimumWidth(m_rowFixedWidthStacked + kMinNameWidth + 2 * m_resultsList->frameWidth() + scrollBar + 2);
+    fitMemberColumns();
 }
 
 void ScheduleTab::assignClicked()
@@ -746,40 +864,6 @@ void ScheduleTab::assignClicked()
     }
     populateSundayList();
     selectSunday(m_selectedDate);
-}
-
-void ScheduleTab::addMemberClicked()
-{
-    if (!m_isAdmin || !selectedSundayEditable()) {
-        return;
-    }
-    AddToScheduleDialog dialog(m_selectedDate, m_userController->allUsers(), m_dutyTypeController, this);
-    if (dialog.exec() != QDialog::Accepted) {
-        return;
-    }
-
-    // A duty the member already has on this Sunday isn't added twice.
-    const QVector<Duty> existing = m_dutyController->dutiesForDate(m_selectedDate);
-    QStringList skipped;
-    for (Duty duty : dialog.duties()) {
-        const bool alreadyThere = std::any_of(existing.cbegin(), existing.cend(), [&duty](const Duty &other) {
-            return other.memberId() == duty.memberId() && other.dutyTypeId() == duty.dutyTypeId();
-        });
-        if (alreadyThere) {
-            skipped.append(m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).name());
-            continue;
-        }
-        if (!m_dutyController->addDuty(duty)) {
-            QMessageBox::critical(this, tr("Add Member"), m_dutyController->lastError());
-            break;
-        }
-    }
-    populateSundayList();
-    selectSunday(m_selectedDate);
-    if (!skipped.isEmpty()) {
-        QMessageBox::information(this, tr("Add Member"),
-            tr("Already on this Sunday, so not added again: %1.").arg(skipped.join(QStringLiteral(", "))));
-    }
 }
 
 void ScheduleTab::editClicked()
@@ -866,25 +950,31 @@ void ScheduleTab::memberDoubleClicked(QListWidgetItem *item)
     if (duty.id() < 0) {
         return;
     }
-    // An Admin on an upcoming Sunday edits the member's place on it;
-    // otherwise (logged out, or a past Sunday) it's the read-only summary.
-    if (m_isAdmin && selectedSundayEditable()) {
-        if (duty.memberId() > 0) {
-            editMemberOnSchedule(duty.memberId());
-        } else {
+    const bool canEdit = m_isAdmin && selectedSundayEditable();
+    if (duty.memberId() <= 0) {
+        if (canEdit) {
             editClicked(); // an unfilled duty: pick someone for it
         }
-        return;
-    }
-    if (duty.memberId() <= 0) {
         return;
     }
     const User user = m_userController->userById(duty.memberId());
     if (user.id() < 0) {
         return;
     }
-    MemberStatsDialog dialog(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController, this);
+
+    // Their part in the selected Sunday, with the way into editing it (for
+    // an Admin on an upcoming Sunday) or into their full history.
+    const QString teamName = user.teamId() > 0 ? m_teamController->teamById(user.teamId()).name() : QString();
+    const bool markedAway = m_dutyController->membersMarkedUnavailable(m_selectedDate).contains(user.name());
+    MemberSundayDialog dialog(user, teamName, m_selectedDate, m_dutyController->dutiesForDate(m_selectedDate),
+                              markedAway, canEdit, m_userController, m_dutyTypeController, this);
     dialog.exec();
+    if (dialog.editRequested()) {
+        editMemberOnSchedule(user.id());
+    } else if (dialog.allDutiesRequested()) {
+        MemberStatsDialog stats(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController, this);
+        stats.exec();
+    }
 }
 
 void ScheduleTab::editMemberOnSchedule(int memberId)

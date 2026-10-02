@@ -1245,6 +1245,14 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <source>Remove %1</source>
         <translation>Retirer %1</translation>
     </message>
+    <message>
+        <source>All members — type a name to add</source>
+        <translation>Tous les membres — saisissez un nom pour l'ajouter</translation>
+    </message>
+    <message>
+        <source>Add another member...</source>
+        <translation>Ajouter un autre membre...</translation>
+    </message>
 </context>
 <context>
     <name>MemberStatsDialog</name>
@@ -1279,6 +1287,53 @@ Notez dès maintenant le nouveau mot de passe.</translation>
     <message>
         <source>All Duties</source>
         <translation>Toutes les tâches</translation>
+    </message>
+</context>
+<context>
+    <name>MemberSundayDialog</name>
+    <message>
+        <source>Team: %1</source>
+        <translation>Équipe : %1</translation>
+    </message>
+    <message>
+        <source>Marked themselves away this Sunday.</source>
+        <translation>S'est indiqué absent ce dimanche.</translation>
+    </message>
+    <message>
+        <source>Serving</source>
+        <translation>En service</translation>
+    </message>
+    <message>
+        <source>Backing up</source>
+        <translation>En remplacement</translation>
+    </message>
+    <message>
+        <source>No backup</source>
+        <translation>Pas de remplaçant</translation>
+    </message>
+    <message>
+        <source>Backup: %1</source>
+        <translation>Remplaçant : %1</translation>
+    </message>
+    <message>
+        <source>Nobody assigned yet</source>
+        <translation>Personne n'est encore prévu</translation>
+    </message>
+    <message>
+        <source>Covering for %1</source>
+        <translation>Remplace %1</translation>
+    </message>
+    <message>
+        <source>No duties this Sunday.</source>
+        <translation>Aucune tâche ce dimanche.</translation>
+    </message>
+    <message>
+        <source>All Duties...</source>
+        <translation>Toutes les tâches...</translation>
+    </message>
+    <message>
+        <source>Edit on Schedule</source>
+        <translation>Modifier au planning</translation>
     </message>
 </context>
 <context>
@@ -1430,6 +1485,30 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <source>Saved to %1</source>
         <translation>Enregistré dans %1</translation>
     </message>
+    <message>
+        <source>All duties — type a duty to add</source>
+        <translation>Toutes les tâches — saisissez une tâche pour l'ajouter</translation>
+    </message>
+    <message>
+        <source>Add another duty...</source>
+        <translation>Ajouter une autre tâche...</translation>
+    </message>
+    <message>
+        <source>All teams — type a team to add</source>
+        <translation>Toutes les équipes — saisissez une équipe pour l'ajouter</translation>
+    </message>
+    <message>
+        <source>Add another team...</source>
+        <translation>Ajouter une autre équipe...</translation>
+    </message>
+    <message>
+        <source>Duties</source>
+        <translation>Tâches</translation>
+    </message>
+    <message>
+        <source>Teams</source>
+        <translation>Équipes</translation>
+    </message>
 </context>
 <context>
     <name>ScheduleTab</name>
@@ -1438,20 +1517,8 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Planning</translation>
     </message>
     <message>
-        <source>Pick a Sunday to see who's serving, and assign duties for it. Double-click a member to edit their duties and backup.</source>
-        <translation>Choisissez un dimanche pour voir qui sert et attribuer les tâches. Double-cliquez sur un membre pour modifier ses tâches et son remplaçant.</translation>
-    </message>
-    <message>
         <source>+  Assign Duty</source>
         <translation>+  Attribuer une tâche</translation>
-    </message>
-    <message>
-        <source>+  Add Member</source>
-        <translation>+  Ajouter un membre</translation>
-    </message>
-    <message>
-        <source>Put a member on this Sunday: their duties and a backup</source>
-        <translation>Ajouter un membre à ce dimanche : ses tâches et un remplaçant</translation>
     </message>
     <message>
         <source>Copy Schedule</source>
@@ -1590,14 +1657,6 @@ Attention : ces membres se sont indiqués indisponibles ce jour-là :
         <translation>Attribuer une tâche</translation>
     </message>
     <message>
-        <source>Add Member</source>
-        <translation>Ajouter un membre</translation>
-    </message>
-    <message>
-        <source>Already on this Sunday, so not added again: %1.</source>
-        <translation>Déjà prévu ce dimanche, donc pas ajouté à nouveau : %1.</translation>
-    </message>
-    <message>
         <source>Edit Duty</source>
         <translation>Modifier la tâche</translation>
     </message>
@@ -1612,6 +1671,10 @@ Attention : ces membres se sont indiqués indisponibles ce jour-là :
     <message>
         <source>Delete this duty?</source>
         <translation>Supprimer cette tâche ?</translation>
+    </message>
+    <message>
+        <source>Pick a Sunday to see who's serving, and assign duties for it. Double-click a member to see their part in that Sunday.</source>
+        <translation>Choisissez un dimanche pour voir qui sert et attribuer les tâches. Double-cliquez sur un membre pour voir son rôle ce dimanche-là.</translation>
     </message>
 </context>
 <context>

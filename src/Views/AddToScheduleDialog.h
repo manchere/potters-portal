@@ -14,15 +14,15 @@ class DutyTypeController;
 class MemberPickerField;
 class SuggestLineEdit;
 
-// The Schedule tab's "+ Add Member": puts a Member on the open Sunday's
-// schedule in one go -- pick their name, one or more duties, and an
-// optional backup who covers if they're not around. Each duty becomes its
-// own Duty row with the same Member, backup and notes. (Creating a new
-// Member profile is done from the Taxonomy tab.)
+// Puts a Member on a Sunday's schedule in one go -- their name, one or
+// more duties, and an optional backup who covers if they're not around.
+// Each duty becomes its own Duty row with the same Member, backup and
+// notes. (Creating a new Member profile is done from the Taxonomy tab.)
 //
-// Given the Member's existing duties on that Sunday it edits them instead
-// ("Edit Member on Schedule", opened by double-clicking them): the Member
-// is fixed, and the duties, backup and notes start from what's there.
+// The Schedule tab uses it with the Member's existing duties on that
+// Sunday ("Edit Member on Schedule", from Edit Member or the member's
+// Sunday summary): the Member is fixed, and the duties, backup and notes
+// start from what's there.
 // duties() is then the wanted set; ScheduleTab works out what to add,
 // change and remove. When those duties have different backups (or notes)
 // the field starts empty, and leaving it empty keeps each duty's own --

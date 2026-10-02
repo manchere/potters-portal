@@ -1,0 +1,4 @@
+// Windows resources for the desktop app: the Potters House mark as the
+// exe icon (File Explorer, taskbar). Qt also uses IDI_ICON1 as the default
+// window icon.
+IDI_ICON1 ICON "pottershouse.ico"

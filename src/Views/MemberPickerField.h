@@ -54,8 +54,9 @@ private:
 
     QList<QPair<int, QString>> m_members;
     QVector<int> m_selected;
-    QString m_emptyPlaceholder = QStringLiteral("All members — type a name to add");
-    QString m_morePlaceholder = QStringLiteral("Add another member...");
+    // Set (translated) in the constructor.
+    QString m_emptyPlaceholder;
+    QString m_morePlaceholder;
     // Set between a suggestion being picked and the edit being cleared.
     bool m_justPicked = false;
 
