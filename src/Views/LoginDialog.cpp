@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 
 #include "AdminContact.h"
+#include "ClickableLabel.h"
 #include "Controllers/UserController.h"
 
 LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
@@ -45,10 +46,14 @@ LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
 
     // Opens a new email to the admin contact in the default mail app; if
     // there isn't one, the address is shown instead so it can be copied.
-    auto *forgotLink = new QLabel(QStringLiteral("<a href='#'>Forgot password?</a>"), this);
+    // A ClickableLabel rather than a QLabel link: the dialog drags itself on
+    // any press a child doesn't take, and a link label doesn't take it.
+    auto *forgotLink = new ClickableLabel(this);
+    forgotLink->setText(QStringLiteral("<a href='#'>Forgot password?</a>"));
+    forgotLink->setTextInteractionFlags(Qt::NoTextInteraction);
     forgotLink->setToolTip(QStringLiteral("Email %1 to reset the admin password").arg(kAdminContactEmail));
     forgotLink->setAlignment(Qt::AlignRight);
-    connect(forgotLink, &QLabel::linkActivated, this, [this]() {
+    connect(forgotLink, &ClickableLabel::clicked, this, [this]() {
         QUrl mail(QStringLiteral("mailto:") + kAdminContactEmail);
         mail.setQuery(QStringLiteral("subject=Potter's Portal admin password reset"));
         if (!QDesktopServices::openUrl(mail)) {
