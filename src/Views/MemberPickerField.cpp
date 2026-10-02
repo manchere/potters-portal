@@ -92,6 +92,17 @@ QVector<int> MemberPickerField::selectedIds() const
     return m_selected;
 }
 
+void MemberPickerField::setSelectedIds(const QVector<int> &ids)
+{
+    m_selected.clear();
+    for (int id : ids) {
+        if (!nameOf(id).isNull() && !m_selected.contains(id)) {
+            m_selected.append(id);
+        }
+    }
+    rebuildChips();
+}
+
 QStringList MemberPickerField::selectedNames() const
 {
     QStringList names;

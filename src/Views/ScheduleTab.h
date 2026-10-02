@@ -80,7 +80,6 @@ private:
     // tint (if any) or the plain default.
     void applySundayItemStyle(QListWidgetItem *item, bool isSelected) const;
     QWidget *buildRow(const Duty &duty);
-    QString memberName(int userId) const;
     // Duties only ever happen on Sundays -- rounds forward to the
     // Sunday of date's week (or date itself, if it's already Sunday).
     static QDate nearestSunday(const QDate &date);
@@ -91,6 +90,9 @@ private:
     // Sunday (past ones are read-only), and selected duty.
     void updateActionState();
     bool selectedSundayEditable() const;
+    // Opens "Edit Member on Schedule" for memberId's duties on the selected
+    // Sunday and applies the changes.
+    void editMemberOnSchedule(int memberId);
 
     DutyController *m_dutyController = nullptr;
     UserController *m_userController = nullptr;

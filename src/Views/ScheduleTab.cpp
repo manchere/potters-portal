@@ -72,7 +72,7 @@ ScheduleTab::ScheduleTab(
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
         QStringLiteral("Pick a Sunday to see who's serving, and assign duties for it. "
-                        "Double-click a Member to see their responsibilities."),
+                        "Double-click a member to edit their duties and backup."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
     subtitle->setWordWrap(true);
@@ -193,59 +193,92 @@ ScheduleTab::ScheduleTab(
     selectSunday(nearestSunday(QDate::currentDate()));
 }
 
-QString ScheduleTab::memberName(int userId) const
+namespace
 {
-    if (userId <= 0) {
-        return QStringLiteral("Unassigned");
+    // The row's three columns (member, duty, backup) take fixed shares of
+    // the width, so they line up from one row to the next.
+    void addColumn(QHBoxLayout *layout, QWidget *column, int share)
+    {
+        QSizePolicy policy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        policy.setHorizontalStretch(share);
+        column->setSizePolicy(policy);
+        layout->addWidget(column);
     }
-    const User user = m_userController->userById(userId);
-    return user.id() >= 0 ? user.name() : QStringLiteral("(deleted member)");
 }
 
+// One duty, laid out across the full row: the member (badge, name in
+// large bold type, any notes beneath), the duty as an icon pill, and the
+// backup with their own small badge.
 QWidget *ScheduleTab::buildRow(const Duty &duty)
 {
     auto *row = new QWidget(m_resultsList);
     auto *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(8, 6, 8, 6);
-    layout->setSpacing(10);
+    layout->setContentsMargins(10, 6, 12, 6);
+    layout->setSpacing(12);
 
     const User member = duty.memberId() > 0 ? m_userController->userById(duty.memberId()) : User();
     if (member.id() >= 0) {
-        layout->addWidget(MemberBadge::make(member.name(), member.color(), 36, row));
+        layout->addWidget(MemberBadge::make(member.name(), member.color(), 40, row));
     } else {
         // Unfilled duty (or a deleted Member): an empty grey circle.
         auto *placeholder = new QLabel(row);
-        placeholder->setFixedSize(36, 36);
+        placeholder->setFixedSize(40, 40);
         placeholder->setObjectName(QStringLiteral("avatarPlaceholder"));
         layout->addWidget(placeholder);
     }
 
-    const DutyType dutyType = m_dutyTypeController->dutyTypeById(duty.dutyTypeId());
-    auto *dutyTypeIcon = new QLabel(dutyType.icon(), row);
-    QFont iconFont = dutyTypeIcon->font();
-    iconFont.setPointSize(16);
-    dutyTypeIcon->setFont(iconFont);
-    layout->addWidget(dutyTypeIcon);
-
-    auto *textContainer = new QWidget(row);
-    auto *textLayout = new QVBoxLayout(textContainer);
-    textLayout->setContentsMargins(0, 0, 0, 0);
-    textLayout->setSpacing(2);
-    auto *dutyTypeLabel = new QLabel(dutyType.name(), textContainer);
-    dutyTypeLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
-
-    // Main member and support member on the same line, e.g.
-    // "Grace Adeyemi   ·   Support: Ruth Mensah".
-    QString memberLine = memberName(duty.memberId());
-    if (duty.supportMemberId() > 0) {
-        memberLine += QStringLiteral("   ·   Support: %1").arg(memberName(duty.supportMemberId()));
+    // --- Member: name, then notes if any.
+    auto *memberColumn = new QWidget(row);
+    auto *memberLayout = new QVBoxLayout(memberColumn);
+    memberLayout->setContentsMargins(0, 0, 0, 0);
+    memberLayout->setSpacing(1);
+    auto *nameLabel = new QLabel(member.id() >= 0 ? member.name() : QStringLiteral("Nobody assigned"), memberColumn);
+    nameLabel->setObjectName(member.id() >= 0 ? QStringLiteral("dutyMemberName") : QStringLiteral("dutyUnfilled"));
+    nameLabel->setToolTip(nameLabel->text());
+    memberLayout->addWidget(nameLabel);
+    if (!duty.notes().isEmpty()) {
+        auto *notesLabel = new QLabel(duty.notes(), memberColumn);
+        notesLabel->setObjectName(QStringLiteral("mutedLabel"));
+        notesLabel->setToolTip(duty.notes());
+        memberLayout->addWidget(notesLabel);
     }
-    auto *memberLabel = new QLabel(memberLine, textContainer);
-    memberLabel->setObjectName(QStringLiteral("mutedLabel"));
+    addColumn(layout, memberColumn, 5);
 
-    textLayout->addWidget(dutyTypeLabel);
-    textLayout->addWidget(memberLabel);
-    layout->addWidget(textContainer, 1);
+    // --- Duty: icon + name in a pill.
+    const DutyType dutyType = m_dutyTypeController->dutyTypeById(duty.dutyTypeId());
+    auto *dutyColumn = new QWidget(row);
+    auto *dutyLayout = new QHBoxLayout(dutyColumn);
+    dutyLayout->setContentsMargins(0, 0, 0, 0);
+    auto *dutyPill = new QLabel(dutyType.iconAndName(), dutyColumn);
+    dutyPill->setObjectName(QStringLiteral("dutyPill"));
+    dutyLayout->addWidget(dutyPill);
+    dutyLayout->addStretch();
+    addColumn(layout, dutyColumn, 4);
+
+    // --- Backup: caption over a small badge + name, or a dash.
+    auto *backupColumn = new QWidget(row);
+    auto *backupLayout = new QVBoxLayout(backupColumn);
+    backupLayout->setContentsMargins(0, 0, 0, 0);
+    backupLayout->setSpacing(2);
+    auto *backupCaption = new QLabel(QStringLiteral("Backup"), backupColumn);
+    backupCaption->setObjectName(QStringLiteral("dutyCaption"));
+    backupLayout->addWidget(backupCaption);
+    const User backup = duty.supportMemberId() > 0 ? m_userController->userById(duty.supportMemberId()) : User();
+    auto *backupLine = new QHBoxLayout;
+    backupLine->setSpacing(6);
+    if (backup.id() >= 0) {
+        backupLine->addWidget(MemberBadge::make(backup.name(), backup.color(), 20, backupColumn));
+        auto *backupName = new QLabel(backup.name(), backupColumn);
+        backupName->setObjectName(QStringLiteral("dutyBackupName"));
+        backupName->setToolTip(backup.name());
+        backupLine->addWidget(backupName, 1);
+    } else {
+        auto *none = new QLabel(QStringLiteral("—"), backupColumn);
+        none->setObjectName(QStringLiteral("mutedLabel"));
+        backupLine->addWidget(none, 1);
+    }
+    backupLayout->addLayout(backupLine);
+    addColumn(layout, backupColumn, 4);
 
     return row;
 }
@@ -540,7 +573,7 @@ void ScheduleTab::rebuildResults()
     for (const Duty &duty : duties) {
         auto *item = new QListWidgetItem(m_resultsList);
         item->setData(Qt::UserRole, duty.id());
-        item->setSizeHint(QSize(0, 56));
+        item->setSizeHint(QSize(0, 64));
         m_resultsList->addItem(item);
         m_resultsList->setItemWidget(item, buildRow(duty));
     }
@@ -671,7 +704,20 @@ void ScheduleTab::memberDoubleClicked(QListWidgetItem *item)
     }
     const int dutyId = item->data(Qt::UserRole).toInt();
     const Duty duty = m_dutyController->dutyById(dutyId);
-    if (duty.id() < 0 || duty.memberId() <= 0) {
+    if (duty.id() < 0) {
+        return;
+    }
+    // An Admin on an upcoming Sunday edits the member's place on it;
+    // otherwise (logged out, or a past Sunday) it's the read-only summary.
+    if (m_isAdmin && selectedSundayEditable()) {
+        if (duty.memberId() > 0) {
+            editMemberOnSchedule(duty.memberId());
+        } else {
+            editClicked(); // an unfilled duty: pick someone for it
+        }
+        return;
+    }
+    if (duty.memberId() <= 0) {
         return;
     }
     const User user = m_userController->userById(duty.memberId());
@@ -680,6 +726,60 @@ void ScheduleTab::memberDoubleClicked(QListWidgetItem *item)
     }
     MemberStatsDialog dialog(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController, this);
     dialog.exec();
+}
+
+void ScheduleTab::editMemberOnSchedule(int memberId)
+{
+    QVector<Duty> current;
+    for (const Duty &duty : m_dutyController->dutiesForDate(m_selectedDate)) {
+        if (duty.memberId() == memberId) {
+            current.append(duty);
+        }
+    }
+    if (current.isEmpty()) {
+        return;
+    }
+    AddToScheduleDialog dialog(m_selectedDate, m_userController->allUsers(), m_dutyTypeController, this, current);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    // Keep duties still wanted (updating backup/notes), remove the ones
+    // taken off, add the new ones.
+    const QVector<Duty> wanted = dialog.duties();
+    bool ok = true;
+    for (const Duty &existing : std::as_const(current)) {
+        const auto match = std::find_if(wanted.cbegin(), wanted.cend(), [&existing](const Duty &duty) {
+            return duty.dutyTypeId() == existing.dutyTypeId();
+        });
+        if (match == wanted.cend()) {
+            ok = m_dutyController->removeDuty(existing.id());
+        } else if (match->supportMemberId() != existing.supportMemberId() || match->notes() != existing.notes()) {
+            Duty updated = existing;
+            updated.setSupportMemberId(match->supportMemberId());
+            updated.setNotes(match->notes());
+            ok = m_dutyController->updateDuty(updated);
+        }
+        if (!ok) {
+            break;
+        }
+    }
+    for (Duty duty : wanted) {
+        if (!ok) {
+            break;
+        }
+        const bool alreadyThere = std::any_of(current.cbegin(), current.cend(), [&duty](const Duty &existing) {
+            return existing.dutyTypeId() == duty.dutyTypeId();
+        });
+        if (!alreadyThere) {
+            ok = m_dutyController->addDuty(duty);
+        }
+    }
+    if (!ok) {
+        QMessageBox::critical(this, QStringLiteral("Edit Member"), m_dutyController->lastError());
+    }
+    populateSundayList();
+    selectSunday(m_selectedDate);
 }
 
 void ScheduleTab::refresh()

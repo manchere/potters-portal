@@ -16,12 +16,15 @@ AddToScheduleDialog::AddToScheduleDialog(
     const QDate &serviceDate,
     const QVector<User> &members,
     DutyTypeController *dutyTypeController,
-    QWidget *parent)
+    QWidget *parent,
+    const QVector<Duty> &existingDuties)
     : FramelessDialog(parent)
     , m_serviceDate(serviceDate)
 {
-    setWindowTitle(QStringLiteral("Add Member to Schedule"));
-    auto *heading = new QLabel(QStringLiteral("Add Member to Schedule"), this);
+    const bool isEdit = !existingDuties.isEmpty();
+    const QString title = isEdit ? QStringLiteral("Edit Member on Schedule") : QStringLiteral("Add Member to Schedule");
+    setWindowTitle(title);
+    auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
     auto *dateLabel = new QLabel(serviceDate.toString(QStringLiteral("dddd d MMMM yyyy")), this);
     dateLabel->setObjectName(QStringLiteral("pageSubtitle"));
@@ -64,8 +67,26 @@ AddToScheduleDialog::AddToScheduleDialog(
     connect(m_backupEdit, &QLineEdit::textChanged, m_errorLabel, &QLabel::clear);
     connect(m_dutyPicker, &MemberPickerField::selectionChanged, m_errorLabel, &QLabel::clear);
 
+    if (isEdit) {
+        // Same person throughout -- to put someone else on, use Add Member.
+        const Duty &first = existingDuties.first();
+        m_memberEdit->setCurrentId(first.memberId());
+        m_memberEdit->setReadOnly(true);
+        QVector<int> dutyTypeIds;
+        int backupId = -1;
+        for (const Duty &duty : existingDuties) {
+            dutyTypeIds.append(duty.dutyTypeId());
+            if (backupId < 0) {
+                backupId = duty.supportMemberId();
+            }
+        }
+        m_dutyPicker->setSelectedIds(dutyTypeIds);
+        m_backupEdit->setCurrentId(backupId);
+        m_notesEdit->setPlainText(first.notes());
+    }
+
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-    buttons->button(QDialogButtonBox::Save)->setText(QStringLiteral("Add to Schedule"));
+    buttons->button(QDialogButtonBox::Save)->setText(isEdit ? QStringLiteral("Save Changes") : QStringLiteral("Add to Schedule"));
     connect(buttons, &QDialogButtonBox::accepted, this, &AddToScheduleDialog::saveClicked);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 

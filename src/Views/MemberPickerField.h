@@ -31,6 +31,8 @@ public:
     void setPlaceholders(const QString &empty, const QString &more);
 
     QVector<int> selectedIds() const;
+    // Replaces the chips (ids not in the list are ignored); no signal.
+    void setSelectedIds(const QVector<int> &ids);
     QStringList selectedNames() const;
 
 signals:

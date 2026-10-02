@@ -19,6 +19,12 @@ class SuggestLineEdit;
 // optional backup who covers if they're not around. Each duty becomes its
 // own Duty row with the same Member, backup and notes. (Creating a new
 // Member profile is done from the Taxonomy tab.)
+//
+// Given the Member's existing duties on that Sunday it edits them instead
+// ("Edit Member on Schedule", opened by double-clicking them): the Member
+// is fixed, and the duties, backup and notes start from what's there.
+// duties() is then the wanted set; ScheduleTab works out what to add,
+// change and remove.
 class AddToScheduleDialog : public FramelessDialog
 {
     Q_OBJECT
@@ -28,9 +34,11 @@ public:
         const QDate &serviceDate,
         const QVector<User> &members,
         DutyTypeController *dutyTypeController,
-        QWidget *parent = nullptr);
+        QWidget *parent = nullptr,
+        const QVector<Duty> &existingDuties = {});
 
-    // One Duty per chosen duty type (id() < 0, ready for addDuty()).
+    // One Duty per chosen duty type (id() < 0), all with the chosen
+    // Member, backup and notes.
     QVector<Duty> duties() const;
 
 private slots:
