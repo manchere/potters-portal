@@ -87,7 +87,7 @@ ScheduleTab::ScheduleTab(
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
     subtitle->setWordWrap(true);
 
-    m_assignButton = new QPushButton(tr("+  Assign Duty"), this);
+    m_assignButton = new QPushButton(tr("Assign Duty"), this);
     connect(m_assignButton, &QPushButton::clicked, this, &ScheduleTab::assignClicked);
     m_copyButton = new QPushButton(tr("Copy Schedule"), this);
     m_copyButton->setObjectName(QStringLiteral("secondaryButton"));

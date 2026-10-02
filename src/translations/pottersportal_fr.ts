@@ -1517,10 +1517,6 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Planning</translation>
     </message>
     <message>
-        <source>+  Assign Duty</source>
-        <translation>+  Attribuer une tâche</translation>
-    </message>
-    <message>
         <source>Copy Schedule</source>
         <translation>Copier le planning</translation>
     </message>

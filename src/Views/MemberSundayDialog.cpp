@@ -114,7 +114,10 @@ MemberSundayDialog::MemberSundayDialog(
     if (backing > 0) {
         layout->addWidget(backingBox);
     } else {
-        backingBox->deleteLater();
+        // Not in any layout, so it would sit at the dialog's top-left
+        // corner; deleteLater() wouldn't run until the dialog closes (exec()
+        // runs its own event loop), so delete it now.
+        delete backingBox;
     }
 
     // --- Buttons -------------------------------------------------------------------
