@@ -96,14 +96,11 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     m_autofillStatus->setWordWrap(true);
     m_autofillStatus->hide();
 
-    auto *photoButtonsLayout = new QVBoxLayout;
-    photoButtonsLayout->addWidget(m_autofillButton);
-    photoButtonsLayout->addWidget(m_autofillStatus);
-    photoButtonsLayout->addStretch();
-
-    auto *photoLayout = new QHBoxLayout;
-    photoLayout->addWidget(m_imagePreview);
-    photoLayout->addLayout(photoButtonsLayout, 1);
+    // Photo on top, the AI fill button and its status underneath.
+    auto *photoLayout = new QVBoxLayout;
+    photoLayout->addWidget(m_imagePreview, 0, Qt::AlignLeft);
+    photoLayout->addWidget(m_autofillButton, 0, Qt::AlignLeft);
+    photoLayout->addWidget(m_autofillStatus);
     auto *photoBox = new QGroupBox(tr("Photo"), this);
     photoBox->setLayout(photoLayout);
 
