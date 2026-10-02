@@ -6,6 +6,7 @@
 #include "Controllers/CategoryController.h"
 #include "Controllers/ItemController.h"
 #include "Controllers/DutyTypeController.h"
+#include "Controllers/TeamController.h"
 #include "Controllers/SongController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
@@ -62,6 +63,7 @@ private:
     UserController m_userController;
     DutyController m_dutyController;
     DutyTypeController m_dutyTypeController;
+    TeamController m_teamController;
     SongController m_songController;
 
     ItemListView *m_itemListView = nullptr;

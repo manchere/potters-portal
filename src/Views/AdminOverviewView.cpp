@@ -2,6 +2,7 @@
 
 #include <QButtonGroup>
 #include <QColor>
+#include <QHash>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -16,37 +17,42 @@
 #include "Controllers/CategoryController.h"
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/TagController.h"
+#include "Controllers/TeamController.h"
 #include "Controllers/UserController.h"
 #include "MemberEditDialog.h"
 #include "DutyTypeEditDialog.h"
 #include "TagEditDialog.h"
+#include "TeamEditDialog.h"
 
 AdminOverviewView::AdminOverviewView(
     TagController *tagController,
     CategoryController *categoryController,
     DutyTypeController *dutyTypeController,
     UserController *userController,
+    TeamController *teamController,
     QWidget *parent)
     : QWidget(parent)
     , m_tagController(tagController)
     , m_categoryController(categoryController)
     , m_dutyTypeController(dutyTypeController)
     , m_userController(userController)
+    , m_teamController(teamController)
 {
     auto *title = new QLabel(QStringLiteral("Taxonomy"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        QStringLiteral("Browse Members, Tags, Categories, or Duty Types one list at a time. "
+        QStringLiteral("Browse Members, Teams, Tags, Categories, or Duty Types one list at a time. "
                         "Double-click a row to edit it, or use Delete to remove it."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
     subtitle->setWordWrap(true);
 
     m_membersToggle = new QPushButton(QStringLiteral("Members"), this);
+    m_teamsToggle = new QPushButton(QStringLiteral("Teams"), this);
     m_tagsToggle = new QPushButton(QStringLiteral("Tags"), this);
     m_categoriesToggle = new QPushButton(QStringLiteral("Categories"), this);
     m_dutyTypesToggle = new QPushButton(QStringLiteral("Duty Types"), this);
-    for (QPushButton *toggle : {m_membersToggle, m_tagsToggle, m_categoriesToggle, m_dutyTypesToggle}) {
+    for (QPushButton *toggle : {m_membersToggle, m_teamsToggle, m_tagsToggle, m_categoriesToggle, m_dutyTypesToggle}) {
         toggle->setCheckable(true);
         toggle->setObjectName(QStringLiteral("secondaryButton"));
         connect(toggle, &QPushButton::clicked, this, &AdminOverviewView::kindButtonClicked);
@@ -55,12 +61,14 @@ AdminOverviewView::AdminOverviewView(
     m_kindGroup = new QButtonGroup(this);
     m_kindGroup->setExclusive(true);
     m_kindGroup->addButton(m_membersToggle);
+    m_kindGroup->addButton(m_teamsToggle);
     m_kindGroup->addButton(m_tagsToggle);
     m_kindGroup->addButton(m_categoriesToggle);
     m_kindGroup->addButton(m_dutyTypesToggle);
 
     auto *toggleRow = new QHBoxLayout;
     toggleRow->addWidget(m_membersToggle);
+    toggleRow->addWidget(m_teamsToggle);
     toggleRow->addWidget(m_tagsToggle);
     toggleRow->addWidget(m_categoriesToggle);
     toggleRow->addWidget(m_dutyTypesToggle);
@@ -72,6 +80,9 @@ AdminOverviewView::AdminOverviewView(
 
     m_addMemberButton = new QPushButton(QStringLiteral("+  Add Member"), this);
     connect(m_addMemberButton, &QPushButton::clicked, this, &AdminOverviewView::addMemberClicked);
+    m_addTeamButton = new QPushButton(QStringLiteral("+  Add Team"), this);
+    m_addTeamButton->setToolTip(QStringLiteral("Create a team -- put Members on it from Add/Edit Member"));
+    connect(m_addTeamButton, &QPushButton::clicked, this, &AdminOverviewView::addTeamClicked);
     m_addTagButton = new QPushButton(QStringLiteral("+  Add Tag"), this);
     connect(m_addTagButton, &QPushButton::clicked, this, &AdminOverviewView::addTagClicked);
     m_addCategoryButton = new QPushButton(QStringLiteral("+  Add Category"), this);
@@ -81,7 +92,7 @@ AdminOverviewView::AdminOverviewView(
         QStringLiteral("Define a new duty type (name + icon) -- to give a Member a duty on a "
                         "specific Sunday, use the Schedule tab instead."));
     connect(m_addDutyTypeButton, &QPushButton::clicked, this, &AdminOverviewView::addDutyTypeClicked);
-    for (QPushButton *addButton : {m_addMemberButton, m_addTagButton, m_addCategoryButton, m_addDutyTypeButton}) {
+    for (QPushButton *addButton : {m_addMemberButton, m_addTeamButton, m_addTagButton, m_addCategoryButton, m_addDutyTypeButton}) {
         addButton->setObjectName(QStringLiteral("secondaryButton"));
     }
 
@@ -99,6 +110,7 @@ AdminOverviewView::AdminOverviewView(
     connect(m_roleButton, &QPushButton::clicked, this, &AdminOverviewView::toggleAdminRoleClicked);
     auto *actionBar = new ActionBar(this);
     actionBar->addWidget(m_addMemberButton);
+    actionBar->addWidget(m_addTeamButton);
     actionBar->addWidget(m_addTagButton);
     actionBar->addWidget(m_addCategoryButton);
     actionBar->addWidget(m_addDutyTypeButton);
@@ -187,15 +199,18 @@ void AdminOverviewView::toggleAdminRoleClicked()
 
 void AdminOverviewView::updateAddButtonVisibility()
 {
-    // Members are a profile/login concern -- Admin-only, same as the Date
-    // tab. Tags/Categories/Duty Types stay open to everyone.
+    // Members and Teams are a profile/login concern -- Admin-only, same as
+    // the Date tab. Tags/Categories/Duty Types stay open to everyone.
     m_addMemberButton->setVisible(m_isAdmin);
+    m_addTeamButton->setVisible(m_isAdmin);
 }
 
 void AdminOverviewView::kindButtonClicked()
 {
     if (m_membersToggle->isChecked()) {
         setKind(Kind::Members);
+    } else if (m_teamsToggle->isChecked()) {
+        setKind(Kind::Teams);
     } else if (m_tagsToggle->isChecked()) {
         setKind(Kind::Tags);
     } else if (m_categoriesToggle->isChecked()) {
@@ -220,6 +235,7 @@ void AdminOverviewView::searchTextChanged(const QString &)
 void AdminOverviewView::refresh()
 {
     m_users = m_userController->allUsers();
+    m_teams = m_teamController->allTeams();
     m_tags = m_tagController->allTags();
     m_categories = m_categoryController->allCategories();
     m_dutyTypes = m_dutyTypeController->allDutyTypes();
@@ -234,6 +250,10 @@ void AdminOverviewView::rebuildList()
     const QString search = m_searchEdit->text().trimmed();
 
     if (m_kind == Kind::Members) {
+        QHash<int, QString> teamNames;
+        for (const Team &team : std::as_const(m_teams)) {
+            teamNames.insert(team.id(), team.name());
+        }
         for (const User &user : m_users) {
             if (!search.isEmpty() && !user.name().contains(search, Qt::CaseInsensitive)) {
                 continue;
@@ -259,6 +279,12 @@ void AdminOverviewView::rebuildList()
             textLayout->addWidget(nameLabel);
             textLayout->addWidget(emailLabel);
             rowLayout->addWidget(textContainer, 1);
+            if (teamNames.contains(user.teamId())) {
+                auto *teamLabel = new QLabel(teamNames.value(user.teamId()), row);
+                teamLabel->setObjectName(QStringLiteral("dutyPill"));
+                teamLabel->setToolTip(QStringLiteral("Team"));
+                rowLayout->addWidget(teamLabel);
+            }
             if (user.isAdmin()) {
                 auto *adminLabel = new QLabel(QStringLiteral("Admin"), row);
                 adminLabel->setStyleSheet(QStringLiteral(
@@ -266,6 +292,25 @@ void AdminOverviewView::rebuildList()
                 rowLayout->addWidget(adminLabel);
             }
             m_list->setItemWidget(item, row);
+        }
+    } else if (m_kind == Kind::Teams) {
+        QHash<int, int> memberCounts;
+        for (const User &user : std::as_const(m_users)) {
+            ++memberCounts[user.teamId()];
+        }
+        for (const Team &team : std::as_const(m_teams)) {
+            if (!search.isEmpty() && !team.name().contains(search, Qt::CaseInsensitive)) {
+                continue;
+            }
+            const int count = memberCounts.value(team.id());
+            auto *item = new QListWidgetItem(
+                QStringLiteral("%1   (%2 %3)").arg(team.name()).arg(count)
+                    .arg(count == 1 ? QStringLiteral("member") : QStringLiteral("members")),
+                m_list);
+            item->setData(Qt::UserRole, team.id());
+            if (!team.description().isEmpty()) {
+                item->setToolTip(team.description());
+            }
         }
     } else if (m_kind == Kind::Tags) {
         for (const Tag &tag : m_tags) {
@@ -316,9 +361,26 @@ void AdminOverviewView::addMemberClicked()
     if (!m_isAdmin) {
         return;
     }
-    MemberEditDialog dialog(User(), m_userController, this);
+    MemberEditDialog dialog(User(), m_userController, m_teamController, this);
     if (dialog.exec() == QDialog::Accepted) {
         refresh();
+    }
+}
+
+void AdminOverviewView::addTeamClicked()
+{
+    if (!m_isAdmin) {
+        return;
+    }
+    TeamEditDialog dialog(Team(), this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    Team newTeam = dialog.team();
+    if (m_teamController->addTeam(newTeam)) {
+        refresh();
+    } else {
+        QMessageBox::critical(this, QStringLiteral("Add Team"), m_teamController->lastError());
     }
 }
 
@@ -391,6 +453,20 @@ void AdminOverviewView::deleteClicked()
         } else {
             QMessageBox::critical(this, QStringLiteral("Delete Member"), m_userController->lastError());
         }
+    } else if (m_kind == Kind::Teams) {
+        if (!m_isAdmin) {
+            return;
+        }
+        if (QMessageBox::question(this, QStringLiteral("Delete Team"),
+                QStringLiteral("Delete this team? Its members stay, just without a team."))
+            != QMessageBox::Yes) {
+            return;
+        }
+        if (m_teamController->removeTeam(id)) {
+            refresh();
+        } else {
+            QMessageBox::critical(this, QStringLiteral("Delete Team"), m_teamController->lastError());
+        }
     } else if (m_kind == Kind::Tags) {
         if (QMessageBox::question(this, QStringLiteral("Delete Tag"), QStringLiteral("Delete this tag?"))
             != QMessageBox::Yes) {
@@ -443,9 +519,29 @@ void AdminOverviewView::rowDoubleClicked(QListWidgetItem *item)
         if (existing.id() < 0) {
             return;
         }
-        MemberEditDialog dialog(existing, m_userController, this);
+        MemberEditDialog dialog(existing, m_userController, m_teamController, this);
         if (dialog.exec() == QDialog::Accepted) {
             refresh();
+        }
+    } else if (m_kind == Kind::Teams) {
+        if (!m_isAdmin) {
+            QMessageBox::information(this, QStringLiteral("Edit Team"),
+                QStringLiteral("Log in as Admin (lock icon in the title bar) to edit teams."));
+            return;
+        }
+        const Team existing = m_teamController->teamById(id);
+        if (existing.id() < 0) {
+            return;
+        }
+        TeamEditDialog dialog(existing, this);
+        if (dialog.exec() != QDialog::Accepted) {
+            return;
+        }
+        Team updated = dialog.team();
+        if (m_teamController->updateTeam(updated)) {
+            refresh();
+        } else {
+            QMessageBox::critical(this, QStringLiteral("Edit Team"), m_teamController->lastError());
         }
     } else if (m_kind == Kind::Tags) {
         const Tag existing = m_tagController->tagById(id);

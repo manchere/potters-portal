@@ -1,6 +1,9 @@
 #include "MemberEditDialog.h"
 
+#include <algorithm>
+
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
@@ -10,6 +13,7 @@
 #include <QVBoxLayout>
 
 #include "Auth/PasswordAuth.h"
+#include "Controllers/TeamController.h"
 #include "Controllers/UserController.h"
 #include "MemberBadge.h"
 #include "MemberColorPicker.h"
@@ -29,6 +33,7 @@ namespace
 MemberEditDialog::MemberEditDialog(
     const User &user,
     UserController *userController,
+    TeamController *teamController,
     QWidget *parent)
     : FramelessDialog(parent)
     , m_existingUser(user)
@@ -62,6 +67,13 @@ MemberEditDialog::MemberEditDialog(
     connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
     m_nameError = errorLabel();
 
+    m_teamCombo = new QComboBox(this);
+    m_teamCombo->addItem(QStringLiteral("No team"), -1);
+    for (const Team &team : teamController->allTeams()) {
+        m_teamCombo->addItem(team.name(), team.id());
+    }
+    m_teamCombo->setCurrentIndex(std::max(0, m_teamCombo->findData(user.teamId())));
+
     m_emailEdit = new QLineEdit(user.email(), this);
     m_emailEdit->setPlaceholderText(QStringLiteral("member@example.com"));
     connect(m_emailEdit, &QLineEdit::textChanged, this, [this]() { m_emailError->clear(); });
@@ -82,6 +94,7 @@ MemberEditDialog::MemberEditDialog(
     form->addRow(QStringLiteral("Name"), m_nameEdit);
     form->addRow(QString(), m_nameError);
     form->addRow(QStringLiteral("Color"), m_colorPicker);
+    form->addRow(QStringLiteral("Team"), m_teamCombo);
     form->addRow(QStringLiteral("Email"), m_emailEdit);
     form->addRow(QString(), m_emailError);
     form->addRow(QStringLiteral("Password"), m_passwordEdit);
@@ -150,6 +163,7 @@ void MemberEditDialog::saveClicked()
     user.setName(m_nameEdit->text().trimmed());
     user.setEmail(m_emailEdit->text().trimmed());
     user.setColor(m_colorPicker->color());
+    user.setTeamId(m_teamCombo->currentData().toInt());
 
     const QString password = m_passwordEdit->text();
     if (!password.isEmpty()) {

@@ -6,6 +6,7 @@
 #include "Models/Category.h"
 #include "Models/DutyType.h"
 #include "Models/Tag.h"
+#include "Models/Team.h"
 #include "Models/User.h"
 
 class QListWidget;
@@ -16,11 +17,12 @@ class QButtonGroup;
 class TagController;
 class CategoryController;
 class DutyTypeController;
+class TeamController;
 class UserController;
 
 // "Taxonomy" tab -- a single unified list that shows exactly one of
-// Members / Tags / Categories / Duty Types at a time (toggled via
-// the buttons at the top), with a search-by-name filter, four "+ Add"
+// Members / Teams / Tags / Categories / Duty Types at a time (toggled via
+// the buttons at the top), with a search-by-name filter, "+ Add"
 // buttons, double-click to edit, and one generic Delete button that acts
 // on whichever kind is currently shown. Tag rows are colored with the
 // tag's own color; Member rows show their color badge at the side.
@@ -30,7 +32,10 @@ class UserController;
 // role for a specific Sunday. Scheduling a Member happens exclusively on
 // the Schedule tab ("+ Assign Duty" / "+ Add Member").
 //
-// Adding/editing a Member is Admin-only (gated the same way the Schedule tab
+// "+ Add Team" creates a team; Members are put on one from the Team field
+// of Add/Edit Member, and each Member row shows their team.
+//
+// Adding/editing a Member or a Team is Admin-only (gated the same way the Schedule tab
 // is); Tags, Categories, and Duty Types stay open to everyone, as
 // before. So is changing a Member's role: the "Make Admin" / "Remove
 // Admin" button only exists in Admin mode, and UserController::setAdminRole
@@ -45,6 +50,7 @@ public:
         CategoryController *categoryController,
         DutyTypeController *dutyTypeController,
         UserController *userController,
+        TeamController *teamController,
         QWidget *parent = nullptr);
 
 public slots:
@@ -62,6 +68,7 @@ private slots:
     void kindButtonClicked();
     void searchTextChanged(const QString &text);
     void addMemberClicked();
+    void addTeamClicked();
     void addTagClicked();
     void addCategoryClicked();
     void addDutyTypeClicked();
@@ -70,7 +77,7 @@ private slots:
     void toggleAdminRoleClicked();
 
 private:
-    enum class Kind { Members, Tags, Categories, DutyTypes };
+    enum class Kind { Members, Teams, Tags, Categories, DutyTypes };
 
     void setKind(Kind kind);
     void rebuildList();
@@ -83,16 +90,19 @@ private:
     CategoryController *m_categoryController = nullptr;
     DutyTypeController *m_dutyTypeController = nullptr;
     UserController *m_userController = nullptr;
+    TeamController *m_teamController = nullptr;
     bool m_isAdmin = false;
     int m_adminUserId = -1;
     Kind m_kind = Kind::Members;
 
     QVector<User> m_users;
+    QVector<Team> m_teams;
     QVector<Tag> m_tags;
     QVector<Category> m_categories;
     QVector<DutyType> m_dutyTypes;
 
     QPushButton *m_membersToggle = nullptr;
+    QPushButton *m_teamsToggle = nullptr;
     QPushButton *m_tagsToggle = nullptr;
     QPushButton *m_categoriesToggle = nullptr;
     QPushButton *m_dutyTypesToggle = nullptr;
@@ -101,6 +111,7 @@ private:
     QLineEdit *m_searchEdit = nullptr;
 
     QPushButton *m_addMemberButton = nullptr;
+    QPushButton *m_addTeamButton = nullptr;
     QPushButton *m_addTagButton = nullptr;
     QPushButton *m_addCategoryButton = nullptr;
     QPushButton *m_addDutyTypeButton = nullptr;

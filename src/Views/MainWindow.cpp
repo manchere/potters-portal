@@ -109,7 +109,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_itemListView = new ItemListView(&m_itemController, &m_tagController, &m_categoryController, this);
     m_adminOverviewView = new AdminOverviewView(
-        &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, this);
+        &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, &m_teamController, this);
     m_scheduleTab = new ScheduleTab(
         &m_dutyController, &m_userController, &m_dutyTypeController, this);
     m_songsView = new SongsView(&m_songController, this);
@@ -171,6 +171,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_dutyController, &DutyController::dutiesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
     connect(&m_userController, &UserController::usersChanged, m_adminOverviewView, &AdminOverviewView::refresh);
     connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_teamController, &TeamController::teamsChanged, m_adminOverviewView, &AdminOverviewView::refresh);
 
     connect(&m_dutyController, &DutyController::dutiesChanged, m_scheduleTab, &ScheduleTab::refresh);
     connect(&m_userController, &UserController::usersChanged, m_scheduleTab, &ScheduleTab::refresh);

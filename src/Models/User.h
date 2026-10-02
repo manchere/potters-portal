@@ -5,7 +5,8 @@
 // A user account doubles as a Member profile (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md
 // FR-1.1/FR-1.3): name + an optional Admin flag is all a profile needs
 // beyond login credentials. color is the Member's chosen profile color
-// (one of Models/MemberColors), shown behind their initials.
+// (one of Models/MemberColors), shown behind their initials. teamId is
+// the Team they belong to, or -1 for none.
 class User
 {
 public:
@@ -35,6 +36,9 @@ public:
     QString color() const { return m_color; }
     void setColor(const QString &color) { m_color = color; }
 
+    int teamId() const { return m_teamId; }
+    void setTeamId(int teamId) { m_teamId = teamId; }
+
 private:
     int m_id = -1;
     QString m_name;
@@ -43,4 +47,5 @@ private:
     QString m_passwordSalt;
     bool m_isAdmin = false;
     QString m_color;
+    int m_teamId = -1;
 };

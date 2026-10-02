@@ -2,6 +2,7 @@
 
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QVariant>
 
 #include "Auth/PasswordAuth.h"
 #include "Database/Database.h"
@@ -21,7 +22,15 @@ static User userFromQuery(const QSqlQuery &query)
     user.setPasswordSalt(query.value(QStringLiteral("password_salt")).toString());
     user.setIsAdmin(query.value(QStringLiteral("is_admin")).toBool());
     user.setColor(query.value(QStringLiteral("color")).toString());
+    const QVariant teamId = query.value(QStringLiteral("team_id"));
+    user.setTeamId(teamId.isNull() ? -1 : teamId.toInt());
     return user;
+}
+
+// users.team_id is NULL for "no team".
+static QVariant teamIdValue(const User &user)
+{
+    return user.teamId() > 0 ? QVariant(user.teamId()) : QVariant(QMetaType(QMetaType::LongLong));
 }
 
 QVector<User> UserController::allUsers() const
@@ -30,7 +39,7 @@ QVector<User> UserController::allUsers() const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, color FROM users ORDER BY name"));
+        "SELECT id, name, email, password_hash, password_salt, is_admin, color, team_id FROM users ORDER BY name"));
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return users;
@@ -46,7 +55,7 @@ User UserController::userById(int id) const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, color "
+        "SELECT id, name, email, password_hash, password_salt, is_admin, color, team_id "
         "FROM users WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), id);
     if (!query.exec() || !query.next()) {
@@ -61,7 +70,7 @@ User UserController::userByEmail(const QString &email) const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, color "
+        "SELECT id, name, email, password_hash, password_salt, is_admin, color, team_id "
         "FROM users WHERE LOWER(email) = LOWER(:email)"));
     query.bindValue(QStringLiteral(":email"), email);
     if (!query.exec() || !query.next()) {
@@ -100,14 +109,15 @@ bool UserController::addUser(User &user)
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "INSERT INTO users (name, email, password_hash, password_salt, is_admin, color) "
-        "VALUES (:name, :email, :password_hash, :password_salt, :is_admin, :color) RETURNING id"));
+        "INSERT INTO users (name, email, password_hash, password_salt, is_admin, color, team_id) "
+        "VALUES (:name, :email, :password_hash, :password_salt, :is_admin, :color, :team_id) RETURNING id"));
     query.bindValue(QStringLiteral(":name"), user.name());
     query.bindValue(QStringLiteral(":email"), user.email());
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
     query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
     query.bindValue(QStringLiteral(":is_admin"), user.isAdmin());
     query.bindValue(QStringLiteral(":color"), user.color());
+    query.bindValue(QStringLiteral(":team_id"), teamIdValue(user));
     if (!query.exec() || !query.next()) {
         m_lastError = query.lastError().text();
         return false;
@@ -127,11 +137,12 @@ bool UserController::updateUser(const User &user)
     QSqlQuery query;
     query.prepare(QStringLiteral(
         "UPDATE users SET name = :name, email = :email, "
-        "color = :color, password_hash = :password_hash, password_salt = :password_salt, "
+        "color = :color, team_id = :team_id, password_hash = :password_hash, password_salt = :password_salt, "
         "updated_at = now() WHERE id = :id"));
     query.bindValue(QStringLiteral(":name"), user.name());
     query.bindValue(QStringLiteral(":email"), user.email());
     query.bindValue(QStringLiteral(":color"), user.color());
+    query.bindValue(QStringLiteral(":team_id"), teamIdValue(user));
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
     query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
     query.bindValue(QStringLiteral(":id"), user.id());
