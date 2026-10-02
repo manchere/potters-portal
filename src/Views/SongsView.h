@@ -18,7 +18,7 @@ class SongController;
 //
 // Viewing is open to everyone; adding, editing, and deleting songs are
 // Admin-only and hidden until Admin mode is unlocked (FR-0.4), the same
-// as scheduling on the Date tab.
+// as scheduling on the Schedule tab.
 class SongsView : public QWidget
 {
     Q_OBJECT

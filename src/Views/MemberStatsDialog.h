@@ -11,7 +11,7 @@ class QNetworkAccessManager;
 class DutyTypeController;
 
 // "Responsibilities" modal opened by double-clicking a member's profile
-// row in DateNavigationTab's results list -- a quick summary of
+// row in ScheduleTab's results list -- a quick summary of
 // everything they've ever been assigned (duty breakdown + full history),
 // not just what's scheduled for the currently selected Sunday.
 class MemberStatsDialog : public FramelessDialog

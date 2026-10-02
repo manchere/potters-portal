@@ -59,7 +59,7 @@ add_executable (PottersPortal
   "Views/ItemCardWidget.h" "Views/ItemCardWidget.cpp"
   "Views/ItemDetailsDialog.h" "Views/ItemDetailsDialog.cpp"
   "Views/LoginDialog.h" "Views/LoginDialog.cpp"
-  "Views/DateNavigationTab.h" "Views/DateNavigationTab.cpp"
+  "Views/ScheduleTab.h" "Views/ScheduleTab.cpp"
   "Views/AssignDutyDialog.h" "Views/AssignDutyDialog.cpp"
   "Views/MemberEditDialog.h" "Views/MemberEditDialog.cpp"
   "Views/DutyTypeEditDialog.h" "Views/DutyTypeEditDialog.cpp"

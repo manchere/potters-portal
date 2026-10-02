@@ -13,7 +13,7 @@ class QPlainTextEdit;
 class DutyTypeController;
 
 // Create/edit a duty for a fixed Sunday -- the date already
-// selected on the Date tab -- reached via the "Assign Duty" button there
+// selected on the Schedule tab -- reached via the "Assign Duty" button there
 // rather than a separate tab (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md FR-6,
 // FR-7). Mirrors CategoryEditDialog: pass an existing Duty to edit,
 // or a default-constructed Duty() (id() < 0) for "new". The Duty

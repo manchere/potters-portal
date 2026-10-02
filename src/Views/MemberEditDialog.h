@@ -15,7 +15,7 @@ class UserController;
 // registration screen (name/email/password; avatar generated from the
 // name, see FR-1.2) since it's the same account, just admin-initiated.
 // Pass a default-constructed User() to create a new Member (from either
-// the Date tab's "+ Add Member" or the Taxonomy tab's "+ Add Member"), or
+// the Schedule tab's "+ Add Member" or the Taxonomy tab's "+ Add Member"), or
 // an existing one to edit (Taxonomy tab, double-click) -- password is
 // required when adding, optional when editing (blank keeps the current
 // one; see UserController::updateUser).

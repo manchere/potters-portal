@@ -26,12 +26,12 @@ class Duty;
 // "Copy Schedule" / "Paste Schedule" (or Ctrl+C / Ctrl+V) copy one
 // Sunday's whole schedule onto another -- e.g. reuse last month's
 // Communion Sunday line-up -- via DutyController::copySchedule.
-class DateNavigationTab : public QWidget
+class ScheduleTab : public QWidget
 {
     Q_OBJECT
 
 public:
-    DateNavigationTab(
+    ScheduleTab(
         DutyController *dutyController,
         UserController *userController,
         DutyTypeController *dutyTypeController,

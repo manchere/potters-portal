@@ -33,7 +33,7 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 
 - **FR-1.1** A Member profile shall be creatable in two ways:
   a) **self-service**, via the mobile app (name, email, password), or
-  b) **by an Admin**, via the "+ Add Member" button on the desktop Date tab
+  b) **by an Admin**, via the "+ Add Member" button on the desktop Schedule tab
   (name, email, password — the Admin sets initial credentials and shares
   them with the Member).
 - **FR-1.2** Creating a profile shall generate an avatar for the Member
@@ -104,7 +104,7 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   including reassigning it to a different Member.
 - **FR-6.4** An Admin shall be able to delete a duty.
 - **FR-6.5** An Admin shall be able to view every duty, both for a
-  single Sunday (Date tab, FR-8) and as a full all-dates list (FR-9).
+  single Sunday (Schedule tab, FR-8) and as a full all-dates list (FR-9).
 
 ## 8. Admin — Scheduling
 
@@ -120,7 +120,7 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   Member, the primary and support Member shall be shown together on the
   same line (e.g. "Grace Adeyemi · Support: Ruth Mensah").
 
-## 9. Desktop UI — Date Tab
+## 9. Desktop UI — Schedule Tab
 
 - **FR-8.1** The interface shall add a new tab, positioned first
   (leftmost), listing Sundays to navigate between — as a scrollable list,
@@ -136,11 +136,11 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   of duties by duty type, and their full duty history (not only the
   selected Sunday).
 - **FR-8.4** Creating, editing, and deleting a duty (FR-6, FR-7)
-  shall happen via buttons on this same Date tab — an "+ Assign Duty"
+  shall happen via buttons on this same Schedule tab — an "+ Assign Duty"
   button plus Edit/Delete for the selected row — there is no separate
   Duties tab.
 - **FR-8.5** A "+ Add Member" button on this same tab shall let an Admin
-  create a new Member profile (FR-1.1b) without leaving the Date tab.
+  create a new Member profile (FR-1.1b) without leaving the Schedule tab.
 - **FR-8.6** FR-8.4 and FR-8.5's buttons are Admin-only (FR-0.4).
 - **FR-8.7** An Admin shall be able to copy one Sunday's whole schedule
   ("Copy Schedule" / Ctrl+C) and paste it onto another Sunday ("Paste
@@ -175,7 +175,7 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 - **FR-9.2** This tab, including the duties overview, is visible to
   everyone (not Admin-gated), consistent with Tags/Categories management
   never having required a login. Creating, editing, or deleting a
-  duty still only happens on the Date tab (FR-8.4), which stays
+  duty still only happens on the Schedule tab (FR-8.4), which stays
   Admin-gated.
 - **FR-9.3** Tags and Categories in this tab apply to **inventory items
   only** — they are unrelated to Members, duties, or scheduling, and no
@@ -191,7 +191,7 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 
 ## Platform split
 
-- **Desktop (Qt/C++)**: Admin-facing — the Date tab is the primary
+- **Desktop (Qt/C++)**: Admin-facing — the Schedule tab is the primary
   scheduling surface (duty CRUD, scheduling, support-Member
   duty, Member creation, avatars, duty type icons), plus non-availability
   approval and the combined Tags/Categories/Duties overview tab.

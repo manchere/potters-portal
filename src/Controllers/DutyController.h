@@ -30,7 +30,7 @@ public:
     // upcoming-only for the mobile "my duties" API.
     QVector<Duty> allDutiesForMember(int userId) const;
 
-    // Every duty on a specific date, for the desktop Date tab
+    // Every duty on a specific date, for the desktop Schedule tab
     // (FR-8.1/8.2).
     QVector<Duty> dutiesForDate(const QDate &date) const;
 

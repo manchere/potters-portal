@@ -26,7 +26,7 @@ class UserController;
 // "Save Report..." writes the current report as HTML (printable from any
 // browser) or CSV (for a spreadsheet).
 //
-// Open to everyone, like the Date tab's read-only view. Time-off request
+// Open to everyone, like the Schedule tab's read-only view. Time-off request
 // reasons are never shown -- only their status.
 class ReportsView : public QWidget
 {

@@ -31,7 +31,7 @@ namespace
 
     QString formatSunday(const QDate &date)
     {
-        // Same format as the Date tab, e.g. "Sun 6 Sep 2026".
+        // Same format as the Schedule tab, e.g. "Sun 6 Sep 2026".
         return date.toString(QStringLiteral("ddd d MMM yyyy"));
     }
 

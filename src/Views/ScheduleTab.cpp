@@ -1,4 +1,4 @@
-#include "DateNavigationTab.h"
+#include "ScheduleTab.h"
 
 #include "Style.h"
 
@@ -57,7 +57,7 @@ namespace
     }
 }
 
-DateNavigationTab::DateNavigationTab(
+ScheduleTab::ScheduleTab(
     DutyController *dutyController,
     UserController *userController,
     DutyTypeController *dutyTypeController,
@@ -69,7 +69,7 @@ DateNavigationTab::DateNavigationTab(
     , m_dutyTypeController(dutyTypeController)
     , m_networkManager(networkManager)
 {
-    auto *title = new QLabel(QStringLiteral("Date"), this);
+    auto *title = new QLabel(QStringLiteral("Schedule"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
         QStringLiteral("Pick a Sunday to see who's serving, and assign duties for it. "
@@ -78,32 +78,32 @@ DateNavigationTab::DateNavigationTab(
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
 
     m_assignButton = new QPushButton(QStringLiteral("+  Assign Duty"), this);
-    connect(m_assignButton, &QPushButton::clicked, this, &DateNavigationTab::assignClicked);
+    connect(m_assignButton, &QPushButton::clicked, this, &ScheduleTab::assignClicked);
     m_addMemberButton = new QPushButton(QStringLiteral("+  Add Member"), this);
     m_addMemberButton->setObjectName(QStringLiteral("secondaryButton"));
-    connect(m_addMemberButton, &QPushButton::clicked, this, &DateNavigationTab::addMemberClicked);
+    connect(m_addMemberButton, &QPushButton::clicked, this, &ScheduleTab::addMemberClicked);
     m_assignForMemberButton = new QPushButton(QStringLiteral("+  Assign Another Duty"), this);
     m_assignForMemberButton->setObjectName(QStringLiteral("secondaryButton"));
     m_assignForMemberButton->setToolTip(
         QStringLiteral("Give the selected Member another duty on this Sunday"));
-    connect(m_assignForMemberButton, &QPushButton::clicked, this, &DateNavigationTab::assignForSelectedMemberClicked);
+    connect(m_assignForMemberButton, &QPushButton::clicked, this, &ScheduleTab::assignForSelectedMemberClicked);
     m_copyButton = new QPushButton(QStringLiteral("Copy Schedule"), this);
     m_copyButton->setObjectName(QStringLiteral("secondaryButton"));
     m_copyButton->setToolTip(QStringLiteral("Copy this Sunday's duties (Ctrl+C)"));
-    connect(m_copyButton, &QPushButton::clicked, this, &DateNavigationTab::copyScheduleClicked);
+    connect(m_copyButton, &QPushButton::clicked, this, &ScheduleTab::copyScheduleClicked);
     m_pasteButton = new QPushButton(QStringLiteral("Paste Schedule"), this);
     m_pasteButton->setObjectName(QStringLiteral("secondaryButton"));
     m_pasteButton->setToolTip(QStringLiteral("Paste the copied duties onto this Sunday (Ctrl+V)"));
-    connect(m_pasteButton, &QPushButton::clicked, this, &DateNavigationTab::pasteScheduleClicked);
+    connect(m_pasteButton, &QPushButton::clicked, this, &ScheduleTab::pasteScheduleClicked);
     m_copiedLabel = new QLabel(this);
     m_copiedLabel->setObjectName(QStringLiteral("accentLabel"));
 
     auto *copyShortcut = new QShortcut(QKeySequence::Copy, this);
     copyShortcut->setContext(Qt::WidgetWithChildrenShortcut);
-    connect(copyShortcut, &QShortcut::activated, this, &DateNavigationTab::copyScheduleClicked);
+    connect(copyShortcut, &QShortcut::activated, this, &ScheduleTab::copyScheduleClicked);
     auto *pasteShortcut = new QShortcut(QKeySequence::Paste, this);
     pasteShortcut->setContext(Qt::WidgetWithChildrenShortcut);
-    connect(pasteShortcut, &QShortcut::activated, this, &DateNavigationTab::pasteScheduleClicked);
+    connect(pasteShortcut, &QShortcut::activated, this, &ScheduleTab::pasteScheduleClicked);
 
     auto *topRow = new QHBoxLayout;
     topRow->addWidget(m_assignButton);
@@ -117,7 +117,7 @@ DateNavigationTab::DateNavigationTab(
 
     m_sundayList = new QListWidget(this);
     m_sundayList->setFixedWidth(200);
-    connect(m_sundayList, &QListWidget::currentItemChanged, this, &DateNavigationTab::sundaySelectionChanged);
+    connect(m_sundayList, &QListWidget::currentItemChanged, this, &ScheduleTab::sundaySelectionChanged);
 
     m_resultsList = new QListWidget(this);
     m_resultsList->setAlternatingRowColors(true);
@@ -128,14 +128,14 @@ DateNavigationTab::DateNavigationTab(
         m_deleteButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
         m_assignForMemberButton->setEnabled(m_isAdmin && m_selectedDutyId >= 0);
     });
-    connect(m_resultsList, &QListWidget::itemDoubleClicked, this, &DateNavigationTab::memberDoubleClicked);
+    connect(m_resultsList, &QListWidget::itemDoubleClicked, this, &ScheduleTab::memberDoubleClicked);
 
     m_editButton = new QPushButton(QStringLiteral("Edit"), this);
     m_editButton->setObjectName(QStringLiteral("secondaryButton"));
-    connect(m_editButton, &QPushButton::clicked, this, &DateNavigationTab::editClicked);
+    connect(m_editButton, &QPushButton::clicked, this, &ScheduleTab::editClicked);
     m_deleteButton = new QPushButton(QStringLiteral("Delete"), this);
     m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
-    connect(m_deleteButton, &QPushButton::clicked, this, &DateNavigationTab::deleteClicked);
+    connect(m_deleteButton, &QPushButton::clicked, this, &ScheduleTab::deleteClicked);
     setAdminMode(false);
 
     auto *bottomButtons = new QHBoxLayout;
@@ -155,7 +155,7 @@ DateNavigationTab::DateNavigationTab(
     m_sundaySearch->setToolTip(QStringLiteral(
         "Find Sundays by date (e.g. \"27 Sep\" or \"October\"), by duty, or by a member's first or last name"));
     m_sundaySearch->setClearButtonEnabled(true);
-    connect(m_sundaySearch, &QLineEdit::textChanged, this, &DateNavigationTab::sundaySearchChanged);
+    connect(m_sundaySearch, &QLineEdit::textChanged, this, &ScheduleTab::sundaySearchChanged);
 
     m_noSundayMatchLabel = new QLabel(QStringLiteral("No Sundays match."), this);
     m_noSundayMatchLabel->setObjectName(QStringLiteral("mutedLabel"));
@@ -187,7 +187,7 @@ DateNavigationTab::DateNavigationTab(
     selectSunday(nearestSunday(QDate::currentDate()));
 }
 
-QString DateNavigationTab::memberName(int userId) const
+QString ScheduleTab::memberName(int userId) const
 {
     if (userId <= 0) {
         return QStringLiteral("Unassigned");
@@ -196,7 +196,7 @@ QString DateNavigationTab::memberName(int userId) const
     return user.id() >= 0 ? user.name() : QStringLiteral("(deleted member)");
 }
 
-QString DateNavigationTab::memberAvatarSeed(int userId) const
+QString ScheduleTab::memberAvatarSeed(int userId) const
 {
     if (userId <= 0) {
         return QString();
@@ -205,7 +205,7 @@ QString DateNavigationTab::memberAvatarSeed(int userId) const
     return user.id() >= 0 ? user.avatarSeed() : QString();
 }
 
-QWidget *DateNavigationTab::buildRow(const Duty &duty)
+QWidget *ScheduleTab::buildRow(const Duty &duty)
 {
     auto *row = new QWidget(m_resultsList);
     auto *layout = new QHBoxLayout(row);
@@ -252,7 +252,7 @@ QWidget *DateNavigationTab::buildRow(const Duty &duty)
     return row;
 }
 
-void DateNavigationTab::setAdminMode(bool isAdmin)
+void ScheduleTab::setAdminMode(bool isAdmin)
 {
     m_isAdmin = isAdmin;
     m_assignButton->setVisible(isAdmin);
@@ -269,7 +269,7 @@ void DateNavigationTab::setAdminMode(bool isAdmin)
     updateCopyPasteState();
 }
 
-void DateNavigationTab::updateCopyPasteState()
+void ScheduleTab::updateCopyPasteState()
 {
     m_copyButton->setEnabled(m_isAdmin && m_datesWithDuties.contains(m_selectedDate));
     m_pasteButton->setEnabled(m_isAdmin && m_copiedDate.isValid() && m_copiedDate != m_selectedDate);
@@ -278,7 +278,7 @@ void DateNavigationTab::updateCopyPasteState()
         : QString());
 }
 
-void DateNavigationTab::copyScheduleClicked()
+void ScheduleTab::copyScheduleClicked()
 {
     if (!m_isAdmin || !m_datesWithDuties.contains(m_selectedDate)) {
         return;
@@ -287,7 +287,7 @@ void DateNavigationTab::copyScheduleClicked()
     updateCopyPasteState();
 }
 
-void DateNavigationTab::pasteScheduleClicked()
+void ScheduleTab::pasteScheduleClicked()
 {
     if (!m_isAdmin || !m_copiedDate.isValid() || m_copiedDate == m_selectedDate) {
         return;
@@ -352,13 +352,13 @@ void DateNavigationTab::pasteScheduleClicked()
     QMessageBox::information(this, QStringLiteral("Paste Schedule"), summary);
 }
 
-QDate DateNavigationTab::nearestSunday(const QDate &date)
+QDate ScheduleTab::nearestSunday(const QDate &date)
 {
     // QDate::dayOfWeek(): 1 = Monday ... 7 = Sunday.
     return date.addDays(7 - date.dayOfWeek());
 }
 
-void DateNavigationTab::populateSundayList()
+void ScheduleTab::populateSundayList()
 {
     m_sundayList->clear();
 
@@ -399,7 +399,7 @@ void DateNavigationTab::populateSundayList()
     applySundayFilter();
 }
 
-void DateNavigationTab::applySundayFilter()
+void ScheduleTab::applySundayFilter()
 {
     const QStringList terms = m_sundaySearch->text().toLower().split(QLatin1Char(' '), Qt::SkipEmptyParts);
     int visibleCount = 0;
@@ -418,7 +418,7 @@ void DateNavigationTab::applySundayFilter()
     m_noSundayMatchLabel->setVisible(visibleCount == 0);
 }
 
-void DateNavigationTab::sundaySearchChanged()
+void ScheduleTab::sundaySearchChanged()
 {
     applySundayFilter();
 
@@ -444,7 +444,7 @@ void DateNavigationTab::sundaySearchChanged()
 // selection highlight, since a per-item color already set for the "has
 // duties" tint would otherwise compete with -- and often hide --
 // the native selection styling.
-void DateNavigationTab::applySundayItemStyle(QListWidgetItem *item, bool isSelected) const
+void ScheduleTab::applySundayItemStyle(QListWidgetItem *item, bool isSelected) const
 {
     const QDate date = item->data(Qt::UserRole).toDate();
     const bool hasDuties = m_datesWithDuties.contains(date);
@@ -466,7 +466,7 @@ void DateNavigationTab::applySundayItemStyle(QListWidgetItem *item, bool isSelec
     }
 }
 
-void DateNavigationTab::restyleSundayItems()
+void ScheduleTab::restyleSundayItems()
 {
     for (int i = 0; i < m_sundayList->count(); ++i) {
         QListWidgetItem *item = m_sundayList->item(i);
@@ -474,7 +474,7 @@ void DateNavigationTab::restyleSundayItems()
     }
 }
 
-void DateNavigationTab::selectSunday(const QDate &date)
+void ScheduleTab::selectSunday(const QDate &date)
 {
     for (int i = 0; i < m_sundayList->count(); ++i) {
         if (m_sundayList->item(i)->data(Qt::UserRole).toDate() == date) {
@@ -488,7 +488,7 @@ void DateNavigationTab::selectSunday(const QDate &date)
     }
 }
 
-void DateNavigationTab::sundaySelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
+void ScheduleTab::sundaySelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
     if (previous) {
         applySundayItemStyle(previous, false);
@@ -502,7 +502,7 @@ void DateNavigationTab::sundaySelectionChanged(QListWidgetItem *current, QListWi
     updateCopyPasteState();
 }
 
-void DateNavigationTab::rebuildResults()
+void ScheduleTab::rebuildResults()
 {
     m_resultsList->clear();
     m_selectedDutyId = -1;
@@ -526,7 +526,7 @@ void DateNavigationTab::rebuildResults()
     }
 }
 
-void DateNavigationTab::assignClicked()
+void ScheduleTab::assignClicked()
 {
     if (!m_isAdmin) {
         return;
@@ -544,7 +544,7 @@ void DateNavigationTab::assignClicked()
     selectSunday(m_selectedDate);
 }
 
-void DateNavigationTab::addMemberClicked()
+void ScheduleTab::addMemberClicked()
 {
     if (!m_isAdmin) {
         return;
@@ -553,7 +553,7 @@ void DateNavigationTab::addMemberClicked()
     dialog.exec();
 }
 
-void DateNavigationTab::assignForSelectedMemberClicked()
+void ScheduleTab::assignForSelectedMemberClicked()
 {
     if (!m_isAdmin || m_selectedDutyId < 0) {
         return;
@@ -580,7 +580,7 @@ void DateNavigationTab::assignForSelectedMemberClicked()
     selectSunday(m_selectedDate);
 }
 
-void DateNavigationTab::editClicked()
+void ScheduleTab::editClicked()
 {
     if (!m_isAdmin || m_selectedDutyId < 0) {
         return;
@@ -602,7 +602,7 @@ void DateNavigationTab::editClicked()
     selectSunday(m_selectedDate);
 }
 
-void DateNavigationTab::deleteClicked()
+void ScheduleTab::deleteClicked()
 {
     if (!m_isAdmin || m_selectedDutyId < 0) {
         return;
@@ -619,7 +619,7 @@ void DateNavigationTab::deleteClicked()
     selectSunday(m_selectedDate);
 }
 
-void DateNavigationTab::memberDoubleClicked(QListWidgetItem *item)
+void ScheduleTab::memberDoubleClicked(QListWidgetItem *item)
 {
     if (!item) {
         return;
@@ -637,7 +637,7 @@ void DateNavigationTab::memberDoubleClicked(QListWidgetItem *item)
     dialog.exec();
 }
 
-void DateNavigationTab::refresh()
+void ScheduleTab::refresh()
 {
     const QDate previouslySelected = m_selectedDate;
     populateSundayList();

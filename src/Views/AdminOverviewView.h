@@ -29,9 +29,9 @@ class UserController;
 // "+ Add Duty" creates a duty *type* (a duty name + icon,
 // e.g. "Ushering" + an emoji) -- it does NOT schedule a Member against a
 // role for a specific Sunday. Scheduling a Member happens exclusively on
-// the Date tab ("+ Assign Duty" / "+ Assign Another Duty").
+// the Schedule tab ("+ Assign Duty" / "+ Assign Another Duty").
 //
-// Adding/editing a Member is Admin-only (gated the same way the Date tab
+// Adding/editing a Member is Admin-only (gated the same way the Schedule tab
 // is); Tags, Categories, and Duty Types stay open to everyone, as
 // before. So is changing a Member's role: the "Make Admin" / "Remove
 // Admin" button only exists in Admin mode, and UserController::setAdminRole

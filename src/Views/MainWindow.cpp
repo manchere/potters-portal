@@ -7,7 +7,7 @@
 #include <QWindow>
 
 #include "AdminOverviewView.h"
-#include "DateNavigationTab.h"
+#include "ScheduleTab.h"
 #include "ItemListView.h"
 #include "LoginDialog.h"
 #include "ReportsView.h"
@@ -107,7 +107,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_itemListView = new ItemListView(&m_itemController, &m_tagController, &m_categoryController, this);
     m_adminOverviewView = new AdminOverviewView(
         &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, &m_networkManager, this);
-    m_dateNavigationTab = new DateNavigationTab(
+    m_scheduleTab = new ScheduleTab(
         &m_dutyController, &m_userController, &m_dutyTypeController, &m_networkManager, this);
     m_songsView = new SongsView(&m_songController, this);
     m_reportsView = new ReportsView(&m_dutyController, &m_userController, this);
@@ -117,15 +117,15 @@ MainWindow::MainWindow(QWidget *parent)
     m_titleBar = new TitleBar(frame);
     // Date is inserted first (leftmost) per FR-8.1; the rest keep their
     // existing left-to-right order. Assigning a duty happens via a button
-    // on the Date tab itself (see DateNavigationTab), not a separate tab.
-    m_titleBar->tabBar()->insertTab(0, QStringLiteral("Date"));
+    // on the Schedule tab itself (see ScheduleTab), not a separate tab.
+    m_titleBar->tabBar()->insertTab(0, QStringLiteral("Schedule"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Reports"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Songs"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Items"));
     m_titleBar->tabBar()->addTab(QStringLiteral("Taxonomy"));
 
     m_stack = new QStackedWidget(frame);
-    m_stack->insertWidget(0, m_dateNavigationTab);
+    m_stack->insertWidget(0, m_scheduleTab);
     m_stack->addWidget(m_reportsView);
     m_stack->addWidget(m_songsView);
     m_stack->addWidget(m_itemListView);
@@ -157,9 +157,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_userController, &UserController::usersChanged, m_adminOverviewView, &AdminOverviewView::refresh);
     connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_adminOverviewView, &AdminOverviewView::refresh);
 
-    connect(&m_dutyController, &DutyController::dutiesChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
-    connect(&m_userController, &UserController::usersChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
-    connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_dateNavigationTab, &DateNavigationTab::refresh);
+    connect(&m_dutyController, &DutyController::dutiesChanged, m_scheduleTab, &ScheduleTab::refresh);
+    connect(&m_userController, &UserController::usersChanged, m_scheduleTab, &ScheduleTab::refresh);
+    connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_scheduleTab, &ScheduleTab::refresh);
 
     connect(&m_dutyController, &DutyController::dutiesChanged, m_reportsView, &ReportsView::refresh);
     connect(&m_userController, &UserController::usersChanged, m_reportsView, &ReportsView::refresh);
@@ -181,7 +181,7 @@ void MainWindow::adminButtonClicked()
 
     const bool isAdmin = m_currentUser.id() >= 0;
     m_titleBar->setAdminLoggedIn(isAdmin);
-    m_dateNavigationTab->setAdminMode(isAdmin);
+    m_scheduleTab->setAdminMode(isAdmin);
     m_adminOverviewView->setAdminMode(isAdmin, m_currentUser.id());
     m_songsView->setAdminMode(isAdmin);
 }
@@ -193,7 +193,7 @@ void MainWindow::themeButtonClicked()
     m_titleBar->setBlackTheme(theme == Theme::Black);
     // The Sunday list's per-row colors and the report's HTML aren't
     // reached by the stylesheet.
-    m_dateNavigationTab->restyleSundayItems();
+    m_scheduleTab->restyleSundayItems();
     m_reportsView->restyleReport();
 }
 

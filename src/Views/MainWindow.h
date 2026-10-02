@@ -14,7 +14,7 @@
 
 class ItemListView;
 class AdminOverviewView;
-class DateNavigationTab;
+class ScheduleTab;
 class SongsView;
 class ReportsView;
 class TitleBar;
@@ -30,7 +30,7 @@ class QStackedWidget;
 // There is no login gate at startup -- the app is usable read-only right
 // away. Clicking the lock icon in the title bar opens a password-only
 // LoginDialog; on success m_currentUser becomes that Admin and Admin-only
-// actions (Assign Duty/Add Member/Edit/Delete on the Date tab, editing a
+// actions (Assign Duty/Add Member/Edit/Delete on the Schedule tab, editing a
 // duty from the Taxonomy tab) appear. Clicking the icon again logs
 // out.
 class MainWindow : public QMainWindow
@@ -59,13 +59,13 @@ private:
     DutyController m_dutyController;
     DutyTypeController m_dutyTypeController;
     SongController m_songController;
-    // Shared by DateNavigationTab for fetching Member avatars (DiceBear)
+    // Shared by ScheduleTab for fetching Member avatars (DiceBear)
     // without blocking the UI thread.
     QNetworkAccessManager m_networkManager;
 
     ItemListView *m_itemListView = nullptr;
     AdminOverviewView *m_adminOverviewView = nullptr;
-    DateNavigationTab *m_dateNavigationTab = nullptr;
+    ScheduleTab *m_scheduleTab = nullptr;
     SongsView *m_songsView = nullptr;
     ReportsView *m_reportsView = nullptr;
 

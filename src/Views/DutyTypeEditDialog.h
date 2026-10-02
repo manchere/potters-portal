@@ -9,9 +9,9 @@ class QLineEdit;
 
 // Add/edit a duty *type* (name + a single emoji icon) --
 // these are the duty types (Singing, Translating, ...) a Member can be
-// scheduled against on the Date tab; this dialog only manages the type
+// scheduled against on the Schedule tab; this dialog only manages the type
 // itself, never a scheduled duty for a particular Member/date (that
-// happens exclusively via AssignDutyDialog on the Date tab). Used by
+// happens exclusively via AssignDutyDialog on the Schedule tab). Used by
 // AdminOverviewView's Taxonomy tab -- pass an existing DutyType to edit,
 // or a default-constructed DutyType() (id() < 0) for "new", mirroring
 // TagEditDialog/CategoryEditDialog.

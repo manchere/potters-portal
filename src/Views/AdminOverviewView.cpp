@@ -79,7 +79,7 @@ AdminOverviewView::AdminOverviewView(
     m_addDutyTypeButton = new QPushButton(QStringLiteral("+  Add Duty Type"), this);
     m_addDutyTypeButton->setToolTip(
         QStringLiteral("Define a new duty type (name + icon) -- to give a Member a duty on a "
-                        "specific Sunday, use the Date tab instead."));
+                        "specific Sunday, use the Schedule tab instead."));
     connect(m_addDutyTypeButton, &QPushButton::clicked, this, &AdminOverviewView::addDutyTypeClicked);
     for (QPushButton *addButton : {m_addMemberButton, m_addTagButton, m_addCategoryButton, m_addDutyTypeButton}) {
         addButton->setObjectName(QStringLiteral("secondaryButton"));
