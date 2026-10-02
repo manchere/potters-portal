@@ -359,7 +359,7 @@ QString ReportsView::currentReportHtml(bool darkColors) const
 {
     const QDate sunday = selectedSunday();
     if (!sunday.isValid()) {
-        return wrapHtml(QStringLiteral("Who did what"), filterDescription(), rangeHtml(darkColors), darkColors);
+        return wrapHtml(QStringLiteral("Sunday Serving Report"), filterDescription(), rangeHtml(darkColors), darkColors);
     }
     const QStringList members = m_memberField->selectedNames();
     const QString subtitle = !members.isEmpty()
