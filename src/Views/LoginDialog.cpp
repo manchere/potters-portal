@@ -1,14 +1,22 @@
 #include "LoginDialog.h"
 
 #include <QCheckBox>
+#include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QUrl>
 #include <QVBoxLayout>
 
 #include "Controllers/UserController.h"
+
+namespace
+{
+    // Who to contact for an admin password reset. Hardcoded for now.
+    const QString kAdminContactEmail = QStringLiteral("manucheremeh1995@gmail.com");
+}
 
 LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     : FramelessDialog(parent)
@@ -40,11 +48,26 @@ LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     connect(buttons, &QDialogButtonBox::accepted, this, &LoginDialog::attemptLogin);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
+    // Opens a new email to the admin contact in the default mail app; if
+    // there isn't one, the address is shown instead so it can be copied.
+    auto *forgotLink = new QLabel(QStringLiteral("<a href='#'>Forgot password?</a>"), this);
+    forgotLink->setToolTip(QStringLiteral("Email %1 to reset the admin password").arg(kAdminContactEmail));
+    forgotLink->setAlignment(Qt::AlignRight);
+    connect(forgotLink, &QLabel::linkActivated, this, [this]() {
+        QUrl mail(QStringLiteral("mailto:") + kAdminContactEmail);
+        mail.setQuery(QStringLiteral("subject=Potter's Portal admin password reset"));
+        if (!QDesktopServices::openUrl(mail)) {
+            m_errorLabel->setText(QStringLiteral("Email %1 to reset the admin password.").arg(kAdminContactEmail));
+            m_errorLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        }
+    });
+
     auto *layout = contentLayout();
     layout->addWidget(heading);
     layout->addLayout(form);
     layout->addWidget(m_errorLabel);
     layout->addWidget(buttons);
+    layout->addWidget(forgotLink);
 }
 
 void LoginDialog::toggleShowPassword(bool show)
