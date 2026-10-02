@@ -66,6 +66,9 @@ private:
     QPushButton *m_sendButton = nullptr;
 
     QGroupBox *m_requestsBox = nullptr;
+    // Shown instead of an empty page when someone can open the tab but
+    // neither send nor read requests.
+    QLabel *m_noAccessLabel = nullptr;
     QListWidget *m_list = nullptr;
     QLabel *m_requestTitle = nullptr;
     QLabel *m_requestMeta = nullptr;

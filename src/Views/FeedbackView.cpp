@@ -103,8 +103,15 @@ FeedbackView::FeedbackView(FeedbackController *feedbackController, UserControlle
     actionBar->addStretch();
     actionBar->addWidget(m_deleteButton);
 
+    m_noAccessLabel = new QLabel(
+        tr("You can't send or read requests here yet. Ask an Admin if you need access."), this);
+    m_noAccessLabel->setObjectName(QStringLiteral("mutedLabel"));
+    m_noAccessLabel->setAlignment(Qt::AlignCenter);
+    m_noAccessLabel->setWordWrap(true);
+
     auto *columns = new QHBoxLayout;
     columns->setSpacing(16);
+    columns->addWidget(m_noAccessLabel, 1);
     columns->addWidget(m_formBox, 1);
     columns->addWidget(m_requestsBox, 1);
 
@@ -148,6 +155,7 @@ void FeedbackView::setAccess(const SectionAccess &access)
     m_access = access;
     m_formBox->setVisible(access.create);
     m_requestsBox->setVisible(access.update || access.remove);
+    m_noAccessLabel->setVisible(!access.create && !access.update && !access.remove);
     m_doneButton->setVisible(access.update);
     m_deleteButton->setVisible(access.remove);
     refresh();

@@ -54,11 +54,12 @@ AccessRights AccessController::rightsFor(const User &user, const QDate &upcoming
     query.bindValue(QStringLiteral(":team_id"), user.id() >= 0 && user.teamId() > 0 ? user.teamId() : -1);
     query.bindValue(QStringLiteral(":sunday"), upcomingSunday);
     if (!query.exec()) {
-        // Rules unreadable (e.g. the table isn't there yet): let everyone
-        // look around, but not change anything.
+        // Rules unreadable (e.g. the table isn't there yet): fall back to
+        // the defaults migration 0025 sets for everyone -- every tab can be
+        // opened and feedback can be sent, nothing else can be changed.
         m_lastError = query.lastError().text();
         for (Section section : allSections()) {
-            rights.grant(section, SectionAccess{true, false, false, false});
+            rights.grant(section, SectionAccess{true, section == Section::Feedback, false, false});
         }
         return rights;
     }

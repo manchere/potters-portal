@@ -787,6 +787,10 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <source>Delete "%1"?</source>
         <translation>Supprimer « %1 » ?</translation>
     </message>
+    <message>
+        <source>You can't send or read requests here yet. Ask an Admin if you need access.</source>
+        <translation>Vous ne pouvez pas encore envoyer ni lire de demandes ici. Demandez à un Admin si vous avez besoin d'un accès.</translation>
+    </message>
 </context>
 <context>
     <name>ItemAddDialog</name>
