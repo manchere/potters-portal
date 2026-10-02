@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QMap>
+#include <QPushButton>
 #include <QVBoxLayout>
 
 #include "Controllers/DutyTypeController.h"
@@ -19,7 +20,8 @@ MemberStatsDialog::MemberStatsDialog(
     const User &user,
     const QVector<Duty> &duties,
     DutyTypeController *dutyTypeController,
-    QWidget *parent)
+    QWidget *parent,
+    bool showBack)
     : FramelessDialog(parent)
 {
     setWindowTitle(tr("%1 — Responsibilities").arg(user.name()));
@@ -75,7 +77,7 @@ MemberStatsDialog::MemberStatsDialog(
         const bool isSupportOnly = duty.memberId() != user.id() && duty.supportMemberId() == user.id();
         const DutyType dutyType = dutyTypeController->dutyTypeById(duty.dutyTypeId());
         const QString label = QStringLiteral("%1   %2 %3%4")
-            .arg(QLocale().toString(duty.serviceDate(), QStringLiteral("yyyy-MM-dd")))
+            .arg(QLocale().toString(duty.serviceDate(), QStringLiteral("dd/MM/yyyy")))
             .arg(dutyType.icon())
             .arg(dutyType.name())
             .arg(isSupportOnly ? tr("  (support)") : QString());
@@ -87,6 +89,14 @@ MemberStatsDialog::MemberStatsDialog(
     listBox->setLayout(listLayout);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
+    if (showBack) {
+        QPushButton *backButton = buttons->addButton(tr("← Back"), QDialogButtonBox::ActionRole);
+        backButton->setObjectName(QStringLiteral("secondaryButton"));
+        connect(backButton, &QPushButton::clicked, this, [this]() {
+            m_backRequested = true;
+            accept();
+        });
+    }
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
 

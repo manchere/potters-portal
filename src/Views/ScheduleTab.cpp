@@ -966,14 +966,25 @@ void ScheduleTab::memberDoubleClicked(QListWidgetItem *item)
     // an Admin on an upcoming Sunday) or into their full history.
     const QString teamName = user.teamId() > 0 ? m_teamController->teamById(user.teamId()).name() : QString();
     const bool markedAway = m_dutyController->membersMarkedUnavailable(m_selectedDate).contains(user.name());
-    MemberSundayDialog dialog(user, teamName, m_selectedDate, m_dutyController->dutiesForDate(m_selectedDate),
-                              markedAway, canEdit, m_userController, m_dutyTypeController, this);
-    dialog.exec();
-    if (dialog.editRequested()) {
-        editMemberOnSchedule(user.id());
-    } else if (dialog.allDutiesRequested()) {
-        MemberStatsDialog stats(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController, this);
+    // The summary and the full history lead to each other ("All Duties..."
+    // / "Back") until one of them is closed or Edit is chosen.
+    for (;;) {
+        MemberSundayDialog dialog(user, teamName, m_selectedDate, m_dutyController->dutiesForDate(m_selectedDate),
+                                  markedAway, canEdit, m_userController, m_dutyTypeController, this);
+        dialog.exec();
+        if (dialog.editRequested()) {
+            editMemberOnSchedule(user.id());
+            return;
+        }
+        if (!dialog.allDutiesRequested()) {
+            return;
+        }
+        MemberStatsDialog stats(user, m_dutyController->allDutiesForMember(user.id()), m_dutyTypeController,
+                                this, true);
         stats.exec();
+        if (!stats.backRequested()) {
+            return;
+        }
     }
 }
 

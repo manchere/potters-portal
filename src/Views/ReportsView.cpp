@@ -30,6 +30,11 @@
 
 namespace
 {
+    // The one filter field holds members, duty types and teams together;
+    // each pick's id is kind * kKindStride + the record's own id.
+    constexpr int kKindStride = 100000000;
+    enum FilterKind { MemberFilter = 0, DutyFilter = 1, TeamFilter = 2 };
+
     // Marks the "All Sundays in range" entry in the Sunday list (Sunday rows store
     // their QDate instead).
     const QString kSummaryKey = QStringLiteral("summary");
@@ -160,14 +165,10 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
         connect(edit, &QDateEdit::dateChanged, this, &ReportsView::reloadReport);
     }
 
-    m_memberField = new MemberPickerField(this);
-    connect(m_memberField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
-    m_dutyField = new MemberPickerField(this);
-    m_dutyField->setPlaceholders(tr("All duties — type a duty to add"), tr("Add another duty..."));
-    connect(m_dutyField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
-    m_teamField = new MemberPickerField(this);
-    m_teamField->setPlaceholders(tr("All teams — type a team to add"), tr("Add another team..."));
-    connect(m_teamField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
+    m_filterField = new MemberPickerField(this);
+    m_filterField->setPlaceholders(tr("Everyone — type a member, duty or team to filter"), tr("Add another..."));
+    m_filterField->setToolTip(tr("Members and teams together pick the people; duties narrow it to those duties."));
+    connect(m_filterField, &MemberPickerField::selectionChanged, this, &ReportsView::reloadReport);
 
     auto *filterRow = new QHBoxLayout;
     filterRow->addWidget(new QLabel(tr("From"), this));
@@ -178,23 +179,10 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
 
     // Its own row: the field grows as Members are added.
     auto *memberRow = new QHBoxLayout;
-    auto *memberLabel = new QLabel(tr("Members"), this);
+    auto *memberLabel = new QLabel(tr("Filter"), this);
     memberRow->addWidget(memberLabel, 0, Qt::AlignTop);
-    memberRow->addWidget(m_memberField, 1);
+    memberRow->addWidget(m_filterField, 1);
     memberLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
-
-    // Duties and Teams side by side, each growing like Members.
-    auto *dutyTeamRow = new QHBoxLayout;
-    dutyTeamRow->setSpacing(12);
-    auto *dutyLabel = new QLabel(tr("Duties"), this);
-    dutyLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
-    dutyLabel->setMinimumWidth(memberLabel->sizeHint().width());
-    dutyTeamRow->addWidget(dutyLabel, 0, Qt::AlignTop);
-    dutyTeamRow->addWidget(m_dutyField, 1);
-    auto *teamLabel = new QLabel(tr("Teams"), this);
-    teamLabel->setMinimumHeight(m_fromEdit->sizeHint().height());
-    dutyTeamRow->addWidget(teamLabel, 0, Qt::AlignTop);
-    dutyTeamRow->addWidget(m_teamField, 1);
 
     m_sundayList = new QListWidget(this);
     m_sundayList->setFixedWidth(230);
@@ -251,7 +239,6 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     content->addSpacing(6);
     content->addLayout(filterRow);
     content->addLayout(memberRow);
-    content->addLayout(dutyTeamRow);
     content->addLayout(columns, 1);
 
     auto *layout = new QHBoxLayout(this);
@@ -271,40 +258,38 @@ void ReportsView::refresh()
 
 void ReportsView::populateFilters()
 {
-    QList<QPair<int, QString>> members;
+    // Each shows what it is: a person, the duty's own icon, or a group.
+    QList<QPair<int, QString>> choices;
     for (const User &user : m_userController->allUsers()) {
-        members.append({user.id(), user.name()});
+        choices.append({MemberFilter * kKindStride + user.id(), QStringLiteral("\U0001F464 ") + user.name()});
     }
-    QList<QPair<int, QString>> dutyTypes;
     for (const DutyType &dutyType : m_dutyTypeController->allDutyTypes()) {
-        dutyTypes.append({dutyType.id(), dutyType.iconAndName()});
+        choices.append({DutyFilter * kKindStride + dutyType.id(), dutyType.iconAndName()});
     }
-    QList<QPair<int, QString>> teams;
     for (const Team &team : m_teamController->allTeams()) {
-        teams.append({team.id(), team.name()});
+        choices.append({TeamFilter * kKindStride + team.id(), QStringLiteral("\U0001F465 ") + team.name()});
     }
     // refresh() reloads the report right after, so no signal is needed.
-    for (MemberPickerField *field : {m_memberField, m_dutyField, m_teamField}) {
-        field->blockSignals(true);
-    }
-    m_memberField->setMembers(members);
-    m_dutyField->setMembers(dutyTypes);
-    m_teamField->setMembers(teams);
-    for (MemberPickerField *field : {m_memberField, m_dutyField, m_teamField}) {
-        field->blockSignals(false);
+    m_filterField->blockSignals(true);
+    m_filterField->setMembers(choices);
+    m_filterField->blockSignals(false);
+}
+
+void ReportsView::selectedFilters(QVector<int> *memberIds, QVector<int> *dutyTypeIds, QVector<int> *teamIds) const
+{
+    for (int key : m_filterField->selectedIds()) {
+        const int id = key % kKindStride;
+        switch (key / kKindStride) {
+        case MemberFilter: memberIds->append(id); break;
+        case DutyFilter: dutyTypeIds->append(id); break;
+        case TeamFilter: teamIds->append(id); break;
+        }
     }
 }
 
 QString ReportsView::selectionDescription() const
 {
-    QStringList parts;
-    for (const MemberPickerField *field : {m_memberField, m_dutyField, m_teamField}) {
-        const QStringList names = field->selectedNames();
-        if (!names.isEmpty()) {
-            parts.append(names.join(QStringLiteral(", ")));
-        }
-    }
-    return parts.join(QStringLiteral("  ·  "));
+    return m_filterField->selectedNames().join(QStringLiteral(", "));
 }
 
 void ReportsView::presetClicked(int months)
@@ -326,8 +311,11 @@ void ReportsView::reloadReport()
     if (from > to) {
         std::swap(from, to);
     }
-    m_rows = m_dutyController->scheduleReport(from, to, m_memberField->selectedIds(),
-                                              m_dutyField->selectedIds(), m_teamField->selectedIds());
+    QVector<int> memberIds;
+    QVector<int> dutyTypeIds;
+    QVector<int> teamIds;
+    selectedFilters(&memberIds, &dutyTypeIds, &teamIds);
+    m_rows = m_dutyController->scheduleReport(from, to, memberIds, dutyTypeIds, teamIds);
     populateSundayList();
 }
 
@@ -535,7 +523,7 @@ void ReportsView::saveClicked()
         // works as-is in a spreadsheet.
         out << "Date,Duty,Serving,Backup,Notes,Availability\n";
         for (const ScheduleReportRow &row : visibleRows()) {
-            out << csvField(row.serviceDate.toString(Qt::ISODate)) << ','
+            out << csvField(row.serviceDate.toString(QStringLiteral("dd/MM/yyyy"))) << ','
                 << csvField(row.dutyTypeName) << ','
                 << csvField(row.memberName.isEmpty() ? tr("Unfilled") : row.memberName) << ','
                 << csvField(row.supportMemberName) << ','

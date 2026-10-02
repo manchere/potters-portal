@@ -27,7 +27,7 @@ AssignDutyDialog::AssignDutyDialog(
     heading->setObjectName(QStringLiteral("pageTitle"));
 
     auto *dateLabel = new QLabel(
-        tr("Sunday: %1").arg(QLocale().toString(serviceDate, QStringLiteral("yyyy-MM-dd"))), this);
+        tr("Sunday: %1").arg(QLocale().toString(serviceDate, QStringLiteral("dd/MM/yyyy"))), this);
     dateLabel->setObjectName(QStringLiteral("pageSubtitle"));
 
     QList<QPair<int, QString>> dutyTypes;

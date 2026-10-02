@@ -1288,6 +1288,10 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <source>All Duties</source>
         <translation>Toutes les tâches</translation>
     </message>
+    <message>
+        <source>← Back</source>
+        <translation>← Retour</translation>
+    </message>
 </context>
 <context>
     <name>MemberSundayDialog</name>
@@ -1398,10 +1402,6 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Au</translation>
     </message>
     <message>
-        <source>Members</source>
-        <translation>Membres</translation>
-    </message>
-    <message>
         <source>Sundays</source>
         <translation>Dimanches</translation>
     </message>
@@ -1486,28 +1486,20 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Enregistré dans %1</translation>
     </message>
     <message>
-        <source>All duties — type a duty to add</source>
-        <translation>Toutes les tâches — saisissez une tâche pour l'ajouter</translation>
+        <source>Everyone — type a member, duty or team to filter</source>
+        <translation>Tout le monde — saisissez un membre, une tâche ou une équipe</translation>
     </message>
     <message>
-        <source>Add another duty...</source>
-        <translation>Ajouter une autre tâche...</translation>
+        <source>Add another...</source>
+        <translation>Ajouter...</translation>
     </message>
     <message>
-        <source>All teams — type a team to add</source>
-        <translation>Toutes les équipes — saisissez une équipe pour l'ajouter</translation>
+        <source>Members and teams together pick the people; duties narrow it to those duties.</source>
+        <translation>Les membres et équipes choisissent les personnes ; les tâches limitent à ces tâches.</translation>
     </message>
     <message>
-        <source>Add another team...</source>
-        <translation>Ajouter une autre équipe...</translation>
-    </message>
-    <message>
-        <source>Duties</source>
-        <translation>Tâches</translation>
-    </message>
-    <message>
-        <source>Teams</source>
-        <translation>Équipes</translation>
+        <source>Filter</source>
+        <translation>Filtre</translation>
     </message>
 </context>
 <context>

@@ -59,8 +59,11 @@ private slots:
     void saveClicked();
 
 private:
-    // Fills the Members, Duties and Teams pickers.
+    // Fills the one filter field with every member, duty type and team.
     void populateFilters();
+    // The filter field's picks, split back into members, duty types and
+    // teams (see the encoding in ReportsView.cpp).
+    void selectedFilters(QVector<int> *memberIds, QVector<int> *dutyTypeIds, QVector<int> *teamIds) const;
     void populateSundayList();
     // darkColors is for the on-screen view in the dark themes only; saved
     // files always use the light colors so they print well.
@@ -75,7 +78,7 @@ private:
     // Invalid when "All Sundays in range" is selected.
     QDate selectedSunday() const;
     QString filterDescription() const;
-    // The chosen members, duties and teams, e.g. "Grace · Singing · Choir";
+    // The picked members, duties and teams, e.g. "Grace, Singing, Choir";
     // empty when nothing is picked.
     QString selectionDescription() const;
 
@@ -90,9 +93,8 @@ private:
 
     QDateEdit *m_fromEdit = nullptr;
     QDateEdit *m_toEdit = nullptr;
-    MemberPickerField *m_memberField = nullptr;
-    MemberPickerField *m_dutyField = nullptr;
-    MemberPickerField *m_teamField = nullptr;
+    // One field for members, duties and teams together.
+    MemberPickerField *m_filterField = nullptr;
     QListWidget *m_sundayList = nullptr;
     QTextBrowser *m_reportView = nullptr;
     QPushButton *m_saveButton = nullptr;
