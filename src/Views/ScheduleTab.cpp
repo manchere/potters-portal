@@ -19,6 +19,7 @@
 
 #include "AssignDutyDialog.h"
 #include "MemberEditDialog.h"
+#include "ActionBar.h"
 #include "MemberBadge.h"
 #include "Controllers/DutyController.h"
 #include "Controllers/DutyTypeController.h"
@@ -74,6 +75,7 @@ ScheduleTab::ScheduleTab(
                         "Double-click a Member to see their responsibilities."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
+    subtitle->setWordWrap(true);
 
     m_assignButton = new QPushButton(QStringLiteral("+  Assign Duty"), this);
     connect(m_assignButton, &QPushButton::clicked, this, &ScheduleTab::assignClicked);
@@ -103,16 +105,6 @@ ScheduleTab::ScheduleTab(
     pasteShortcut->setContext(Qt::WidgetWithChildrenShortcut);
     connect(pasteShortcut, &QShortcut::activated, this, &ScheduleTab::pasteScheduleClicked);
 
-    auto *topRow = new QHBoxLayout;
-    topRow->addWidget(m_assignButton);
-    topRow->addWidget(m_addMemberButton);
-    topRow->addSpacing(12);
-    topRow->addWidget(m_copyButton);
-    topRow->addWidget(m_pasteButton);
-    topRow->addWidget(m_copiedLabel);
-    topRow->addStretch();
-    topRow->addWidget(m_assignForMemberButton);
-
     m_sundayList = new QListWidget(this);
     m_sundayList->setFixedWidth(200);
     connect(m_sundayList, &QListWidget::currentItemChanged, this, &ScheduleTab::sundaySelectionChanged);
@@ -134,16 +126,23 @@ ScheduleTab::ScheduleTab(
     m_deleteButton = new QPushButton(QStringLiteral("Delete"), this);
     m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
     connect(m_deleteButton, &QPushButton::clicked, this, &ScheduleTab::deleteClicked);
-    setAdminMode(false);
 
-    auto *bottomButtons = new QHBoxLayout;
-    bottomButtons->addWidget(m_editButton);
-    bottomButtons->addWidget(m_deleteButton);
-    bottomButtons->addStretch();
+    auto *actionBar = new ActionBar(this);
+    actionBar->addWidget(m_assignButton);
+    actionBar->addWidget(m_assignForMemberButton);
+    actionBar->addWidget(m_editButton);
+    actionBar->addSeparator();
+    actionBar->addWidget(m_addMemberButton);
+    actionBar->addSeparator();
+    actionBar->addWidget(m_copyButton);
+    actionBar->addWidget(m_pasteButton);
+    actionBar->addWidget(m_copiedLabel);
+    actionBar->addStretch();
+    actionBar->addWidget(m_deleteButton);
+    setAdminMode(false);
 
     auto *resultsLayout = new QVBoxLayout;
     resultsLayout->addWidget(m_resultsList);
-    resultsLayout->addLayout(bottomButtons);
     auto *resultsBox = new QGroupBox(QStringLiteral("Duties"), this);
     resultsBox->setLayout(resultsLayout);
 
@@ -171,15 +170,18 @@ ScheduleTab::ScheduleTab(
     columns->addWidget(sundayBox);
     columns->addWidget(resultsBox, 1);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *content = new QVBoxLayout;
+    content->setSpacing(12);
+    content->addWidget(title);
+    content->addWidget(subtitle);
+    content->addSpacing(6);
+    content->addLayout(columns);
+
+    auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(12);
-    layout->addWidget(title);
-    layout->addWidget(subtitle);
-    layout->addSpacing(6);
-    layout->addLayout(topRow);
-    layout->addSpacing(8);
-    layout->addLayout(columns);
+    layout->setSpacing(16);
+    layout->addLayout(content, 1);
+    layout->addWidget(actionBar);
 
     populateSundayList();
     selectSunday(nearestSunday(QDate::currentDate()));

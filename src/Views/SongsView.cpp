@@ -12,6 +12,7 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include "ActionBar.h"
 #include "Controllers/SongController.h"
 #include "SongEditDialog.h"
 
@@ -42,6 +43,7 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
                         "or press Play to open it."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
+    subtitle->setWordWrap(true);
 
     m_searchEdit = new QLineEdit(this);
     m_searchEdit->setPlaceholderText(QStringLiteral("Search by title or artist..."));
@@ -50,9 +52,6 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     m_addButton = new QPushButton(QStringLiteral("+  Add Song"), this);
     connect(m_addButton, &QPushButton::clicked, this, &SongsView::addClicked);
 
-    auto *topRow = new QHBoxLayout;
-    topRow->addWidget(m_searchEdit, 1);
-    topRow->addWidget(m_addButton);
 
     m_list = new QListWidget(this);
     m_list->setAlternatingRowColors(true);
@@ -69,7 +68,8 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     listLayout->addWidget(m_list);
     listBox->setMinimumWidth(280);
 
-    // Detail panel: song title, artist/key, Play, lyrics, Edit/Delete.
+    // Detail panel: song title, artist/key, lyrics. Play/Edit/Delete act
+    // on the selected song from the action bar.
     m_detailPanel = new QWidget(this);
     m_titleLabel = new QLabel(m_detailPanel);
     m_titleLabel->setStyleSheet(QStringLiteral("font-size: 20px; font-weight: 700;"));
@@ -89,21 +89,19 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
     connect(m_deleteButton, &QPushButton::clicked, this, &SongsView::deleteClicked);
 
-    auto *playRow = new QHBoxLayout;
-    playRow->addWidget(m_playButton);
-    playRow->addStretch();
-    auto *adminRow = new QHBoxLayout;
-    adminRow->addWidget(m_editButton);
-    adminRow->addWidget(m_deleteButton);
-    adminRow->addStretch();
+    auto *actionBar = new ActionBar(this);
+    actionBar->addWidget(m_addButton);
+    actionBar->addSeparator();
+    actionBar->addWidget(m_playButton);
+    actionBar->addWidget(m_editButton);
+    actionBar->addStretch();
+    actionBar->addWidget(m_deleteButton);
 
     auto *detailLayout = new QVBoxLayout(m_detailPanel);
     detailLayout->setContentsMargins(0, 0, 0, 0);
     detailLayout->addWidget(m_titleLabel);
     detailLayout->addWidget(m_metaLabel);
-    detailLayout->addLayout(playRow);
     detailLayout->addWidget(m_lyricsView, 1);
-    detailLayout->addLayout(adminRow);
 
     m_emptyLabel = new QLabel(QStringLiteral("Select a song to see its details."), this);
     m_emptyLabel->setAlignment(Qt::AlignCenter);
@@ -119,14 +117,19 @@ SongsView::SongsView(SongController *songController, QWidget *parent)
     columns->addWidget(listBox, 2);
     columns->addWidget(detailBox, 3);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *content = new QVBoxLayout;
+    content->setSpacing(12);
+    content->addWidget(title);
+    content->addWidget(subtitle);
+    content->addSpacing(6);
+    content->addWidget(m_searchEdit);
+    content->addLayout(columns, 1);
+
+    auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(12);
-    layout->addWidget(title);
-    layout->addWidget(subtitle);
-    layout->addSpacing(6);
-    layout->addLayout(topRow);
-    layout->addLayout(columns, 1);
+    layout->setSpacing(16);
+    layout->addLayout(content, 1);
+    layout->addWidget(actionBar);
 
     setAdminMode(false);
     refresh();
@@ -209,6 +212,10 @@ void SongsView::selectionChanged()
     }
     m_detailPanel->hide();
     m_emptyLabel->show();
+    // The action bar stays visible, so its song actions grey out instead.
+    for (QPushButton *button : {m_playButton, m_editButton, m_deleteButton}) {
+        button->setEnabled(false);
+    }
 }
 
 void SongsView::showSong(const Song &song)
@@ -220,6 +227,8 @@ void SongsView::showSong(const Song &song)
     m_metaLabel->setText(meta);
     m_metaLabel->setVisible(!meta.isEmpty());
     m_playButton->setEnabled(!song.link().isEmpty());
+    m_editButton->setEnabled(true);
+    m_deleteButton->setEnabled(true);
     m_playButton->setToolTip(song.link().isEmpty() ? QStringLiteral("No play link added") : song.link());
     m_lyricsView->setPlainText(song.lyrics());
 }

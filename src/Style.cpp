@@ -232,6 +232,23 @@ QPushButton#sidebarButton:hover:!checked {
     color: {{softText}};
 }
 
+/* Each page's action buttons, in a column at its right edge (see
+   ActionBar). */
+QFrame#actionBar {
+    background: {{surface}};
+    border: 1px solid {{border}};
+    border-radius: 10px;
+}
+QLabel#actionBarHeading {
+    color: {{mutedText}};
+    font-weight: 700;
+    font-size: 9pt;
+}
+QFrame#actionBarSeparator {
+    background: {{divider}};
+    border: none;
+}
+
 QGroupBox {
     border: 1px solid {{border}};
     border-radius: 10px;

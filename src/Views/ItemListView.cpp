@@ -24,6 +24,7 @@
 #include "Controllers/CategoryController.h"
 #include "Controllers/ItemController.h"
 #include "Controllers/TagController.h"
+#include "ActionBar.h"
 #include "FlowLayout.h"
 #include "ItemAddDialog.h"
 #include "ItemCardWidget.h"
@@ -127,8 +128,9 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     title->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(QStringLiteral("Select a row to edit, delete, add a tag, or change status."), this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
+    subtitle->setWordWrap(true);
 
-    auto *addItemButton = new QPushButton(QStringLiteral("+ Add Item"), this);
+    auto *addItemButton = new QPushButton(QStringLiteral("+  Add Item"), this);
     connect(addItemButton, &QPushButton::clicked, this, &ItemListView::addItemClicked);
 
     auto *titleColumn = new QVBoxLayout;
@@ -141,7 +143,6 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     headerRow->addSpacing(12);
     headerRow->addLayout(titleColumn);
     headerRow->addStretch();
-    headerRow->addWidget(addItemButton);
 
     // --- Search / question row ------------------------------------------
     m_searchEdit = new QLineEdit(this);
@@ -246,21 +247,27 @@ ItemListView::ItemListView(ItemController *itemController, TagController *tagCon
     connect(addTagButton, &QPushButton::clicked, this, &ItemListView::addTagClicked);
     connect(setStatusButton, &QPushButton::clicked, this, &ItemListView::setStatusClicked);
 
-    auto *buttonRow = new QHBoxLayout;
-    buttonRow->addWidget(editButton);
-    buttonRow->addWidget(addTagButton);
-    buttonRow->addWidget(setStatusButton);
-    buttonRow->addStretch();
-    buttonRow->addWidget(deleteButton);
+    auto *actionBar = new ActionBar(this);
+    actionBar->addWidget(addItemButton);
+    actionBar->addSeparator();
+    actionBar->addWidget(editButton);
+    actionBar->addWidget(addTagButton);
+    actionBar->addWidget(setStatusButton);
+    actionBar->addStretch();
+    actionBar->addWidget(deleteButton);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *content = new QVBoxLayout;
+    content->setSpacing(12);
+    content->addLayout(headerRow);
+    content->addLayout(searchRow);
+    content->addSpacing(6);
+    content->addWidget(m_viewStack);
+
+    auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(12);
-    layout->addLayout(headerRow);
-    layout->addLayout(searchRow);
-    layout->addSpacing(6);
-    layout->addWidget(m_viewStack);
-    layout->addLayout(buttonRow);
+    layout->setSpacing(16);
+    layout->addLayout(content, 1);
+    layout->addWidget(actionBar);
 
     refresh();
 }

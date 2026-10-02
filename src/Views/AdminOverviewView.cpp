@@ -10,6 +10,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include "ActionBar.h"
 #include "MemberBadge.h"
 #include "CategoryEditDialog.h"
 #include "Controllers/CategoryController.h"
@@ -39,6 +40,7 @@ AdminOverviewView::AdminOverviewView(
                         "Double-click a row to edit it, or use Delete to remove it."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
+    subtitle->setWordWrap(true);
 
     m_membersToggle = new QPushButton(QStringLiteral("Members"), this);
     m_tagsToggle = new QPushButton(QStringLiteral("Tags"), this);
@@ -83,12 +85,6 @@ AdminOverviewView::AdminOverviewView(
         addButton->setObjectName(QStringLiteral("secondaryButton"));
     }
 
-    auto *addRow = new QHBoxLayout;
-    addRow->addWidget(m_addMemberButton);
-    addRow->addWidget(m_addTagButton);
-    addRow->addWidget(m_addCategoryButton);
-    addRow->addWidget(m_addDutyTypeButton);
-    addRow->addStretch();
 
     m_list = new QListWidget(this);
     m_list->setAlternatingRowColors(true);
@@ -101,22 +97,30 @@ AdminOverviewView::AdminOverviewView(
     m_roleButton = new QPushButton(QStringLiteral("Make Admin"), this);
     m_roleButton->setObjectName(QStringLiteral("secondaryButton"));
     connect(m_roleButton, &QPushButton::clicked, this, &AdminOverviewView::toggleAdminRoleClicked);
-    auto *bottomRow = new QHBoxLayout;
-    bottomRow->addWidget(m_deleteButton);
-    bottomRow->addWidget(m_roleButton);
-    bottomRow->addStretch();
+    auto *actionBar = new ActionBar(this);
+    actionBar->addWidget(m_addMemberButton);
+    actionBar->addWidget(m_addTagButton);
+    actionBar->addWidget(m_addCategoryButton);
+    actionBar->addWidget(m_addDutyTypeButton);
+    actionBar->addSeparator();
+    actionBar->addWidget(m_roleButton);
+    actionBar->addStretch();
+    actionBar->addWidget(m_deleteButton);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *content = new QVBoxLayout;
+    content->setSpacing(12);
+    content->addWidget(title);
+    content->addWidget(subtitle);
+    content->addSpacing(6);
+    content->addLayout(toggleRow);
+    content->addWidget(m_searchEdit);
+    content->addWidget(m_list, 1);
+
+    auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(12);
-    layout->addWidget(title);
-    layout->addWidget(subtitle);
-    layout->addSpacing(6);
-    layout->addLayout(toggleRow);
-    layout->addWidget(m_searchEdit);
-    layout->addLayout(addRow);
-    layout->addWidget(m_list, 1);
-    layout->addLayout(bottomRow);
+    layout->setSpacing(16);
+    layout->addLayout(content, 1);
+    layout->addWidget(actionBar);
 
     updateAddButtonVisibility();
     refresh();

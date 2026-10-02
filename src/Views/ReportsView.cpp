@@ -20,6 +20,7 @@
 
 #include "Controllers/DutyController.h"
 #include "Controllers/UserController.h"
+#include "ActionBar.h"
 #include "MemberPickerField.h"
 #include "Style.h"
 
@@ -137,6 +138,7 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
                         "or \"All Sundays in range\" to see every Sunday in it."),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
+    subtitle->setWordWrap(true);
 
     const QDate today = QDate::currentDate();
     m_fromEdit = new QDateEdit(today.addMonths(-3), this);
@@ -155,19 +157,6 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     filterRow->addWidget(m_fromEdit);
     filterRow->addWidget(new QLabel(QStringLiteral("To"), this));
     filterRow->addWidget(m_toEdit);
-    filterRow->addSpacing(12);
-    const QList<QPair<QString, int>> presets = {
-        {QStringLiteral("Last month"), 1},
-        {QStringLiteral("Last 3 months"), 3},
-        {QStringLiteral("Last year"), 12},
-    };
-    for (const auto &preset : presets) {
-        auto *button = new QPushButton(preset.first, this);
-        button->setObjectName(QStringLiteral("secondaryButton"));
-        const int months = preset.second;
-        connect(button, &QPushButton::clicked, this, [this, months]() { presetClicked(months); });
-        filterRow->addWidget(button);
-    }
     filterRow->addStretch();
 
     // Its own row: the field grows as Members are added.
@@ -194,28 +183,51 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     connect(m_saveButton, &QPushButton::clicked, this, &ReportsView::saveClicked);
     m_statusLabel = new QLabel(this);
     m_statusLabel->setObjectName(QStringLiteral("mutedLabel"));
-    auto *reportButtons = new QHBoxLayout;
-    reportButtons->addWidget(m_statusLabel, 1);
-    reportButtons->addWidget(m_saveButton);
     auto *reportBox = new QGroupBox(QStringLiteral("Report"), this);
     auto *reportLayout = new QVBoxLayout(reportBox);
     reportLayout->addWidget(m_reportView, 1);
-    reportLayout->addLayout(reportButtons);
+    reportLayout->addWidget(m_statusLabel);
+
+    // Quick date ranges sit in the action bar too, under their own heading.
+    auto *actionBar = new ActionBar(this);
+    actionBar->addWidget(m_saveButton);
+    actionBar->addSeparator();
+    auto *rangeHeading = new QLabel(QStringLiteral("Quick range"), this);
+    rangeHeading->setObjectName(QStringLiteral("mutedLabel"));
+    actionBar->addWidget(rangeHeading);
+    const QList<QPair<QString, int>> presets = {
+        {QStringLiteral("Last month"), 1},
+        {QStringLiteral("Last 3 months"), 3},
+        {QStringLiteral("Last year"), 12},
+    };
+    for (const auto &preset : presets) {
+        auto *button = new QPushButton(preset.first, this);
+        button->setObjectName(QStringLiteral("secondaryButton"));
+        const int months = preset.second;
+        connect(button, &QPushButton::clicked, this, [this, months]() { presetClicked(months); });
+        actionBar->addWidget(button);
+    }
+    actionBar->addStretch();
 
     auto *columns = new QHBoxLayout;
     columns->setSpacing(16);
     columns->addWidget(sundayBox);
     columns->addWidget(reportBox, 1);
 
-    auto *layout = new QVBoxLayout(this);
+    auto *content = new QVBoxLayout;
+    content->setSpacing(12);
+    content->addWidget(title);
+    content->addWidget(subtitle);
+    content->addSpacing(6);
+    content->addLayout(filterRow);
+    content->addLayout(memberRow);
+    content->addLayout(columns, 1);
+
+    auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(20, 20, 20, 20);
-    layout->setSpacing(12);
-    layout->addWidget(title);
-    layout->addWidget(subtitle);
-    layout->addSpacing(6);
-    layout->addLayout(filterRow);
-    layout->addLayout(memberRow);
-    layout->addLayout(columns, 1);
+    layout->setSpacing(16);
+    layout->addLayout(content, 1);
+    layout->addWidget(actionBar);
 
     refresh();
 }
@@ -405,7 +417,7 @@ QString ReportsView::rangeHtml(bool darkColors) const
     const ReportColors c = reportColors(darkColors);
     if (m_rows.isEmpty()) {
         return QStringLiteral("<p style='color:%1;'>No Sunday schedules in this date range. "
-                              "Try a wider range with the buttons above.</p>").arg(c.muted);
+                              "Try a wider range from Quick range on the right.</p>").arg(c.muted);
     }
 
     // m_rows is newest first; keep that order, and each Sunday's duty order.
