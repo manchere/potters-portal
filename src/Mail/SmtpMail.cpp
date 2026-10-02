@@ -103,7 +103,7 @@ namespace
     QByteArray buildMessage(const QString &from, const QStringList &recipients, const QString &subject, const QString &body)
     {
         QStringList lines = {
-            QStringLiteral("From: Potter's Portal <%1>").arg(from),
+            QStringLiteral("From: Potters Portal <%1>").arg(from),
             QStringLiteral("To: %1").arg(recipients.join(QStringLiteral(", "))),
             QStringLiteral("Subject: %1").arg(subject),
             QStringLiteral("Date: %1").arg(QDateTime::currentDateTime().toString(Qt::RFC2822Date)),

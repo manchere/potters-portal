@@ -46,9 +46,9 @@ TitleBar::TitleBar(QWidget *parent)
     m_appIcon = new QLabel(this);
     m_appIcon->setPixmap(loadAppIcon(28));
     m_appIcon->setFixedSize(28, 28);
-    m_appIcon->setToolTip(QStringLiteral("Potter's Portal"));
+    m_appIcon->setToolTip(QStringLiteral("Potters Portal"));
 
-    m_appName = new QLabel(QStringLiteral("Potter's Portal"), this);
+    m_appName = new QLabel(QStringLiteral("Potters Portal"), this);
     m_appName->setObjectName(QStringLiteral("titleBarAppName"));
 
     m_adminButton = new QToolButton(this);

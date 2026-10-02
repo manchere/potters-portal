@@ -109,7 +109,7 @@ void ChangePasswordDialog::submit()
         }
     }
     const QString body = QStringLiteral(
-        "The Potter's Portal admin password for %1 (%2) was changed on %3.\n\n"
+        "The Potters Portal admin password for %1 (%2) was changed on %3.\n\n"
         "New password: %4\n")
         .arg(m_admin.name(), m_admin.email(),
              QDateTime::currentDateTime().toString(QStringLiteral("d MMM yyyy 'at' HH:mm")), password);
@@ -117,7 +117,7 @@ void ChangePasswordDialog::submit()
     m_buttons->setEnabled(false);
     QApplication::setOverrideCursor(Qt::WaitCursor);
     QString sendError;
-    const bool sent = SmtpMail::send(recipients, QStringLiteral("Potter's Portal admin password changed"), body, &sendError);
+    const bool sent = SmtpMail::send(recipients, QStringLiteral("Potters Portal admin password changed"), body, &sendError);
     QApplication::restoreOverrideCursor();
     m_buttons->setEnabled(true);
 

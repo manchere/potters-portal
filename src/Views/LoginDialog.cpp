@@ -55,7 +55,7 @@ LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     forgotLink->setAlignment(Qt::AlignRight);
     connect(forgotLink, &ClickableLabel::clicked, this, [this]() {
         QUrl mail(QStringLiteral("mailto:") + kAdminContactEmail);
-        mail.setQuery(QStringLiteral("subject=Potter's Portal admin password reset"));
+        mail.setQuery(QStringLiteral("subject=Potters Portal admin password reset"));
         if (!QDesktopServices::openUrl(mail)) {
             m_errorLabel->setText(QStringLiteral("Email %1 to reset the admin password.").arg(kAdminContactEmail));
             m_errorLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
