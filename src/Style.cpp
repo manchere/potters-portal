@@ -304,6 +304,16 @@ QFrame#actionBarSeparator {
     border: none;
 }
 
+/* Settings page theme choices (see SettingsView). */
+QFrame#themeCard {
+    background: {{surface}};
+    border: 1px solid {{border}};
+    border-radius: 10px;
+}
+QFrame#themeCard[selected="true"] {
+    border: 2px solid {{focus}};
+}
+
 QGroupBox {
     border: 1px solid {{border}};
     border-radius: 10px;

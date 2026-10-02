@@ -53,7 +53,7 @@ private slots:
 private:
     void populateMemberFilter();
     void populateSundayList();
-    // darkColors is for the on-screen view in the black theme only; saved
+    // darkColors is for the on-screen view in the dark themes only; saved
     // files always use the light colors so they print well.
     QString rangeHtml(bool darkColors) const;
     QString sundayHtml(const QDate &date, bool darkColors) const;

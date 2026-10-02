@@ -10,10 +10,12 @@
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
 #include "Models/User.h"
+#include "Style.h"
 
 class ItemListView;
 class AdminOverviewView;
 class ScheduleTab;
+class SettingsView;
 class SongsView;
 class ReportsView;
 class Sidebar;
@@ -24,8 +26,9 @@ class QStackedWidget;
 // tag refreshes the tag list shown in both Items and the combined
 // Taxonomy tab. Adding an item happens via a modal dialog opened from the
 // Items tab, not a separate tab. Frameless window: TitleBar (custom
-// minimize/maximize/close + the tab bar) sits above a QStackedWidget that
-// swaps between the views.
+// minimize/maximize/close + the admin lock) sits above the Sidebar and a
+// QStackedWidget that swaps between the pages; the last page, Settings,
+// holds the theme choice and the Admin password change.
 //
 // There is no login gate at startup -- the app is usable read-only right
 // away. Clicking the lock icon in the title bar opens a password-only
@@ -47,7 +50,7 @@ private slots:
     void toggleMaximizeRestore();
     void adminButtonClicked();
     void changePasswordClicked();
-    void themeButtonClicked();
+    void themeChosen(Theme theme);
 
 private:
     // Default-constructed (id() < 0, isAdmin() false) means logged out.
@@ -66,6 +69,7 @@ private:
     ScheduleTab *m_scheduleTab = nullptr;
     SongsView *m_songsView = nullptr;
     ReportsView *m_reportsView = nullptr;
+    SettingsView *m_settingsView = nullptr;
 
     TitleBar *m_titleBar = nullptr;
     Sidebar *m_sidebar = nullptr;

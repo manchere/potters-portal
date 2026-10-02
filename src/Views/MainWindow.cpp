@@ -12,6 +12,7 @@
 #include "ChangePasswordDialog.h"
 #include "LoginDialog.h"
 #include "ReportsView.h"
+#include "SettingsView.h"
 #include "SongsView.h"
 #include "Sidebar.h"
 #include "TitleBar.h"
@@ -113,6 +114,8 @@ MainWindow::MainWindow(QWidget *parent)
         &m_dutyController, &m_userController, &m_dutyTypeController, this);
     m_songsView = new SongsView(&m_songController, this);
     m_reportsView = new ReportsView(&m_dutyController, &m_userController, this);
+    m_settingsView = new SettingsView(this);
+    m_settingsView->setCurrentTheme(currentTheme());
 
     auto *frame = new ResizeFrame(this);
 
@@ -128,6 +131,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_sidebar->addPage(QStringLiteral("🎵"), QStringLiteral("Songs"));    // 🎵
     m_sidebar->addPage(QStringLiteral("📦"), QStringLiteral("Items"));    // 📦
     m_sidebar->addPage(QStringLiteral("🏷"), QStringLiteral("Taxonomy")); // 🏷
+    m_sidebar->addPage(QStringLiteral("⚙"), QStringLiteral("Settings"));     // ⚙
 
     m_stack = new QStackedWidget(frame);
     m_stack->addWidget(m_scheduleTab);
@@ -135,15 +139,15 @@ MainWindow::MainWindow(QWidget *parent)
     m_stack->addWidget(m_songsView);
     m_stack->addWidget(m_itemListView);
     m_stack->addWidget(m_adminOverviewView);
+    m_stack->addWidget(m_settingsView);
 
     connect(m_sidebar, &Sidebar::currentChanged, m_stack, &QStackedWidget::setCurrentIndex);
     connect(m_titleBar, &TitleBar::minimizeClicked, this, &QWidget::showMinimized);
     connect(m_titleBar, &TitleBar::closeClicked, this, &QWidget::close);
     connect(m_titleBar, &TitleBar::maximizeClicked, this, &MainWindow::toggleMaximizeRestore);
     connect(m_titleBar, &TitleBar::adminButtonClicked, this, &MainWindow::adminButtonClicked);
-    connect(m_titleBar, &TitleBar::changePasswordClicked, this, &MainWindow::changePasswordClicked);
-    connect(m_titleBar, &TitleBar::themeButtonClicked, this, &MainWindow::themeButtonClicked);
-    m_titleBar->setBlackTheme(currentTheme() == Theme::Black);
+    connect(m_settingsView, &SettingsView::changePasswordClicked, this, &MainWindow::changePasswordClicked);
+    connect(m_settingsView, &SettingsView::themeChosen, this, &MainWindow::themeChosen);
 
     auto *frameLayout = new QVBoxLayout(frame);
     frameLayout->setContentsMargins(kResizeMargin, kResizeMargin, kResizeMargin, kResizeMargin);
@@ -195,6 +199,7 @@ void MainWindow::adminButtonClicked()
     m_scheduleTab->setAdminMode(isAdmin);
     m_adminOverviewView->setAdminMode(isAdmin, m_currentUser.id());
     m_songsView->setAdminMode(isAdmin);
+    m_settingsView->setAdminMode(isAdmin);
 }
 
 void MainWindow::changePasswordClicked()
@@ -211,11 +216,9 @@ void MainWindow::changePasswordClicked()
     dialog.exec();
 }
 
-void MainWindow::themeButtonClicked()
+void MainWindow::themeChosen(Theme theme)
 {
-    const Theme theme = currentTheme() == Theme::Black ? Theme::Light : Theme::Black;
     applyTheme(theme);
-    m_titleBar->setBlackTheme(theme == Theme::Black);
     // The Sunday list's per-row colors and the report's HTML aren't
     // reached by the stylesheet.
     m_scheduleTab->restyleSundayItems();

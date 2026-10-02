@@ -51,17 +51,6 @@ TitleBar::TitleBar(QWidget *parent)
     m_appName = new QLabel(QStringLiteral("Potter's Portal"), this);
     m_appName->setObjectName(QStringLiteral("titleBarAppName"));
 
-    m_themeButton = new QToolButton(this);
-    m_themeButton->setObjectName(QStringLiteral("titleBarButton"));
-    connect(m_themeButton, &QToolButton::clicked, this, &TitleBar::themeButtonClicked);
-    setBlackTheme(false);
-
-    m_passwordButton = new QToolButton(this);
-    m_passwordButton->setObjectName(QStringLiteral("titleBarButton"));
-    m_passwordButton->setText(QStringLiteral("🔑")); // 🔑
-    m_passwordButton->setToolTip(QStringLiteral("Change admin password"));
-    connect(m_passwordButton, &QToolButton::clicked, this, &TitleBar::changePasswordClicked);
-
     m_adminButton = new QToolButton(this);
     m_adminButton->setObjectName(QStringLiteral("titleBarButton"));
     connect(m_adminButton, &QToolButton::clicked, this, &TitleBar::adminButtonClicked);
@@ -93,8 +82,6 @@ TitleBar::TitleBar(QWidget *parent)
     layout->addSpacing(8);
     layout->addWidget(m_appName);
     layout->addStretch();
-    layout->addWidget(m_themeButton);
-    layout->addWidget(m_passwordButton);
     layout->addWidget(m_adminButton);
     layout->addWidget(m_minimizeButton);
     layout->addWidget(m_maximizeButton);
@@ -103,15 +90,8 @@ TitleBar::TitleBar(QWidget *parent)
 
 void TitleBar::setAdminLoggedIn(bool loggedIn)
 {
-    m_passwordButton->setVisible(loggedIn);
     m_adminButton->setText(loggedIn ? QStringLiteral("\U0001F513") : QStringLiteral("\U0001F512")); // 🔓 / 🔒
     m_adminButton->setToolTip(loggedIn ? QStringLiteral("Admin mode -- click to log out") : QStringLiteral("Admin Login"));
-}
-
-void TitleBar::setBlackTheme(bool isBlack)
-{
-    m_themeButton->setText(isBlack ? QStringLiteral("☀") : QStringLiteral("☾")); // ☀ / ☾
-    m_themeButton->setToolTip(isBlack ? QStringLiteral("Switch to light theme") : QStringLiteral("Switch to black theme"));
 }
 
 void TitleBar::setMaximized(bool maximized)

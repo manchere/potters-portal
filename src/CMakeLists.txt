@@ -56,6 +56,7 @@ add_executable (PottersPortal
   "Views/TitleBar.h" "Views/TitleBar.cpp"
   "Views/Sidebar.h" "Views/Sidebar.cpp"
   "Views/ActionBar.h" "Views/ActionBar.cpp"
+  "Views/SettingsView.h" "Views/SettingsView.cpp"
   "Views/FlowLayout.h" "Views/FlowLayout.cpp"
   "Views/ClickableLabel.h" "Views/ClickableLabel.cpp"
   "Views/Badge.h" "Views/Badge.cpp"
