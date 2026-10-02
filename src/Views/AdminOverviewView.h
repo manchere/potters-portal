@@ -28,7 +28,7 @@ class UserController;
 // "+ Add Duty" creates a duty *type* (a duty name + icon,
 // e.g. "Ushering" + an emoji) -- it does NOT schedule a Member against a
 // role for a specific Sunday. Scheduling a Member happens exclusively on
-// the Schedule tab ("+ Assign Duty" / "+ Assign Another Duty").
+// the Schedule tab ("+ Assign Duty" / "+ Add Member").
 //
 // Adding/editing a Member is Admin-only (gated the same way the Schedule tab
 // is); Tags, Categories, and Duty Types stay open to everyone, as

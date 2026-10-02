@@ -61,7 +61,6 @@ private slots:
     void sundaySelectionChanged(QListWidgetItem *current, QListWidgetItem *previous);
     void sundaySearchChanged();
     void assignClicked();
-    void assignForSelectedMemberClicked();
     void addMemberClicked();
     void editClicked();
     void deleteClicked();
@@ -116,10 +115,6 @@ private:
     QCheckBox *m_combineCheck = nullptr;
     QPushButton *m_assignButton = nullptr;
     QPushButton *m_addMemberButton = nullptr;
-    // Top-right: prefills the Member combo with whichever row is
-    // currently selected, for quickly giving that same person another
-    // duty on this date (FR-7.2) -- enabled only when a row is selected.
-    QPushButton *m_assignForMemberButton = nullptr;
     QPushButton *m_editButton = nullptr;
     QPushButton *m_deleteButton = nullptr;
     QPushButton *m_copyButton = nullptr;

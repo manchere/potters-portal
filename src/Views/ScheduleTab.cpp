@@ -86,11 +86,6 @@ ScheduleTab::ScheduleTab(
     m_addMemberButton->setToolTip(
         QStringLiteral("Put a member on this Sunday: their duties and a backup"));
     connect(m_addMemberButton, &QPushButton::clicked, this, &ScheduleTab::addMemberClicked);
-    m_assignForMemberButton = new QPushButton(QStringLiteral("+  Assign Another Duty"), this);
-    m_assignForMemberButton->setObjectName(QStringLiteral("secondaryButton"));
-    m_assignForMemberButton->setToolTip(
-        QStringLiteral("Give the selected Member another duty on this Sunday"));
-    connect(m_assignForMemberButton, &QPushButton::clicked, this, &ScheduleTab::assignForSelectedMemberClicked);
     m_copyButton = new QPushButton(QStringLiteral("Copy Schedule"), this);
     m_copyButton->setObjectName(QStringLiteral("secondaryButton"));
     m_copyButton->setToolTip(QStringLiteral("Copy this Sunday's duties (Ctrl+C)"));
@@ -139,7 +134,6 @@ ScheduleTab::ScheduleTab(
 
     auto *actionBar = new ActionBar(this);
     actionBar->addWidget(m_assignButton);
-    actionBar->addWidget(m_assignForMemberButton);
     actionBar->addWidget(m_editButton);
     actionBar->addSeparator();
     actionBar->addWidget(m_addMemberButton);
@@ -215,6 +209,34 @@ namespace
         column->setSizePolicy(policy);
         layout->addWidget(column);
     }
+
+    // The duty as an icon pill in its column. The column never gets
+    // narrower than the pill, so the duty's full name stays readable
+    // however small the window is (the member and backup names give way).
+    QLabel *addDutyPill(QHBoxLayout *layout, QWidget *column, const QString &text, int share)
+    {
+        auto *columnLayout = new QHBoxLayout(column);
+        columnLayout->setContentsMargins(0, 0, 0, 0);
+        auto *pill = new QLabel(text, column);
+        pill->setObjectName(QStringLiteral("dutyPill"));
+        pill->setToolTip(text);
+        pill->ensurePolished();
+        pill->setMinimumWidth(pill->sizeHint().width());
+        columnLayout->addWidget(pill);
+        columnLayout->addStretch();
+        addColumn(layout, column, share);
+        column->setMinimumWidth(pill->minimumWidth());
+        return pill;
+    }
+
+    // Fits the list row to its widget, so nothing (e.g. the backup's
+    // badge) is cut off at the bottom.
+    void setRowWidget(QListWidget *list, QListWidgetItem *item, QWidget *row)
+    {
+        row->ensurePolished();
+        item->setSizeHint(QSize(0, std::max(52, row->sizeHint().height())));
+        list->setItemWidget(item, row);
+    }
 }
 
 QWidget *ScheduleTab::buildBackupLine(const Duty &duty, QWidget *parent)
@@ -278,14 +300,7 @@ QWidget *ScheduleTab::buildRow(const Duty &duty)
 
     // --- Duty: icon + name in a pill.
     const DutyType dutyType = m_dutyTypeController->dutyTypeById(duty.dutyTypeId());
-    auto *dutyColumn = new QWidget(row);
-    auto *dutyLayout = new QHBoxLayout(dutyColumn);
-    dutyLayout->setContentsMargins(0, 0, 0, 0);
-    auto *dutyPill = new QLabel(dutyType.iconAndName(), dutyColumn);
-    dutyPill->setObjectName(QStringLiteral("dutyPill"));
-    dutyLayout->addWidget(dutyPill);
-    dutyLayout->addStretch();
-    addColumn(layout, dutyColumn, 4);
+    addDutyPill(layout, new QWidget(row), dutyType.iconAndName(), 4);
 
     // --- Backup: caption over a small badge + name, or a dash.
     auto *backupColumn = new QWidget(row);
@@ -348,14 +363,8 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
         lineLayout->setContentsMargins(0, 0, 0, 0);
         lineLayout->setSpacing(12);
 
-        auto *dutyCell = new QWidget(line);
-        auto *dutyCellLayout = new QHBoxLayout(dutyCell);
-        dutyCellLayout->setContentsMargins(0, 0, 0, 0);
-        auto *dutyPill = new QLabel(m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName(), dutyCell);
-        dutyPill->setObjectName(QStringLiteral("dutyPill"));
-        dutyCellLayout->addWidget(dutyPill);
-        dutyCellLayout->addStretch();
-        addColumn(lineLayout, dutyCell, 4);
+        addDutyPill(lineLayout, new QWidget(line),
+                    m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName(), 4);
 
         auto *backupCell = new QWidget(line);
         auto *backupCellLayout = new QHBoxLayout(backupCell);
@@ -389,7 +398,6 @@ void ScheduleTab::setAdminMode(bool isAdmin)
     m_isAdmin = isAdmin;
     m_assignButton->setVisible(isAdmin);
     m_addMemberButton->setVisible(isAdmin);
-    m_assignForMemberButton->setVisible(isAdmin);
     m_editButton->setVisible(isAdmin);
     m_deleteButton->setVisible(isAdmin);
     m_copyButton->setVisible(isAdmin);
@@ -413,7 +421,6 @@ void ScheduleTab::updateActionState()
     const bool hasDuty = m_selectedDutyId >= 0;
     m_assignButton->setEnabled(editable);
     m_addMemberButton->setEnabled(editable);
-    m_assignForMemberButton->setEnabled(editable && hasDuty);
     m_editButton->setEnabled(editable && hasDuty);
     m_deleteButton->setEnabled(editable && hasDuty);
     // On a combined row they act on the member's whole place this Sunday.
@@ -684,9 +691,8 @@ void ScheduleTab::rebuildResults()
         for (const Duty &duty : duties) {
             auto *item = new QListWidgetItem(m_resultsList);
             item->setData(Qt::UserRole, duty.id());
-            item->setSizeHint(QSize(0, 56));
             m_resultsList->addItem(item);
-            m_resultsList->setItemWidget(item, buildRow(duty));
+            setRowWidget(m_resultsList, item, buildRow(duty));
         }
         return;
     }
@@ -709,13 +715,11 @@ void ScheduleTab::rebuildResults()
         item->setData(Qt::UserRole, memberDuties.first().id());
         m_resultsList->addItem(item);
         if (key < 0) {
-            item->setSizeHint(QSize(0, 56));
-            m_resultsList->setItemWidget(item, buildRow(memberDuties.first()));
+            setRowWidget(m_resultsList, item, buildRow(memberDuties.first()));
             continue;
         }
         item->setData(Qt::UserRole + 1, key);
-        item->setSizeHint(QSize(0, std::max(56, 16 + static_cast<int>(memberDuties.size()) * 34)));
-        m_resultsList->setItemWidget(item, buildMemberRow(m_userController->userById(key), memberDuties));
+        setRowWidget(m_resultsList, item, buildMemberRow(m_userController->userById(key), memberDuties));
     }
 }
 
@@ -769,33 +773,6 @@ void ScheduleTab::addMemberClicked()
         QMessageBox::information(this, QStringLiteral("Add Member"),
             QStringLiteral("Already on this Sunday, so not added again: %1.").arg(skipped.join(QStringLiteral(", "))));
     }
-}
-
-void ScheduleTab::assignForSelectedMemberClicked()
-{
-    if (!m_isAdmin || !selectedSundayEditable() || m_selectedDutyId < 0) {
-        return;
-    }
-    const Duty reference = m_dutyController->dutyById(m_selectedDutyId);
-    if (reference.id() < 0) {
-        return;
-    }
-    // Prefill just the Member -- duty type/support/notes start blank, since this
-    // is a brand-new duty for the same person, not an edit of the
-    // one that's currently selected.
-    Duty prefilled;
-    prefilled.setMemberId(reference.memberId());
-    AssignDutyDialog dialog(prefilled, m_selectedDate, m_userController->allUsers(), m_dutyTypeController, this);
-    if (dialog.exec() != QDialog::Accepted) {
-        return;
-    }
-    Duty newDuty = dialog.duty();
-    if (!m_dutyController->addDuty(newDuty)) {
-        QMessageBox::critical(this, QStringLiteral("Assign Another Duty"), m_dutyController->lastError());
-        return;
-    }
-    populateSundayList();
-    selectSunday(m_selectedDate);
 }
 
 void ScheduleTab::editClicked()
