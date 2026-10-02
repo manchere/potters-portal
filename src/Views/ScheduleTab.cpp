@@ -200,33 +200,51 @@ ScheduleTab::ScheduleTab(
 
 namespace
 {
-    // The row's three columns (member, duty, backup) take fixed shares of
-    // the width, so they line up from one row to the next.
-    void addColumn(QHBoxLayout *layout, QWidget *column, int share)
+    // Every row's member column is this wide (longer names end in "..."),
+    // so the duties start at the same place on each row, clear of the name.
+    constexpr int kMemberColumnWidth = 190;
+    constexpr int kNameToDutyGap = 24;
+
+    // Sets text cut to fit width with a trailing "...", in the label's
+    // styled font; the tooltip keeps the whole text.
+    void setElidedText(QLabel *label, const QString &text, int width)
     {
-        QSizePolicy policy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-        policy.setHorizontalStretch(share);
-        column->setSizePolicy(policy);
-        layout->addWidget(column);
+        label->ensurePolished();
+        label->setText(label->fontMetrics().elidedText(text, Qt::ElideRight, width));
+        label->setToolTip(text);
     }
 
-    // The duty as an icon pill in its column. The column never gets
-    // narrower than the pill, so the duty's full name stays readable
-    // however small the window is (the member and backup names give way).
-    QLabel *addDutyPill(QHBoxLayout *layout, QWidget *column, const QString &text, int share)
+    QLabel *makeDutyPill(const QString &text, QWidget *parent)
     {
-        auto *columnLayout = new QHBoxLayout(column);
-        columnLayout->setContentsMargins(0, 0, 0, 0);
-        auto *pill = new QLabel(text, column);
+        auto *pill = new QLabel(text, parent);
         pill->setObjectName(QStringLiteral("dutyPill"));
         pill->setToolTip(text);
         pill->ensurePolished();
         pill->setMinimumWidth(pill->sizeHint().width());
-        columnLayout->addWidget(pill);
-        columnLayout->addStretch();
-        addColumn(layout, column, share);
-        column->setMinimumWidth(pill->minimumWidth());
         return pill;
+    }
+
+    // The member's name (and any notes) in the fixed-width column.
+    QWidget *buildMemberColumn(const QString &name, const QString &nameStyle, const QString &notes, QWidget *parent)
+    {
+        auto *column = new QWidget(parent);
+        column->setFixedWidth(kMemberColumnWidth);
+        auto *layout = new QVBoxLayout(column);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(1);
+        layout->addStretch();
+        auto *nameLabel = new QLabel(column);
+        nameLabel->setObjectName(nameStyle);
+        setElidedText(nameLabel, name, kMemberColumnWidth);
+        layout->addWidget(nameLabel);
+        if (!notes.isEmpty()) {
+            auto *notesLabel = new QLabel(column);
+            notesLabel->setObjectName(QStringLiteral("mutedLabel"));
+            setElidedText(notesLabel, notes, kMemberColumnWidth);
+            layout->addWidget(notesLabel);
+        }
+        layout->addStretch();
+        return column;
     }
 
     // Fits the list row to its widget, so nothing (e.g. the backup's
@@ -239,30 +257,49 @@ namespace
     }
 }
 
+// "Backup", the backup's small badge and their name on one line (or a
+// dash), so the badge sits level with the caption instead of under it.
 QWidget *ScheduleTab::buildBackupLine(const Duty &duty, QWidget *parent)
 {
     auto *line = new QWidget(parent);
+    line->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     auto *layout = new QHBoxLayout(line);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(6);
+    auto *caption = new QLabel(QStringLiteral("Backup"), line);
+    caption->setObjectName(QStringLiteral("dutyCaption"));
+    layout->addWidget(caption, 0, Qt::AlignVCenter);
     const User backup = duty.supportMemberId() > 0 ? m_userController->userById(duty.supportMemberId()) : User();
     if (backup.id() >= 0) {
-        layout->addWidget(MemberBadge::make(backup.name(), backup.color(), 20, line));
+        layout->addWidget(MemberBadge::make(backup.name(), backup.color(), 20, line), 0, Qt::AlignVCenter);
         auto *backupName = new QLabel(backup.name(), line);
         backupName->setObjectName(QStringLiteral("dutyBackupName"));
         backupName->setToolTip(backup.name());
-        layout->addWidget(backupName, 1);
+        backupName->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        layout->addWidget(backupName, 1, Qt::AlignVCenter);
     } else {
         auto *none = new QLabel(QStringLiteral("—"), line);
         none->setObjectName(QStringLiteral("mutedLabel"));
-        layout->addWidget(none, 1);
+        layout->addWidget(none, 1, Qt::AlignVCenter);
     }
     return line;
 }
 
+// The duty's pill in a column m_dutyColumnWidth wide, so the backups
+// after it line up from row to row.
+QWidget *ScheduleTab::buildDutyCell(const Duty &duty, QWidget *parent)
+{
+    auto *cell = new QWidget(parent);
+    cell->setFixedWidth(m_dutyColumnWidth);
+    auto *layout = new QHBoxLayout(cell);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(makeDutyPill(m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName(), cell));
+    layout->addStretch();
+    return cell;
+}
+
 // One duty, laid out across the full row: the member (badge, name in
-// bold, any notes beneath), the duty as an icon pill, and the backup
-// with their own small badge.
+// bold, any notes beneath), the duty as an icon pill, and the backup.
 QWidget *ScheduleTab::buildRow(const Duty &duty)
 {
     auto *row = new QWidget(m_resultsList);
@@ -280,39 +317,12 @@ QWidget *ScheduleTab::buildRow(const Duty &duty)
         placeholder->setObjectName(QStringLiteral("avatarPlaceholder"));
         layout->addWidget(placeholder);
     }
-
-    // --- Member: name, then notes if any.
-    auto *memberColumn = new QWidget(row);
-    auto *memberLayout = new QVBoxLayout(memberColumn);
-    memberLayout->setContentsMargins(0, 0, 0, 0);
-    memberLayout->setSpacing(1);
-    auto *nameLabel = new QLabel(member.id() >= 0 ? member.name() : QStringLiteral("Nobody assigned"), memberColumn);
-    nameLabel->setObjectName(member.id() >= 0 ? QStringLiteral("dutyMemberName") : QStringLiteral("dutyUnfilled"));
-    nameLabel->setToolTip(nameLabel->text());
-    memberLayout->addWidget(nameLabel);
-    if (!duty.notes().isEmpty()) {
-        auto *notesLabel = new QLabel(duty.notes(), memberColumn);
-        notesLabel->setObjectName(QStringLiteral("mutedLabel"));
-        notesLabel->setToolTip(duty.notes());
-        memberLayout->addWidget(notesLabel);
-    }
-    addColumn(layout, memberColumn, 5);
-
-    // --- Duty: icon + name in a pill.
-    const DutyType dutyType = m_dutyTypeController->dutyTypeById(duty.dutyTypeId());
-    addDutyPill(layout, new QWidget(row), dutyType.iconAndName(), 4);
-
-    // --- Backup: caption over a small badge + name, or a dash.
-    auto *backupColumn = new QWidget(row);
-    auto *backupLayout = new QVBoxLayout(backupColumn);
-    backupLayout->setContentsMargins(0, 0, 0, 0);
-    backupLayout->setSpacing(2);
-    auto *backupCaption = new QLabel(QStringLiteral("Backup"), backupColumn);
-    backupCaption->setObjectName(QStringLiteral("dutyCaption"));
-    backupLayout->addWidget(backupCaption);
-    backupLayout->addWidget(buildBackupLine(duty, backupColumn));
-    addColumn(layout, backupColumn, 4);
-
+    layout->addWidget(member.id() >= 0
+        ? buildMemberColumn(member.name(), QStringLiteral("dutyMemberName"), duty.notes(), row)
+        : buildMemberColumn(QStringLiteral("Nobody assigned"), QStringLiteral("dutyUnfilled"), duty.notes(), row));
+    layout->addSpacing(kNameToDutyGap);
+    layout->addWidget(buildDutyCell(duty, row));
+    layout->addWidget(buildBackupLine(duty, row), 1);
     return row;
 }
 
@@ -326,31 +336,17 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
     layout->setContentsMargins(10, 6, 12, 6);
     layout->setSpacing(12);
 
-    auto *badge = MemberBadge::make(member.name(), member.color(), 32, row);
-    layout->addWidget(badge, 0, Qt::AlignTop);
-
-    auto *memberColumn = new QWidget(row);
-    auto *memberLayout = new QVBoxLayout(memberColumn);
-    memberLayout->setContentsMargins(0, 0, 0, 0);
-    memberLayout->setSpacing(1);
-    auto *nameLabel = new QLabel(member.name(), memberColumn);
-    nameLabel->setObjectName(QStringLiteral("dutyMemberName"));
-    nameLabel->setToolTip(member.name());
-    memberLayout->addWidget(nameLabel);
+    layout->addWidget(MemberBadge::make(member.name(), member.color(), 32, row), 0, Qt::AlignTop);
     QStringList notes;
     for (const Duty &duty : duties) {
         if (!duty.notes().isEmpty() && !notes.contains(duty.notes())) {
             notes.append(duty.notes());
         }
     }
-    if (!notes.isEmpty()) {
-        auto *notesLabel = new QLabel(notes.join(QStringLiteral(" · ")), memberColumn);
-        notesLabel->setObjectName(QStringLiteral("mutedLabel"));
-        notesLabel->setToolTip(notes.join(QLatin1Char('\n')));
-        memberLayout->addWidget(notesLabel);
-    }
-    memberLayout->addStretch();
-    addColumn(layout, memberColumn, 5);
+    auto *memberColumn = buildMemberColumn(member.name(), QStringLiteral("dutyMemberName"),
+                                           notes.join(QStringLiteral(" · ")), row);
+    layout->addWidget(memberColumn, 0, Qt::AlignTop);
+    layout->addSpacing(kNameToDutyGap);
 
     const bool canEdit = m_isAdmin && selectedSundayEditable();
     auto *dutiesColumn = new QWidget(row);
@@ -362,20 +358,8 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
         auto *lineLayout = new QHBoxLayout(line);
         lineLayout->setContentsMargins(0, 0, 0, 0);
         lineLayout->setSpacing(12);
-
-        addDutyPill(lineLayout, new QWidget(line),
-                    m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName(), 4);
-
-        auto *backupCell = new QWidget(line);
-        auto *backupCellLayout = new QHBoxLayout(backupCell);
-        backupCellLayout->setContentsMargins(0, 0, 0, 0);
-        backupCellLayout->setSpacing(6);
-        auto *backupCaption = new QLabel(QStringLiteral("Backup"), backupCell);
-        backupCaption->setObjectName(QStringLiteral("dutyCaption"));
-        backupCellLayout->addWidget(backupCaption);
-        backupCellLayout->addWidget(buildBackupLine(duty, backupCell), 1);
-        addColumn(lineLayout, backupCell, 4);
-
+        lineLayout->addWidget(buildDutyCell(duty, line));
+        lineLayout->addWidget(buildBackupLine(duty, line), 1);
         if (canEdit) {
             auto *editButton = new QToolButton(line);
             editButton->setObjectName(QStringLiteral("dutyEditButton"));
@@ -388,7 +372,7 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
         }
         dutiesLayout->addWidget(line);
     }
-    addColumn(layout, dutiesColumn, 8);
+    layout->addWidget(dutiesColumn, 1);
 
     return row;
 }
@@ -687,6 +671,13 @@ void ScheduleTab::rebuildResults()
         m_resultsList->setItemWidget(item, new QLabel(QStringLiteral("No duties for this date."), m_resultsList));
         return;
     }
+    m_dutyColumnWidth = 0;
+    for (const Duty &duty : duties) {
+        QLabel *probe = makeDutyPill(m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName(), m_resultsList);
+        m_dutyColumnWidth = std::max(m_dutyColumnWidth, probe->minimumWidth());
+        delete probe;
+    }
+
     if (!m_combineCheck->isChecked()) {
         for (const Duty &duty : duties) {
             auto *item = new QListWidgetItem(m_resultsList);

@@ -86,8 +86,9 @@ private:
     // line per duty showing that duty's own backup and, for an Admin on
     // an upcoming Sunday, an Edit button for just that duty.
     QWidget *buildMemberRow(const User &member, const QVector<Duty> &duties);
-    // Small badge + the duty's backup's name, or a dash.
+    // "Backup" + small badge + the duty's backup's name, or a dash.
     QWidget *buildBackupLine(const Duty &duty, QWidget *parent);
+    QWidget *buildDutyCell(const Duty &duty, QWidget *parent);
     // Opens Edit Duty for one duty and saves it.
     void editDuty(int dutyId);
     // Duties only ever happen on Sundays -- rounds forward to the
@@ -135,6 +136,8 @@ private:
     // a single-duty row), so Edit/Delete act on all their duties.
     int m_selectedDutyId = -1;
     int m_selectedMemberId = -1;
+    // Width of the widest duty pill on the open Sunday (rebuildResults).
+    int m_dutyColumnWidth = 0;
     // The Sunday whose schedule was last copied; invalid until Copy is
     // used. Only the date is kept -- the paste reads whatever is on that
     // Sunday at paste time.
