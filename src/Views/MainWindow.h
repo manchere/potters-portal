@@ -17,6 +17,7 @@ class AdminOverviewView;
 class ScheduleTab;
 class SongsView;
 class ReportsView;
+class Sidebar;
 class TitleBar;
 class QStackedWidget;
 
@@ -71,5 +72,6 @@ private:
     ReportsView *m_reportsView = nullptr;
 
     TitleBar *m_titleBar = nullptr;
+    Sidebar *m_sidebar = nullptr;
     QStackedWidget *m_stack = nullptr;
 };

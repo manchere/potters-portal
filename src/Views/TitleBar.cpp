@@ -7,7 +7,6 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
-#include <QTabBar>
 #include <QToolButton>
 #include <QWindow>
 
@@ -44,17 +43,13 @@ TitleBar::TitleBar(QWidget *parent)
     setObjectName(QStringLiteral("titleBar"));
     setFixedHeight(44);
 
-    // The icon replaces the app name entirely — the tooltip is the only
-    // remaining textual identification of what the window is.
     m_appIcon = new QLabel(this);
     m_appIcon->setPixmap(loadAppIcon(28));
     m_appIcon->setFixedSize(28, 28);
     m_appIcon->setToolTip(QStringLiteral("Potter's Portal"));
 
-    m_tabBar = new QTabBar(this);
-    m_tabBar->setObjectName(QStringLiteral("titleBarTabs"));
-    m_tabBar->setExpanding(false);
-    m_tabBar->setDrawBase(false);
+    m_appName = new QLabel(QStringLiteral("Potter's Portal"), this);
+    m_appName->setObjectName(QStringLiteral("titleBarAppName"));
 
     m_themeButton = new QToolButton(this);
     m_themeButton->setObjectName(QStringLiteral("titleBarButton"));
@@ -95,8 +90,8 @@ TitleBar::TitleBar(QWidget *parent)
     layout->setContentsMargins(16, 0, 8, 0);
     layout->setSpacing(4);
     layout->addWidget(m_appIcon);
-    layout->addSpacing(20);
-    layout->addWidget(m_tabBar);
+    layout->addSpacing(8);
+    layout->addWidget(m_appName);
     layout->addStretch();
     layout->addWidget(m_themeButton);
     layout->addWidget(m_passwordButton);
@@ -128,8 +123,8 @@ void TitleBar::setMaximized(bool maximized)
 
 void TitleBar::mousePressEvent(QMouseEvent *event)
 {
-    // Only reached for clicks on empty title bar space — the tab bar and
-    // the min/max/close buttons are child widgets and handle their own
+    // Only reached for clicks on empty title bar space (or the app name) —
+    // the buttons are child widgets and handle their own
     // mouse events first.
     if (event->button() == Qt::LeftButton) {
         if (QWindow *handle = window()->windowHandle()) {

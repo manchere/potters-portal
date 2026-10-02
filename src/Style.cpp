@@ -199,27 +199,35 @@ QToolButton#titleBarCloseButton:hover {
     color: white;
 }
 
-/* Tab bar now lives inside the title bar row (see TitleBar). Navy/gold to
-   match the app icon (pottershouse.jpg): navy for the active state, a thin
-   gold underline as the brand accent. */
-QTabBar#titleBarTabs {
-    background: transparent;
-    qproperty-drawBase: 0;
+QLabel#titleBarAppName {
+    color: {{strongText}};
+    font-weight: 700;
+    font-size: 11pt;
 }
-QTabBar#titleBarTabs::tab {
+
+/* Page navigation (see Sidebar). Navy/gold to match the app icon
+   (pottershouse.jpg): navy for the active state, a gold edge as the brand
+   accent. */
+QFrame#sidebar {
+    background: {{surface}};
+    border-right: 1px solid {{divider}};
+}
+QPushButton#sidebarButton {
     background: transparent;
-    padding: 8px 18px;
-    margin: 6px 2px;
+    border: none;
+    border-left: 3px solid transparent;
     border-radius: 8px;
+    padding: 10px 12px;
+    text-align: left;
     color: {{mutedText}};
     font-weight: 600;
 }
-QTabBar#titleBarTabs::tab:selected {
+QPushButton#sidebarButton:checked {
     background: {{tabSelected}};
     color: {{tabSelectedText}};
-    border-bottom: 2px solid #d6a537;
+    border-left: 3px solid #d6a537;
 }
-QTabBar#titleBarTabs::tab:hover:!selected {
+QPushButton#sidebarButton:hover:!checked {
     background: {{hover}};
     color: {{softText}};
 }

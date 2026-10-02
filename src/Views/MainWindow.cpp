@@ -2,7 +2,7 @@
 
 #include <QMouseEvent>
 #include <QStackedWidget>
-#include <QTabBar>
+#include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QWindow>
 
@@ -13,6 +13,7 @@
 #include "LoginDialog.h"
 #include "ReportsView.h"
 #include "SongsView.h"
+#include "Sidebar.h"
 #include "TitleBar.h"
 #include "Style.h"
 
@@ -20,7 +21,7 @@ namespace {
 
 constexpr int kResizeMargin = 6;
 
-// The window's central widget: hosts TitleBar + the QStackedWidget of
+// The window's central widget: hosts TitleBar, Sidebar + the QStackedWidget of
 // pages, with a thin margin around them so *this* widget (rather than a
 // child) receives mouse events right at the window edge — used to drive
 // OS-native interactive resize (QWindow::startSystemResize) since the
@@ -116,23 +117,26 @@ MainWindow::MainWindow(QWidget *parent)
     auto *frame = new ResizeFrame(this);
 
     m_titleBar = new TitleBar(frame);
-    // Date is inserted first (leftmost) per FR-8.1; the rest keep their
-    // existing left-to-right order. Assigning a duty happens via a button
-    // on the Schedule tab itself (see ScheduleTab), not a separate tab.
-    m_titleBar->tabBar()->insertTab(0, QStringLiteral("Schedule"));
-    m_titleBar->tabBar()->addTab(QStringLiteral("Reports"));
-    m_titleBar->tabBar()->addTab(QStringLiteral("Songs"));
-    m_titleBar->tabBar()->addTab(QStringLiteral("Items"));
-    m_titleBar->tabBar()->addTab(QStringLiteral("Taxonomy"));
+
+    // Schedule comes first (top) per FR-8.1; the rest keep their existing
+    // order. Assigning a duty happens via a button on the Schedule page
+    // itself (see ScheduleTab), not a separate page. Sidebar order must
+    // match the stack's.
+    m_sidebar = new Sidebar(frame);
+    m_sidebar->addPage(QStringLiteral("📅"), QStringLiteral("Schedule")); // 📅
+    m_sidebar->addPage(QStringLiteral("📊"), QStringLiteral("Reports"));  // 📊
+    m_sidebar->addPage(QStringLiteral("🎵"), QStringLiteral("Songs"));    // 🎵
+    m_sidebar->addPage(QStringLiteral("📦"), QStringLiteral("Items"));    // 📦
+    m_sidebar->addPage(QStringLiteral("🏷"), QStringLiteral("Taxonomy")); // 🏷
 
     m_stack = new QStackedWidget(frame);
-    m_stack->insertWidget(0, m_scheduleTab);
+    m_stack->addWidget(m_scheduleTab);
     m_stack->addWidget(m_reportsView);
     m_stack->addWidget(m_songsView);
     m_stack->addWidget(m_itemListView);
     m_stack->addWidget(m_adminOverviewView);
 
-    connect(m_titleBar->tabBar(), &QTabBar::currentChanged, m_stack, &QStackedWidget::setCurrentIndex);
+    connect(m_sidebar, &Sidebar::currentChanged, m_stack, &QStackedWidget::setCurrentIndex);
     connect(m_titleBar, &TitleBar::minimizeClicked, this, &QWidget::showMinimized);
     connect(m_titleBar, &TitleBar::closeClicked, this, &QWidget::close);
     connect(m_titleBar, &TitleBar::maximizeClicked, this, &MainWindow::toggleMaximizeRestore);
@@ -145,7 +149,12 @@ MainWindow::MainWindow(QWidget *parent)
     frameLayout->setContentsMargins(kResizeMargin, kResizeMargin, kResizeMargin, kResizeMargin);
     frameLayout->setSpacing(0);
     frameLayout->addWidget(m_titleBar);
-    frameLayout->addWidget(m_stack);
+    auto *body = new QHBoxLayout;
+    body->setContentsMargins(0, 0, 0, 0);
+    body->setSpacing(0);
+    body->addWidget(m_sidebar);
+    body->addWidget(m_stack, 1);
+    frameLayout->addLayout(body, 1);
 
     setCentralWidget(frame);
 

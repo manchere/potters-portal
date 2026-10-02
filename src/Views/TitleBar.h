@@ -2,13 +2,12 @@
 
 #include <QWidget>
 
-class QTabBar;
 class QToolButton;
 class QLabel;
 
-// Custom replacement for the OS title bar: app name on the left, the tab
-// bar (Add Item / Items / Tags & Categories) in the same row, then
-// minimize/maximize-restore/close buttons on the right. MainWindow owns the
+// Custom replacement for the OS title bar: app icon and name on the left,
+// then theme/admin and minimize/maximize-restore/close buttons on the
+// right. Page navigation lives in the Sidebar below it. MainWindow owns the
 // actual window-state changes; this widget only reports intent (clicked
 // signals) plus handles dragging the window via a click-and-drag on any
 // empty space in the bar.
@@ -18,8 +17,6 @@ class TitleBar : public QWidget
 
 public:
     explicit TitleBar(QWidget *parent = nullptr);
-
-    QTabBar *tabBar() const { return m_tabBar; }
 
     // Reflects window state so the maximize button shows the right
     // glyph/tooltip (restore vs. maximize).
@@ -47,7 +44,7 @@ protected:
 
 private:
     QLabel *m_appIcon = nullptr;
-    QTabBar *m_tabBar = nullptr;
+    QLabel *m_appName = nullptr;
     QToolButton *m_themeButton = nullptr;
     QToolButton *m_passwordButton = nullptr;
     QToolButton *m_adminButton = nullptr;

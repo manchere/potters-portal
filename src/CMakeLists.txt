@@ -53,6 +53,7 @@ add_executable (PottersPortal
   "Views/CategoryEditDialog.h" "Views/CategoryEditDialog.cpp"
   "Views/TagEditDialog.h" "Views/TagEditDialog.cpp"
   "Views/TitleBar.h" "Views/TitleBar.cpp"
+  "Views/Sidebar.h" "Views/Sidebar.cpp"
   "Views/FlowLayout.h" "Views/FlowLayout.cpp"
   "Views/ClickableLabel.h" "Views/ClickableLabel.cpp"
   "Views/Badge.h" "Views/Badge.cpp"
