@@ -17,7 +17,7 @@ class CategoryController;
 class TagController;
 class ClickableLabel;
 
-// Shared name/description/quantity/location/status/category/tags/image form
+// Shared name/description/quantity/location/barcode/status/category/tags/image form
 // used by both the "Add Item" tab and the edit-item dialog opened from the
 // list. Photo capture + Groq auto-fill live here so both flows get them for
 // free.
@@ -74,6 +74,7 @@ private:
     QPlainTextEdit *m_descriptionEdit = nullptr;
     QSpinBox *m_quantitySpin = nullptr;
     QLineEdit *m_locationEdit = nullptr;
+    QLineEdit *m_barcodeEdit = nullptr;
     QComboBox *m_statusCombo = nullptr;
     QComboBox *m_categoryCombo = nullptr;
     QListWidget *m_tagList = nullptr;

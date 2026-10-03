@@ -56,6 +56,9 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
             m_locationEdit->setText(street);
         }
     }
+    // Same value the mobile app scans to find this item; must be unique.
+    m_barcodeEdit = new QLineEdit(this);
+    m_barcodeEdit->setPlaceholderText(tr("Optional"));
     m_statusCombo = new QComboBox(this);
     for (ItemStatus status : allItemStatuses()) {
         m_statusCombo->addItem(Badge::statusName(status), static_cast<int>(status));
@@ -74,6 +77,7 @@ ItemFormWidget::ItemFormWidget(TagController *tagController, CategoryController 
     detailsForm->addRow(tr("Description"), m_descriptionEdit);
     detailsForm->addRow(tr("Quantity"), m_quantitySpin);
     detailsForm->addRow(tr("Location"), m_locationEdit);
+    detailsForm->addRow(tr("Barcode"), m_barcodeEdit);
     detailsForm->addRow(tr("Status"), m_statusCombo);
     detailsForm->addRow(tr("Category"), m_categoryCombo);
     auto *detailsBox = new QGroupBox(tr("Item Details"), this);
@@ -282,6 +286,7 @@ Item ItemFormWidget::toItem() const
     item.setDescription(m_descriptionEdit->toPlainText().trimmed());
     item.setQuantity(m_quantitySpin->value());
     item.setLocation(m_locationEdit->text().trimmed());
+    item.setBarcode(m_barcodeEdit->text().trimmed());
     item.setStatus(static_cast<ItemStatus>(m_statusCombo->currentData().toInt()));
     item.setCategoryId(m_categoryCombo->currentData().toInt());
 
@@ -303,6 +308,7 @@ void ItemFormWidget::setItem(const Item &item)
     m_descriptionEdit->setPlainText(item.description());
     m_quantitySpin->setValue(item.quantity());
     m_locationEdit->setText(item.location());
+    m_barcodeEdit->setText(item.barcode());
     m_statusCombo->setCurrentIndex(m_statusCombo->findData(static_cast<int>(item.status())));
     m_categoryCombo->setCurrentIndex(m_categoryCombo->findData(item.categoryId()));
 
