@@ -18,3 +18,24 @@ services:
       # Groq key for photo auto-fill; can be left empty.
       - key: GROQ_API_KEY
         sync: false
+
+  # The mobile app as a website (mobile/, its own repo), so members can open
+  # it in a browser or from a home-screen icon without Expo Go.
+  - type: web
+    name: potters-portal-app
+    runtime: static
+    repo: https://github.com/manchere/potters-mobile
+    branch: master
+    buildCommand: npm ci && npm run build:web
+    staticPublishPath: ./dist
+    autoDeploy: true
+    # The app has one page; send every path to it.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # The API server above, built into the site, e.g.
+      # https://potters-portal-api.onrender.com (its URL on its Render page).
+      - key: EXPO_PUBLIC_API_URL
+        sync: false
