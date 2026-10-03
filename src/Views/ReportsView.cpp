@@ -26,7 +26,7 @@
 #include "MemberPickerField.h"
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/TeamController.h"
-#include "Style.h"
+#include "Style.h"
 #include "MessageDialog.h"
 
 namespace
@@ -99,11 +99,16 @@ namespace
     }
 
     // Who did what: one row per duty -- duty, who served, backup, notes.
+    // Columns take fixed shares of the width rather than sizing to their
+    // content, so they line up across rows and from one Sunday's table to
+    // the next.
     QString lineupTable(const QVector<ScheduleReportRow> &rows, const ReportColors &c)
     {
         QString html = QStringLiteral("<table width='100%' cellspacing='0'>"
-                                      "<tr><th class='cell'>%1</th><th class='cell'>%2</th>"
-                                      "<th class='cell'>%3</th><th class='cell'>%4</th></tr>")
+                                      "<tr><th class='cell' width='26%' align='left'>%1</th>"
+                                      "<th class='cell' width='30%' align='left'>%2</th>"
+                                      "<th class='cell' width='20%' align='left'>%3</th>"
+                                      "<th class='cell' width='24%' align='left'>%4</th></tr>")
             .arg(QCoreApplication::translate("ReportsView", "Duty"), QCoreApplication::translate("ReportsView", "Serving"),
                  QCoreApplication::translate("ReportsView", "Backup"), QCoreApplication::translate("ReportsView", "Notes"));
         for (const ScheduleReportRow &row : rows) {
@@ -121,9 +126,9 @@ namespace
             const QString backupCell = row.supportMemberId > 0
                 ? esc(row.supportMemberName)
                 : QStringLiteral("<span style='color:%1;'>&mdash;</span>").arg(c.muted);
-            html += QStringLiteral("<tr><td class='cell'><span>%1</span>&nbsp; <b>%2</b></td>"
-                                   "<td class='cell'>%3</td><td class='cell'>%4</td>"
-                                   "<td class='cell'><span style='color:%5;'>%6</span></td></tr>")
+            html += QStringLiteral("<tr><td class='cell' width='26%'><span>%1</span>&nbsp; <b>%2</b></td>"
+                                   "<td class='cell' width='30%'>%3</td><td class='cell' width='20%'>%4</td>"
+                                   "<td class='cell' width='24%'><span style='color:%5;'>%6</span></td></tr>")
                 .arg(esc(row.dutyTypeIcon), esc(row.dutyTypeName), servingCell, backupCell, c.muted, esc(row.notes));
         }
         return html + QStringLiteral("</table>");
