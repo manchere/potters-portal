@@ -82,6 +82,42 @@ int main(int argc, char **argv)
 
     QHttpServer server;
 
+    // --- CORS ---------------------------------------------------------------
+    // Lets the web version of the mobile app (served from another address)
+    // call this API from a browser. Requests are authorised by the bearer
+    // token, not cookies, so allowing any origin exposes nothing extra.
+    const auto addCorsHeaders = [](QHttpHeaders &headers) {
+        headers.replaceOrAppend(QByteArrayLiteral("Access-Control-Allow-Origin"), QByteArrayLiteral("*"));
+        headers.replaceOrAppend(QByteArrayLiteral("Access-Control-Allow-Methods"),
+                                QByteArrayLiteral("GET, POST, PUT, PATCH, DELETE, OPTIONS"));
+        headers.replaceOrAppend(QByteArrayLiteral("Access-Control-Allow-Headers"),
+                                QByteArrayLiteral("Authorization, Content-Type"));
+        headers.replaceOrAppend(QByteArrayLiteral("Access-Control-Max-Age"), QByteArrayLiteral("86400"));
+    };
+    server.addAfterRequestHandler(&server, [addCorsHeaders](const QHttpServerRequest &, QHttpServerResponse &response) {
+        QHttpHeaders headers = response.headers();
+        addCorsHeaders(headers);
+        response.setHeaders(std::move(headers));
+    });
+    // A browser asks first (OPTIONS) before e.g. a POST with a token; no
+    // route handles OPTIONS, so answer it here. Anything else is a 404.
+    server.setMissingHandler(&server, [addCorsHeaders](const QHttpServerRequest &request, QHttpServerResponder &responder) {
+        QHttpServerResponse response = request.method() == QHttpServerRequest::Method::Options
+            ? QHttpServerResponse(StatusCode::NoContent)
+            : errorResponse(QStringLiteral("not found"), StatusCode::NotFound);
+        QHttpHeaders headers = response.headers();
+        addCorsHeaders(headers);
+        response.setHeaders(std::move(headers));
+        responder.sendResponse(std::move(response));
+    });
+
+    // --- Health ------------------------------------------------------------
+    // For the host's health check (and waking a sleeping free instance);
+    // doesn't touch the database.
+    server.route("/api/health", QHttpServerRequest::Method::Get, [] {
+        return QHttpServerResponse(QJsonObject{{QStringLiteral("status"), QStringLiteral("ok")}});
+    });
+
     // --- Items -------------------------------------------------------------
     server.route("/api/items", QHttpServerRequest::Method::Get, [&itemController] {
         QJsonArray items;

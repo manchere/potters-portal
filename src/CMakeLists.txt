@@ -44,7 +44,12 @@ set(CORE_SOURCES
   "Vision/GroqVisionClient.h" "Vision/GroqVisionClient.cpp"
 )
 
+# POTTERS_SERVER_ONLY builds just the REST API server -- no Widgets or
+# translation tools needed -- for the Linux image in the repo's Dockerfile.
+option(POTTERS_SERVER_ONLY "Build only PottersPortalServer" OFF)
+
 # --- Desktop app (Qt Widgets) ------------------------------------------------
+if (NOT POTTERS_SERVER_ONLY)
 add_executable (PottersPortal
   "Portal.cpp" "Portal.h"
   "Style.h" "Style.cpp"
@@ -96,6 +101,7 @@ add_executable (PottersPortal
   "Vision/LocationClient.h" "Vision/LocationClient.cpp"
 )
 target_include_directories(PottersPortal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
 
 # --- REST API server (Qt HttpServer, no GUI) --------------------------------
 # Same Models/Controllers/Database as the desktop app; this is the piece the
@@ -110,16 +116,24 @@ add_executable (PottersPortalServer
 target_include_directories(PottersPortalServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET PottersPortal PROPERTY CXX_STANDARD 20)
+  if (NOT POTTERS_SERVER_ONLY)
+    set_property(TARGET PottersPortal PROPERTY CXX_STANDARD 20)
+  endif()
   set_property(TARGET PottersPortalServer PROPERTY CXX_STANDARD 20)
 endif()
 
 # Find Qt6 Widgets + Sql (Postgres access via the QPSQL driver) + HttpServer +
 # Network (outbound HTTPS call to Groq for the photo auto-fill feature, used
 # by both the desktop app directly and the REST server's /api/vision route)
-find_package(Qt6 COMPONENTS Widgets Sql HttpServer Network LinguistTools REQUIRED)
-target_link_libraries(PottersPortal PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network)
+if (POTTERS_SERVER_ONLY)
+  find_package(Qt6 COMPONENTS Sql HttpServer Network REQUIRED)
+else()
+  find_package(Qt6 COMPONENTS Widgets Sql HttpServer Network LinguistTools REQUIRED)
+  target_link_libraries(PottersPortal PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network)
+endif()
 target_link_libraries(PottersPortalServer PRIVATE Qt6::Sql Qt6::HttpServer Qt6::Network)
+
+if (NOT POTTERS_SERVER_ONLY)
 
 # French UI text (Settings > Language). The .ts file holds every tr() string
 # with its French version; it's compiled to a .qm and built into the desktop
@@ -137,6 +151,7 @@ qt_add_translations(PottersPortal
 if (WIN32)
   target_link_libraries(PottersPortal PRIVATE WindowsApp.lib)
 endif()
+endif() # NOT POTTERS_SERVER_ONLY
 
 # --- Runtime dependency deployment -----------------------------------------
 # Qt's QPSQL driver dynamically loads libpq at runtime; Qt does not ship it,
@@ -152,12 +167,17 @@ find_program(WINDEPLOYQT_EXECUTABLE windeployqt
 # Small app-mark icon shown in the custom title bar (TitleBar.cpp loads it
 # from applicationDirPath() at runtime), deployed next to the desktop exe
 # only — the headless server has no title bar to show it in.
-add_custom_command(TARGET PottersPortal POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          "${CMAKE_CURRENT_SOURCE_DIR}/pottershouse.jpg" "$<TARGET_FILE_DIR:PottersPortal>"
-)
+if (NOT POTTERS_SERVER_ONLY)
+  add_custom_command(TARGET PottersPortal POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/pottershouse.jpg" "$<TARGET_FILE_DIR:PottersPortal>"
+  )
+  set(_deployTargets PottersPortal PottersPortalServer)
+else()
+  set(_deployTargets PottersPortalServer)
+endif()
 
-foreach(_target PottersPortal PottersPortalServer)
+foreach(_target ${_deployTargets})
   if (WIN32 AND EXISTS "${LIBPQ_RUNTIME_DIR}/libpq.dll")
     foreach(_dll libpq.dll libssl-3-x64.dll libcrypto-3-x64.dll lz4.dll z.dll)
       add_custom_command(TARGET ${_target} POST_BUILD
