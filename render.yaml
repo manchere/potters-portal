@@ -28,6 +28,11 @@ services:
     branch: master
     buildCommand: npm ci && npm run build:web
     staticPublishPath: ./dist
+    envVars:
+      # Baked into the bundle at build time. Without it the web build falls
+      # back to http://localhost:8080, which no member's browser can reach.
+      - key: EXPO_PUBLIC_API_URL
+        value: https://potters-portal-api.onrender.com
     autoDeploy: true
     # The app has one page; send every path to it.
     routes:
