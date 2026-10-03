@@ -11,7 +11,7 @@ who can reach it and how.
 |---|---|---|
 | Data in transit | TLS on every connection: desktop → database, server → database, phone → server (HTTPS), email, AI calls | Good — but the database certificate isn't verified (see 2) |
 | Data at rest | Stored by Neon on encrypted cloud storage; passwords and session tokens hashed, never stored readable | Good |
-| Sign-in | Email + password for members and Admins; PBKDF2-HMAC-SHA256 password hashes; 180-day mobile sessions | Fair |
+| Sign-in | Phone number + password for members and Admins; PBKDF2-HMAC-SHA256 password hashes; 180-day mobile sessions | Fair |
 | Access rights (mobile / API) | Checked by the server on every request, per section and action | Good |
 | Access rights (desktop) | Checked by the desktop app itself — but the app holds the database owner's credentials | **Weak** (see 1) |
 | Secrets | Connection string and API keys kept out of the repository | Good |

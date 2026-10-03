@@ -21,7 +21,7 @@ namespace MemberBadge
         const QString fill = MemberColors::isValid(color) ? color : MemberColors::defaultColor();
         badge->setText(MemberColors::initials(name));
         badge->setStyleSheet(QStringLiteral(
-            "QLabel { background: %1; color: white; border-radius: %2px; font-weight: 700; font-size: %3px; }")
-            .arg(fill).arg(size / 2).arg(qMax(10, size * 2 / 5)));
+            "QLabel { background: %1; color: %4; border-radius: %2px; font-weight: 700; font-size: %3px; }")
+            .arg(fill).arg(size / 2).arg(qMax(10, size * 2 / 5)).arg(MemberColors::textColor(fill)));
     }
 }

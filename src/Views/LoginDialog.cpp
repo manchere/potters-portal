@@ -23,10 +23,11 @@ LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     auto *heading = new QLabel(tr("Sign In"), this);
     heading->setObjectName(QStringLiteral("pageTitle"));
 
-    m_emailEdit = new QLineEdit(this);
-    m_emailEdit->setPlaceholderText(tr("you@example.com"));
-    m_emailEdit->setFocus();
-    connect(m_emailEdit, &QLineEdit::textChanged, this, [this]() { m_errorLabel->clear(); });
+    m_phoneEdit = new QLineEdit(this);
+    m_phoneEdit->setPlaceholderText(tr("Your phone number"));
+    m_phoneEdit->setInputMethodHints(Qt::ImhDialableCharactersOnly);
+    m_phoneEdit->setFocus();
+    connect(m_phoneEdit, &QLineEdit::textChanged, this, [this]() { m_errorLabel->clear(); });
 
     m_passwordEdit = new QLineEdit(this);
     m_passwordEdit->setEchoMode(QLineEdit::Password);
@@ -36,7 +37,7 @@ LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     connect(m_showPasswordCheck, &QCheckBox::toggled, this, &LoginDialog::toggleShowPassword);
 
     auto *form = new QFormLayout;
-    form->addRow(tr("Email"), m_emailEdit);
+    form->addRow(tr("Phone number"), m_phoneEdit);
     form->addRow(tr("Password"), m_passwordEdit);
     form->addRow(QString(), m_showPasswordCheck);
 
@@ -87,8 +88,8 @@ void LoginDialog::toggleShowPassword(bool show)
 void LoginDialog::attemptLogin()
 {
     User user;
-    if (!m_userController->verifyPassword(m_emailEdit->text().trimmed(), m_passwordEdit->text(), user)) {
-        m_errorLabel->setText(tr("Incorrect email or password."));
+    if (!m_userController->verifyPassword(m_phoneEdit->text().trimmed(), m_passwordEdit->text(), user)) {
+        m_errorLabel->setText(tr("Incorrect phone number or password."));
         return;
     }
     m_user = user;

@@ -16,17 +16,25 @@ public:
 
     QVector<User> allUsers() const;
     User userById(int id) const;
-    User userByEmail(const QString &email) const;
+    // `phone` may be in any format; it's normalized before the lookup.
+    User userByPhone(const QString &phone) const;
 
-    // Looks the account up by email and checks the password against its
+    // Digits only, keeping a leading "+" when given, so "07700 900-123"
+    // and "07700900123" are the same number. Every phone stored or looked
+    // up goes through this.
+    static QString normalizePhone(const QString &phone);
+    // At least 7 digits once normalized.
+    static bool isValidPhone(const QString &phone);
+
+    // Looks the account up by phone and checks the password against its
     // stored PBKDF2 hash (PasswordAuth::verifyPassword). On success,
     // outUser is populated (including passwordHash/passwordSalt, which
     // callers must not forward into any JSON response -- see
-    // Json::userToJson). Returns false on either "no such email" or
+    // Json::userToJson). Returns false on either "no such phone" or
     // "wrong password", indistinguishably, so callers don't leak which.
-    bool verifyPassword(const QString &email, const QString &password, User &outUser) const;
+    bool verifyPassword(const QString &phone, const QString &password, User &outUser) const;
 
-    // Desktop admin unlock is password-only (no email/username field) --
+    // Desktop admin unlock is password-only (no phone/username field) --
     // tries the password against every Admin account's stored hash and
     // reports the first match. Fine for the small number of Admin accounts
     // a church would realistically have; outUser is whichever Admin the
@@ -39,6 +47,7 @@ public slots:
     // user.passwordHash()/passwordSalt() must already be set (see
     // PasswordAuth) before calling this -- the controller only persists
     // them, it doesn't hash.
+    // phone is normalized before saving, on both add and update.
     bool addUser(User &user);
     // Updates profile fields and password only -- never is_admin, so a
     // stale User object can't silently grant or revoke Admin. Use

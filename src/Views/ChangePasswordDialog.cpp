@@ -33,7 +33,7 @@ ChangePasswordDialog::ChangePasswordDialog(const User &admin, UserController *us
     auto *heading = new QLabel(tr("Change Password"), this);
     heading->setObjectName(QStringLiteral("pageTitle"));
     auto *subtitle = new QLabel(
-        tr("For %1. The new password will be emailed to you and to %2.")
+        tr("For %1. The new password will be emailed to %2.")
             .arg(admin.name(), kAdminContactEmail),
         this);
     subtitle->setObjectName(QStringLiteral("pageSubtitle"));
@@ -103,15 +103,10 @@ void ChangePasswordDialog::submit()
         return;
     }
 
-    QStringList recipients;
-    for (const QString &address : {m_admin.email().trimmed(), kAdminContactEmail}) {
-        if (!address.isEmpty() && !recipients.contains(address, Qt::CaseInsensitive)) {
-            recipients << address;
-        }
-    }
+    const QStringList recipients{kAdminContactEmail};
     const QString body = tr("The Potters Portal admin password for %1 (%2) was changed on %3.\n\n"
         "New password: %4\n")
-        .arg(m_admin.name(), m_admin.email(),
+        .arg(m_admin.name(), m_admin.phone(),
              QLocale().toString(QDateTime::currentDateTime(), tr("d MMM yyyy 'at' HH:mm")), password);
 
     m_buttons->setEnabled(false);

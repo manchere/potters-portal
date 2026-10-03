@@ -366,25 +366,30 @@ int main(int argc, char **argv)
         }
         const QJsonObject body = doc.object();
         const QString name = body.value(QStringLiteral("name")).toString().trimmed();
-        const QString email = body.value(QStringLiteral("email")).toString().trimmed();
+        const QString phone = body.value(QStringLiteral("phone")).toString().trimmed();
         const QString password = body.value(QStringLiteral("password")).toString();
         // Optional; profiles created without one get the default color.
         const QString color = body.value(QStringLiteral("color")).toString(MemberColors::defaultColor());
         if (!MemberColors::isValid(color)) {
-            return errorResponse(QStringLiteral("color must be one of the profile colors"), StatusCode::BadRequest);
+            return errorResponse(QStringLiteral("color must be a #rrggbb hex color"), StatusCode::BadRequest);
         }
-        if (name.isEmpty() || email.isEmpty() || password.length() < 8) {
+        if (name.isEmpty() || phone.isEmpty() || password.length() < 8) {
             return errorResponse(
-                QStringLiteral("name, email, and a password of at least 8 characters are required"),
+                QStringLiteral("name, phone, and a password of at least 8 characters are required"),
                 StatusCode::BadRequest);
         }
-        if (userController.userByEmail(email).id() >= 0) {
-            return errorResponse(QStringLiteral("an account with this email already exists"), StatusCode::Conflict);
+        if (!UserController::isValidPhone(phone)) {
+            return errorResponse(QStringLiteral("enter a valid phone number"), StatusCode::BadRequest);
+        }
+        if (userController.userByPhone(phone).id() >= 0) {
+            return errorResponse(QStringLiteral("an account with this phone number already exists"), StatusCode::Conflict);
         }
         User user;
         user.setName(name);
-        user.setEmail(email);
-        user.setIsAdmin(false);
+        user.setPhone(phone);
+        // The very first profile becomes the Admin, so a fresh database
+        // (or one just cleared by migration 0026) always gets one.
+        user.setIsAdmin(userController.allUsers().isEmpty());
         user.setColor(color.toLower());
         const QString salt = PasswordAuth::generateSalt();
         user.setPasswordSalt(salt);
@@ -407,11 +412,11 @@ int main(int argc, char **argv)
         if (!doc.isObject()) {
             return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
         }
-        const QString email = doc.object().value(QStringLiteral("email")).toString();
+        const QString phone = doc.object().value(QStringLiteral("phone")).toString();
         const QString password = doc.object().value(QStringLiteral("password")).toString();
         User user;
-        if (!userController.verifyPassword(email, password, user)) {
-            return errorResponse(QStringLiteral("invalid email or password"), StatusCode::Unauthorized);
+        if (!userController.verifyPassword(phone, password, user)) {
+            return errorResponse(QStringLiteral("invalid phone or password"), StatusCode::Unauthorized);
         }
         const QString token = sessionController.createSession(user.id());
         if (token.isEmpty()) {
@@ -628,7 +633,7 @@ int main(int argc, char **argv)
     });
 
     // The pickers for adding a duty: duty types and members (names and
-    // colors only -- no emails).
+    // colors only -- no phone numbers).
     server.route("/api/duty-types", QHttpServerRequest::Method::Get,
                  [&sessionController, &userController, &dutyTypeController](const QHttpServerRequest &request) {
         User currentUser;

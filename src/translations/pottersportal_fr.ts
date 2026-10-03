@@ -557,8 +557,8 @@ Cette personne reste membre et garde ses tâches, mais ne peut plus déverrouill
         <translation>Changer le mot de passe</translation>
     </message>
     <message>
-        <source>For %1. The new password will be emailed to you and to %2.</source>
-        <translation>Pour %1. Le nouveau mot de passe vous sera envoyé par e-mail, ainsi qu'à %2.</translation>
+        <source>For %1. The new password will be emailed to %2.</source>
+        <translation>Pour %1. Le nouveau mot de passe sera envoyé par e-mail à %2.</translation>
     </message>
     <message>
         <source>At least %1 characters</source>
@@ -906,6 +906,10 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>par ex. Réserve B, étagère 3</translation>
     </message>
     <message>
+        <source>Optional</source>
+        <translation>Facultatif</translation>
+    </message>
+    <message>
         <source>Name</source>
         <translation>Nom</translation>
     </message>
@@ -920,6 +924,10 @@ Notez dès maintenant le nouveau mot de passe.</translation>
     <message>
         <source>Location</source>
         <translation>Emplacement</translation>
+    </message>
+    <message>
+        <source>Barcode</source>
+        <translation>Code-barres</translation>
     </message>
     <message>
         <source>Status</source>
@@ -1132,12 +1140,12 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Connexion</translation>
     </message>
     <message>
-        <source>you@example.com</source>
-        <translation>vous@exemple.com</translation>
+        <source>Your phone number</source>
+        <translation>Votre numéro de téléphone</translation>
     </message>
     <message>
-        <source>Email</source>
-        <translation>E-mail</translation>
+        <source>Phone number</source>
+        <translation>Numéro de téléphone</translation>
     </message>
     <message>
         <source>Email %1 to reset your password</source>
@@ -1152,8 +1160,8 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Écrivez à %1 pour réinitialiser votre mot de passe.</translation>
     </message>
     <message>
-        <source>Incorrect email or password.</source>
-        <translation>E-mail ou mot de passe incorrect.</translation>
+        <source>Incorrect phone number or password.</source>
+        <translation>Numéro de téléphone ou mot de passe incorrect.</translation>
     </message>
 </context>
 <context>
@@ -1202,16 +1210,12 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Modifier le membre</translation>
     </message>
     <message>
-        <source>e.g. Grace Adeyemi</source>
-        <translation>par ex. Grace Adeyemi</translation>
-    </message>
-    <message>
         <source>No team</source>
         <translation>Aucune équipe</translation>
     </message>
     <message>
-        <source>member@example.com</source>
-        <translation>membre@exemple.com</translation>
+        <source>What they sign in with</source>
+        <translation>Utilisé pour se connecter</translation>
     </message>
     <message>
         <source>Min. 8 characters -- share this with the member</source>
@@ -1238,8 +1242,8 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Équipe</translation>
     </message>
     <message>
-        <source>Email</source>
-        <translation>E-mail</translation>
+        <source>Phone number</source>
+        <translation>Numéro de téléphone</translation>
     </message>
     <message>
         <source>Password</source>
@@ -1254,12 +1258,12 @@ Notez dès maintenant le nouveau mot de passe.</translation>
         <translation>Le nom est obligatoire.</translation>
     </message>
     <message>
-        <source>Email is required.</source>
-        <translation>L'e-mail est obligatoire.</translation>
+        <source>Phone number is required.</source>
+        <translation>Le numéro de téléphone est obligatoire.</translation>
     </message>
     <message>
-        <source>Enter a valid email address.</source>
-        <translation>Saisissez une adresse e-mail valide.</translation>
+        <source>Enter a valid phone number.</source>
+        <translation>Saisissez un numéro de téléphone valide.</translation>
     </message>
     <message>
         <source>Password must be at least 8 characters.</source>
@@ -1268,6 +1272,17 @@ Notez dès maintenant le nouveau mot de passe.</translation>
     <message>
         <source>Password must be at least 8 characters (or leave it blank).</source>
         <translation>Le mot de passe doit contenir au moins 8 caractères (ou laissez vide).</translation>
+    </message>
+</context>
+<context>
+    <name>MemberColorPicker</name>
+    <message>
+        <source>Any color...</source>
+        <translation>N'importe quelle couleur...</translation>
+    </message>
+    <message>
+        <source>Choose a Color</source>
+        <translation>Choisir une couleur</translation>
     </message>
 </context>
 <context>
@@ -2157,6 +2172,10 @@ Attention : ces membres se sont indiqués indisponibles ce jour-là :
     <message>
         <source>There must always be at least one Admin.</source>
         <translation>Il doit toujours y avoir au moins un Admin.</translation>
+    </message>
+    <message>
+        <source>Another member already uses this phone number.</source>
+        <translation>Un autre membre utilise déjà ce numéro de téléphone.</translation>
     </message>
 </context>
 </TS>

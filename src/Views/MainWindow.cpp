@@ -275,7 +275,7 @@ void MainWindow::changePasswordClicked()
     if (m_currentUser.id() < 0) {
         return;
     }
-    // Re-read the account so the email goes to its current address.
+    // Re-read the account so the email names it as it is now.
     const User admin = m_userController.userById(m_currentUser.id());
     if (admin.id() < 0) {
         return;

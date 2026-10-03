@@ -12,7 +12,7 @@ class UserController;
 
 // Lets the logged-in Admin set a new password for their own account by
 // typing it twice. Once saved, the new password is emailed (SmtpMail) to
-// the Admin's own address and to kAdminContactEmail. Refuses to change
+// kAdminContactEmail. Refuses to change
 // anything while email isn't set up, since sending it is part of the job.
 class ChangePasswordDialog : public FramelessDialog
 {

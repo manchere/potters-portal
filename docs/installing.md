@@ -47,8 +47,8 @@ loading data.
 
 - **Browse** — without signing in, you can open the tabs everyone is allowed
   to see (by default: all of them) and send feedback.
-- **Sign in** — click the 🔒 lock at the top right and enter your email and
-  password. You then get whatever your Admin has allowed you (adding items,
+- **Sign in** — click the 🔒 lock at the top right and enter your phone
+  number and password. You then get whatever your Admin has allowed you (adding items,
   editing songs, …). Admins can do everything, including the schedule. Click
   the 🔓 lock again to sign out.
 - **Language and look** — *Settings* switches between English and French

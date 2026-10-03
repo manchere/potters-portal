@@ -4,14 +4,16 @@
 
 // A user account doubles as a Member profile (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md
 // FR-1.1/FR-1.3): name + an optional Admin flag is all a profile needs
-// beyond login credentials. color is the Member's chosen profile color
-// (one of Models/MemberColors), shown behind their initials. teamId is
+// beyond login credentials. phone is what they sign in with, stored
+// normalized (UserController::normalizePhone). color is the Member's
+// chosen profile color (any "#rrggbb", see Models/MemberColors), shown
+// behind their initials. teamId is
 // the Team they belong to, or -1 for none.
 class User
 {
 public:
     User() = default;
-    User(int id, QString name, QString email, bool isAdmin, QString color);
+    User(int id, QString name, QString phone, bool isAdmin, QString color);
 
     int id() const { return m_id; }
     void setId(int id) { m_id = id; }
@@ -19,8 +21,8 @@ public:
     QString name() const { return m_name; }
     void setName(const QString &name) { m_name = name; }
 
-    QString email() const { return m_email; }
-    void setEmail(const QString &email) { m_email = email; }
+    QString phone() const { return m_phone; }
+    void setPhone(const QString &phone) { m_phone = phone; }
 
     // Only ever read/written by UserController/PasswordAuth. Never
     // serialized to JSON (see Json::userToJson).
@@ -42,7 +44,7 @@ public:
 private:
     int m_id = -1;
     QString m_name;
-    QString m_email;
+    QString m_phone;
     QString m_passwordHash;
     QString m_passwordSalt;
     bool m_isAdmin = false;

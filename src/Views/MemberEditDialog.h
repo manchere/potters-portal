@@ -13,8 +13,8 @@ class TeamController;
 class UserController;
 
 // Add or edit a Member profile (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md
-// FR-1.1/FR-1.3): name + email + password, mirroring the mobile app's
-// registration screen (name/email/password + a profile color shown
+// FR-1.1/FR-1.3): name + phone + password, mirroring the mobile app's
+// registration screen (name/phone/password + a profile color shown
 // behind the Member's initials) since it's the same account, just
 // admin-initiated. The Team dropdown puts the Member on one of the teams
 // made on the Taxonomy tab, or on none.
@@ -50,8 +50,8 @@ private:
     QLineEdit *m_nameEdit = nullptr;
     QLabel *m_nameError = nullptr;
     QComboBox *m_teamCombo = nullptr;
-    QLineEdit *m_emailEdit = nullptr;
-    QLabel *m_emailError = nullptr;
+    QLineEdit *m_phoneEdit = nullptr;
+    QLabel *m_phoneError = nullptr;
     QLineEdit *m_passwordEdit = nullptr;
     QLabel *m_passwordError = nullptr;
     QCheckBox *m_showPasswordCheck = nullptr;

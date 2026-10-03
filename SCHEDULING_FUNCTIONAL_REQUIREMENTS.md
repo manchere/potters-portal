@@ -27,17 +27,19 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   duty, approving/denying a request) shall be hidden — not merely
   disabled — until Admin mode is unlocked.
 - **FR-0.5** The mobile app is Member-facing and keeps its own
-  email + password login (FR-1.1), separate from the desktop Admin unlock.
+  phone number + password login (FR-1.1), separate from the desktop Admin unlock.
 
 ## 2. Member Profile Management
 
 - **FR-1.1** A Member profile shall be creatable in two ways:
-  a) **self-service**, via the mobile app (name, email, password), or
+  a) **self-service**, via the mobile app (name, phone number, password), or
   b) **by an Admin**, via the "+ Add Member" button on the desktop Schedule tab
-  (name, email, password — the Admin sets initial credentials and shares
-  them with the Member).
+  (name, phone number, password — the Admin sets initial credentials and shares
+  them with the Member). The first profile ever created becomes the Admin,
+  so a new (or cleared) database always has one.
 - **FR-1.2** Creating a profile shall let the Member (or the Admin
-  creating it) pick a profile color from a fixed palette. The Member is
+  creating it) pick a profile color — any color, with a few quick picks
+  offered first. The Member is
   then shown as a circle in that color with their initials — no pictures
   or photos. The color can be changed later by editing the profile.
 - **FR-1.3** A user account may hold both the Admin and Member roles

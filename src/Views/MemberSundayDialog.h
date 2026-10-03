@@ -12,7 +12,7 @@ class DutyTypeController;
 class UserController;
 
 // Opened by double-clicking a member's row on the Schedule tab: who they
-// are (badge, name, team, email) and their part in the selected Sunday --
+// are (badge, name, team, phone) and their part in the selected Sunday --
 // the duties they serve (each with its backup and notes), the duties they
 // back someone else up on, and a warning if they marked themselves away.
 //

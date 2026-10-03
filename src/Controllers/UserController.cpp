@@ -17,7 +17,7 @@ static User userFromQuery(const QSqlQuery &query)
     User user;
     user.setId(query.value(QStringLiteral("id")).toInt());
     user.setName(query.value(QStringLiteral("name")).toString());
-    user.setEmail(query.value(QStringLiteral("email")).toString());
+    user.setPhone(query.value(QStringLiteral("phone")).toString());
     user.setPasswordHash(query.value(QStringLiteral("password_hash")).toString());
     user.setPasswordSalt(query.value(QStringLiteral("password_salt")).toString());
     user.setIsAdmin(query.value(QStringLiteral("is_admin")).toBool());
@@ -25,6 +25,16 @@ static User userFromQuery(const QSqlQuery &query)
     const QVariant teamId = query.value(QStringLiteral("team_id"));
     user.setTeamId(teamId.isNull() ? -1 : teamId.toInt());
     return user;
+}
+
+// The unique index on phone is the only constraint a member can trip
+// over, so say that in plain words rather than show Postgres's message.
+static QString saveError(const QSqlQuery &query)
+{
+    const QString error = query.lastError().text();
+    return error.contains(QStringLiteral("users_phone_key"))
+        ? UserController::tr("Another member already uses this phone number.")
+        : error;
 }
 
 // users.team_id is NULL for "no team".
@@ -39,7 +49,7 @@ QVector<User> UserController::allUsers() const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, color, team_id FROM users ORDER BY name"));
+        "SELECT id, name, phone, password_hash, password_salt, is_admin, color, team_id FROM users ORDER BY name"));
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return users;
@@ -55,7 +65,7 @@ User UserController::userById(int id) const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, color, team_id "
+        "SELECT id, name, phone, password_hash, password_salt, is_admin, color, team_id "
         "FROM users WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), id);
     if (!query.exec() || !query.next()) {
@@ -65,14 +75,33 @@ User UserController::userById(int id) const
     return userFromQuery(query);
 }
 
-User UserController::userByEmail(const QString &email) const
+QString UserController::normalizePhone(const QString &phone)
+{
+    const QString trimmed = phone.trimmed();
+    QString result = trimmed.startsWith(QLatin1Char('+')) ? QStringLiteral("+") : QString();
+    for (const QChar c : trimmed) {
+        if (c.isDigit()) {
+            result += c;
+        }
+    }
+    return result;
+}
+
+bool UserController::isValidPhone(const QString &phone)
+{
+    QString digits = normalizePhone(phone);
+    digits.remove(QLatin1Char('+'));
+    return digits.size() >= 7;
+}
+
+User UserController::userByPhone(const QString &phone) const
 {
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT id, name, email, password_hash, password_salt, is_admin, color, team_id "
-        "FROM users WHERE LOWER(email) = LOWER(:email)"));
-    query.bindValue(QStringLiteral(":email"), email);
+        "SELECT id, name, phone, password_hash, password_salt, is_admin, color, team_id "
+        "FROM users WHERE phone = :phone"));
+    query.bindValue(QStringLiteral(":phone"), normalizePhone(phone));
     if (!query.exec() || !query.next()) {
         m_lastError = query.lastError().text();
         return User();
@@ -80,9 +109,9 @@ User UserController::userByEmail(const QString &email) const
     return userFromQuery(query);
 }
 
-bool UserController::verifyPassword(const QString &email, const QString &password, User &outUser) const
+bool UserController::verifyPassword(const QString &phone, const QString &password, User &outUser) const
 {
-    const User user = userByEmail(email);
+    const User user = userByPhone(phone);
     if (user.id() < 0) {
         return false;
     }
@@ -106,20 +135,21 @@ bool UserController::verifyAdminPassword(const QString &password, User &outUser)
 
 bool UserController::addUser(User &user)
 {
+    user.setPhone(normalizePhone(user.phone()));
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "INSERT INTO users (name, email, password_hash, password_salt, is_admin, color, team_id) "
-        "VALUES (:name, :email, :password_hash, :password_salt, :is_admin, :color, :team_id) RETURNING id"));
+        "INSERT INTO users (name, phone, password_hash, password_salt, is_admin, color, team_id) "
+        "VALUES (:name, :phone, :password_hash, :password_salt, :is_admin, :color, :team_id) RETURNING id"));
     query.bindValue(QStringLiteral(":name"), user.name());
-    query.bindValue(QStringLiteral(":email"), user.email());
+    query.bindValue(QStringLiteral(":phone"), user.phone());
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
     query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
     query.bindValue(QStringLiteral(":is_admin"), user.isAdmin());
     query.bindValue(QStringLiteral(":color"), user.color());
     query.bindValue(QStringLiteral(":team_id"), teamIdValue(user));
     if (!query.exec() || !query.next()) {
-        m_lastError = query.lastError().text();
+        m_lastError = saveError(query);
         return false;
     }
     user.setId(query.value(0).toInt());
@@ -136,18 +166,18 @@ bool UserController::updateUser(const User &user)
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "UPDATE users SET name = :name, email = :email, "
+        "UPDATE users SET name = :name, phone = :phone, "
         "color = :color, team_id = :team_id, password_hash = :password_hash, password_salt = :password_salt, "
         "updated_at = now() WHERE id = :id"));
     query.bindValue(QStringLiteral(":name"), user.name());
-    query.bindValue(QStringLiteral(":email"), user.email());
+    query.bindValue(QStringLiteral(":phone"), normalizePhone(user.phone()));
     query.bindValue(QStringLiteral(":color"), user.color());
     query.bindValue(QStringLiteral(":team_id"), teamIdValue(user));
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
     query.bindValue(QStringLiteral(":password_salt"), user.passwordSalt());
     query.bindValue(QStringLiteral(":id"), user.id());
     if (!query.exec()) {
-        m_lastError = query.lastError().text();
+        m_lastError = saveError(query);
         return false;
     }
     emit usersChanged();

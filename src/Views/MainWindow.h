@@ -38,7 +38,7 @@ class QStackedWidget;
 //
 // There is no login gate at startup -- the app opens with whatever
 // Settings > Access Rights allows everyone. Clicking the lock icon in the
-// title bar opens LoginDialog (email + password) for any member; once
+// title bar opens LoginDialog (phone + password) for any member; once
 // signed in, applyAccess() works out what they may do (AccessController)
 // and hides tabs and buttons they can't use. Admins get everything,
 // including the Schedule tab's actions. Clicking the icon again signs out.

@@ -68,7 +68,7 @@ namespace Json
         QJsonObject json;
         json[QStringLiteral("id")] = user.id();
         json[QStringLiteral("name")] = user.name();
-        json[QStringLiteral("email")] = user.email();
+        json[QStringLiteral("phone")] = user.phone();
         json[QStringLiteral("is_admin")] = user.isAdmin();
         json[QStringLiteral("color")] = user.color();
         return json;

@@ -1,5 +1,6 @@
 #include "MemberColors.h"
 
+#include <QRegularExpression>
 #include <QStringList>
 
 namespace MemberColors
@@ -28,12 +29,20 @@ namespace MemberColors
 
     bool isValid(const QString &color)
     {
-        for (const auto &entry : palette()) {
-            if (entry.second.compare(color, Qt::CaseInsensitive) == 0) {
-                return true;
-            }
+        static const QRegularExpression pattern(QStringLiteral("^#[0-9a-fA-F]{6}$"));
+        return pattern.match(color).hasMatch();
+    }
+
+    QString textColor(const QString &color)
+    {
+        if (!isValid(color)) {
+            return QStringLiteral("white");
         }
-        return false;
+        // Perceived brightness; above ~0.6 white text washes out. Parsed by
+        // hand since the server doesn't link QtGui (no QColor).
+        const auto channel = [&color](int index) { return color.mid(1 + index * 2, 2).toInt(nullptr, 16); };
+        const double luminance = (0.299 * channel(0) + 0.587 * channel(1) + 0.114 * channel(2)) / 255.0;
+        return luminance > 0.6 ? QStringLiteral("#1a202c") : QStringLiteral("white");
     }
 
     QString initials(const QString &name)

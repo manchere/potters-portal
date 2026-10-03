@@ -58,7 +58,7 @@ backup includes them.
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `users` | A member profile and its login | `name`, `email` (unique, case-insensitive), `password_hash` + `password_salt`, `is_admin`, `color` (badge color), `team_id` |
+| `users` | A member profile and its login | `name`, `phone` (unique, stored as digits with an optional leading `+`), `password_hash` + `password_salt`, `is_admin`, `color` (badge color), `team_id` |
 | `teams` | Groups of members (Choir, Ushers, …) | `name` (unique, case-insensitive), `description` |
 | `sessions` | Mobile/API sign-ins | `user_id`, `token_hash` (SHA-256 of the token, unique), `expires_at` |
 

@@ -302,10 +302,10 @@ void AdminOverviewView::rebuildList()
             textLayout->setSpacing(2);
             auto *nameLabel = new QLabel(user.name(), textContainer);
             nameLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
-            auto *emailLabel = new QLabel(user.email(), textContainer);
-            emailLabel->setObjectName(QStringLiteral("mutedLabel"));
+            auto *phoneLabel = new QLabel(user.phone(), textContainer);
+            phoneLabel->setObjectName(QStringLiteral("mutedLabel"));
             textLayout->addWidget(nameLabel);
-            textLayout->addWidget(emailLabel);
+            textLayout->addWidget(phoneLabel);
             rowLayout->addWidget(textContainer, 1);
             if (teamNames.contains(user.teamId())) {
                 auto *teamLabel = new QLabel(teamNames.value(user.teamId()), row);

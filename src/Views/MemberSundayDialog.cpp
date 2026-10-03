@@ -36,8 +36,8 @@ MemberSundayDialog::MemberSundayDialog(
     if (!teamName.isEmpty()) {
         details << tr("Team: %1").arg(teamName);
     }
-    if (!member.email().isEmpty()) {
-        details << member.email();
+    if (!member.phone().isEmpty()) {
+        details << member.phone();
     }
     detailsLabel->setText(details.join(QStringLiteral("  ·  ")));
     detailsLabel->setVisible(!details.isEmpty());

@@ -9,7 +9,6 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
-#include <QRegularExpression>
 #include <QVBoxLayout>
 
 #include "Auth/PasswordAuth.h"
@@ -18,17 +17,6 @@
 #include "MemberBadge.h"
 #include "MemberColorPicker.h"
 #include "Models/MemberColors.h"
-
-namespace
-{
-    // Deliberately loose -- just enough to catch "forgot the @" or "forgot
-    // the domain" typos, not a full RFC 5322 validator.
-    bool looksLikeEmail(const QString &value)
-    {
-        static const QRegularExpression pattern(QStringLiteral("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"));
-        return pattern.match(value).hasMatch();
-    }
-}
 
 MemberEditDialog::MemberEditDialog(
     const User &user,
@@ -62,7 +50,6 @@ MemberEditDialog::MemberEditDialog(
     };
 
     m_nameEdit = new QLineEdit(user.name(), this);
-    m_nameEdit->setPlaceholderText(tr("e.g. Grace Adeyemi"));
     connect(m_nameEdit, &QLineEdit::textChanged, this, &MemberEditDialog::updateBadgePreview);
     connect(m_nameEdit, &QLineEdit::textChanged, this, [this]() { m_nameError->clear(); });
     m_nameError = errorLabel();
@@ -74,10 +61,11 @@ MemberEditDialog::MemberEditDialog(
     }
     m_teamCombo->setCurrentIndex(std::max(0, m_teamCombo->findData(user.teamId())));
 
-    m_emailEdit = new QLineEdit(user.email(), this);
-    m_emailEdit->setPlaceholderText(tr("member@example.com"));
-    connect(m_emailEdit, &QLineEdit::textChanged, this, [this]() { m_emailError->clear(); });
-    m_emailError = errorLabel();
+    m_phoneEdit = new QLineEdit(user.phone(), this);
+    m_phoneEdit->setPlaceholderText(tr("What they sign in with"));
+    m_phoneEdit->setInputMethodHints(Qt::ImhDialableCharactersOnly);
+    connect(m_phoneEdit, &QLineEdit::textChanged, this, [this]() { m_phoneError->clear(); });
+    m_phoneError = errorLabel();
 
     m_passwordEdit = new QLineEdit(this);
     m_passwordEdit->setEchoMode(QLineEdit::Password);
@@ -95,8 +83,8 @@ MemberEditDialog::MemberEditDialog(
     form->addRow(QString(), m_nameError);
     form->addRow(tr("Color"), m_colorPicker);
     form->addRow(tr("Team"), m_teamCombo);
-    form->addRow(tr("Email"), m_emailEdit);
-    form->addRow(QString(), m_emailError);
+    form->addRow(tr("Phone number"), m_phoneEdit);
+    form->addRow(QString(), m_phoneError);
     form->addRow(tr("Password"), m_passwordEdit);
     form->addRow(QString(), m_passwordError);
     form->addRow(QString(), m_showPasswordCheck);
@@ -134,12 +122,12 @@ bool MemberEditDialog::validate()
         m_nameError->setText(tr("Name is required."));
         valid = false;
     }
-    const QString email = m_emailEdit->text().trimmed();
-    if (email.isEmpty()) {
-        m_emailError->setText(tr("Email is required."));
+    const QString phone = m_phoneEdit->text().trimmed();
+    if (phone.isEmpty()) {
+        m_phoneError->setText(tr("Phone number is required."));
         valid = false;
-    } else if (!looksLikeEmail(email)) {
-        m_emailError->setText(tr("Enter a valid email address."));
+    } else if (!UserController::isValidPhone(phone)) {
+        m_phoneError->setText(tr("Enter a valid phone number."));
         valid = false;
     }
     const QString password = m_passwordEdit->text();
@@ -161,7 +149,7 @@ void MemberEditDialog::saveClicked()
 
     User user = m_existingUser;
     user.setName(m_nameEdit->text().trimmed());
-    user.setEmail(m_emailEdit->text().trimmed());
+    user.setPhone(m_phoneEdit->text().trimmed());
     user.setColor(m_colorPicker->color());
     user.setTeamId(m_teamCombo->currentData().toInt());
 
@@ -176,7 +164,7 @@ void MemberEditDialog::saveClicked()
 
     const bool ok = m_existingUser.id() < 0 ? m_userController->addUser(user) : m_userController->updateUser(user);
     if (!ok) {
-        m_emailError->setText(m_userController->lastError());
+        m_phoneError->setText(m_userController->lastError());
         return;
     }
     accept();
