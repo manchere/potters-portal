@@ -1,4 +1,5 @@
 #include "GroqVisionClient.h"
+#include "GroqApiKey.h"
 
 #include <QEventLoop>
 #include <QJsonArray>
@@ -39,9 +40,9 @@ namespace GroqVision
 {
     QJsonObject describeItem(QNetworkAccessManager &manager, const QString &imageDataUrl, QString *errorMessage)
     {
-        const QByteArray apiKey = qEnvironmentVariable("GROQ_API_KEY").toUtf8();
+        const QByteArray apiKey = groqApiKey();
         if (apiKey.isEmpty()) {
-            *errorMessage = QStringLiteral("GROQ_API_KEY is not set.");
+            *errorMessage = QStringLiteral("No Groq API key: set GROQ_API_KEY or enter one when connecting to the database.");
             return {};
         }
         // Not every account has the same models enabled; verified via

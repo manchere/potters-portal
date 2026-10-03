@@ -9,6 +9,7 @@
 #include "Style.h"
 #include "Views/DatabaseSetupDialog.h"
 #include "Views/MainWindow.h"
+#include "Vision/GroqApiKey.h"
 
 int main(int argc, char **argv)
 {
@@ -27,7 +28,7 @@ int main(int argc, char **argv)
 	QString connectError;
 	bool connected = !databaseUrl.isEmpty() && Database::connect(databaseUrl, &connectError);
 	while (!connected) {
-		DatabaseSetupDialog dialog(connectError, databaseUrl);
+		DatabaseSetupDialog dialog(connectError, databaseUrl, settings.value(savedGroqApiKeySetting()).toString());
 		if (dialog.exec() != QDialog::Accepted) {
 			return 0; // Quit
 		}
@@ -35,6 +36,12 @@ int main(int argc, char **argv)
 		connected = true; // the dialog only accepts once it has connected
 		if (envUrl.isEmpty() || databaseUrl != envUrl) {
 			settings.setValue(QStringLiteral("databaseUrl"), databaseUrl);
+		}
+		// Optional: an empty field forgets any key saved before.
+		if (dialog.groqApiKey().isEmpty()) {
+			settings.remove(savedGroqApiKeySetting());
+		} else {
+			settings.setValue(savedGroqApiKeySetting(), dialog.groqApiKey());
 		}
 	}
 

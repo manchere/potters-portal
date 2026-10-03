@@ -10,7 +10,8 @@
 
 #include "Database/Database.h"
 
-DatabaseSetupDialog::DatabaseSetupDialog(const QString &problem, const QString &initialUrl, QWidget *parent)
+DatabaseSetupDialog::DatabaseSetupDialog(const QString &problem, const QString &initialUrl,
+                                         const QString &initialGroqKey, QWidget *parent)
     : FramelessDialog(parent)
 {
     setWindowTitle(tr("Connect to the Database"));
@@ -31,7 +32,19 @@ DatabaseSetupDialog::DatabaseSetupDialog(const QString &problem, const QString &
     m_showCheck = new QCheckBox(tr("Show"), this);
     connect(m_showCheck, &QCheckBox::toggled, this, [this](bool show) {
         m_urlEdit->setEchoMode(show ? QLineEdit::Normal : QLineEdit::Password);
+        m_groqKeyEdit->setEchoMode(show ? QLineEdit::Normal : QLineEdit::Password);
     });
+
+    auto *groqLabel = new QLabel(tr("Groq API key (optional)"), this);
+    auto *groqHint = new QLabel(
+        tr("Fills in an item's details from its photo, and answers questions in the inventory search. "
+           "Leave it empty to do without; get a key at console.groq.com."),
+        this);
+    groqHint->setObjectName(QStringLiteral("pageSubtitle"));
+    groqHint->setWordWrap(true);
+    m_groqKeyEdit = new QLineEdit(initialGroqKey, this);
+    m_groqKeyEdit->setEchoMode(QLineEdit::Password);
+    m_groqKeyEdit->setPlaceholderText(QStringLiteral("gsk_..."));
 
     m_errorLabel = new QLabel(problem, this);
     m_errorLabel->setObjectName(QStringLiteral("fieldError"));
@@ -52,6 +65,9 @@ DatabaseSetupDialog::DatabaseSetupDialog(const QString &problem, const QString &
     layout->addWidget(heading);
     layout->addWidget(intro);
     layout->addWidget(m_urlEdit);
+    layout->addWidget(groqLabel);
+    layout->addWidget(groqHint);
+    layout->addWidget(m_groqKeyEdit);
     layout->addWidget(m_showCheck);
     layout->addWidget(m_errorLabel);
     layout->addWidget(buttons);
@@ -60,6 +76,11 @@ DatabaseSetupDialog::DatabaseSetupDialog(const QString &problem, const QString &
 QString DatabaseSetupDialog::connectionUrl() const
 {
     return m_urlEdit->text().trimmed();
+}
+
+QString DatabaseSetupDialog::groqApiKey() const
+{
+    return m_groqKeyEdit->text().trimmed();
 }
 
 void DatabaseSetupDialog::connectClicked()

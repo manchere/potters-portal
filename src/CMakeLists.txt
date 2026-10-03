@@ -41,7 +41,7 @@ set(CORE_SOURCES
   "Controllers/SongController.h" "Controllers/SongController.cpp"
   "Controllers/AvailabilityController.h" "Controllers/AvailabilityController.cpp"
   "Controllers/NonAvailabilityRequestController.h" "Controllers/NonAvailabilityRequestController.cpp"
-  "Vision/GroqVisionClient.h" "Vision/GroqVisionClient.cpp"
+  "Vision/GroqVisionClient.h" "Vision/GroqVisionClient.cpp" "Vision/GroqApiKey.h"
 )
 
 # POTTERS_SERVER_ONLY builds just the REST API server -- no Widgets or
@@ -98,7 +98,7 @@ add_executable (PottersPortal
   "Views/MemberBadge.h" "Views/MemberBadge.cpp"
   "Views/MemberColorPicker.h" "Views/MemberColorPicker.cpp"
   "Views/SuggestLineEdit.h" "Views/SuggestLineEdit.cpp"
-  "Vision/GroqQueryClient.h" "Vision/GroqQueryClient.cpp"
+  "Vision/GroqQueryClient.h" "Vision/GroqQueryClient.cpp" "Vision/GroqApiKey.h"
   "Vision/LocationClient.h" "Vision/LocationClient.cpp"
 )
 target_include_directories(PottersPortal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
