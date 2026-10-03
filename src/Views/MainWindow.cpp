@@ -248,6 +248,7 @@ void MainWindow::applyAccess()
     m_adminOverviewView->setAccess(rights.section(Section::Taxonomy), isAdmin, m_currentUser.id());
     m_feedbackView->setAccess(rights.section(Section::Feedback));
     m_settingsView->setAdminMode(isAdmin);
+    m_settingsView->setCanChangeTheme(rights.section(Section::Settings).update);
 
     // Sidebar pages after Schedule, in the same order as allSections().
     const QVector<Section> sections = allSections();

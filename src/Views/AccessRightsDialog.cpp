@@ -203,7 +203,7 @@ QString AccessRightsDialog::actionMeaning(Section section, AccessAction action)
              : action == AccessAction::Update ? tr("Read everyone's requests and mark them done")
                                               : tr("Delete requests");
     case Section::Settings:
-        break;
+        return tr("Change the app's theme colors");
     }
     return QString();
 }

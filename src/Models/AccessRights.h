@@ -55,8 +55,9 @@ struct SectionAccess
 QVector<Section> allSections();
 // How a section is stored in access_rules.section ("reports", ...).
 QString sectionKey(Section section);
-// False for actions a section has nothing for -- e.g. Settings is view
-// only and Reports can only be viewed and saved (Create).
+// False for actions a section has nothing for -- e.g. Settings can only
+// be viewed and have its theme changed (Update), and Reports can only be
+// viewed and saved (Create).
 bool sectionHasAction(Section section, AccessAction action);
 
 // Who a rule is for.

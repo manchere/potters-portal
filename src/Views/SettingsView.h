@@ -13,7 +13,7 @@ class QPushButton;
 class QRadioButton;
 
 // "Settings" page: the app's look (Light, Black, or Navy & Gold -- applied
-// as soon as one is picked), its language (English or French -- used from
+// as soon as one is picked, for those Access Rights let), its language (English or French -- used from
 // the next launch), and, only while an Admin is logged in,
 // changing the Admin password. Only reports intent; MainWindow applies
 // the theme and opens the password dialog.
@@ -32,6 +32,11 @@ public:
 
     // The Admin password section only appears while an Admin is logged in.
     void setAdminMode(bool isAdmin);
+
+    // Changing the theme takes Settings > Update in Access Rights (Admins
+    // always have it). Without it the cards still show which theme is on,
+    // but can't be picked.
+    void setCanChangeTheme(bool canChange);
 
 signals:
     void themeChosen(Theme theme);
@@ -52,6 +57,7 @@ private:
     QList<ThemeOption> m_themeOptions;
 
     QLabel *m_subtitle = nullptr;
+    QLabel *m_themeLockedHint = nullptr;
     QRadioButton *m_englishRadio = nullptr;
     QRadioButton *m_frenchRadio = nullptr;
     QGroupBox *m_passwordBox = nullptr;

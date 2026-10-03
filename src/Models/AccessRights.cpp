@@ -54,7 +54,7 @@ bool sectionHasAction(Section section, AccessAction action)
         return true;
     }
     switch (section) {
-    case Section::Settings: return false;
+    case Section::Settings: return action == AccessAction::Update;
     case Section::Reports: return action == AccessAction::Create;
     default: return true;
     }

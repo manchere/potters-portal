@@ -42,9 +42,15 @@ SettingsView::SettingsView(QWidget *parent)
         themeRow->addWidget(card, 1);
     }
 
+    m_themeLockedHint = new QLabel(
+        tr("Ask an Admin for access to change the theme colors."), this);
+    m_themeLockedHint->setObjectName(QStringLiteral("mutedLabel"));
+    m_themeLockedHint->setWordWrap(true);
+
     auto *appearanceBox = new QGroupBox(tr("Appearance"), this);
     auto *appearanceLayout = new QVBoxLayout(appearanceBox);
     appearanceLayout->addLayout(themeRow);
+    appearanceLayout->addWidget(m_themeLockedHint);
 
     // --- Language -----------------------------------------------------------
     // Each name in its own language, so it can be found whichever is active.
@@ -116,6 +122,7 @@ SettingsView::SettingsView(QWidget *parent)
     layout->addStretch();
 
     setAdminMode(false);
+    setCanChangeTheme(false);
 }
 
 QFrame *SettingsView::buildThemeCard(Theme theme, const QString &description, const QStringList &swatches)
@@ -192,4 +199,12 @@ void SettingsView::setAdminMode(bool isAdmin)
     m_subtitle->setText(isAdmin
         ? tr("Choose how the app looks and its language, change the Admin password, and set who can do what.")
         : tr("Choose how the app looks and its language."));
+}
+
+void SettingsView::setCanChangeTheme(bool canChange)
+{
+    for (const ThemeOption &option : std::as_const(m_themeOptions)) {
+        option.radio->setEnabled(canChange);
+    }
+    m_themeLockedHint->setVisible(!canChange);
 }

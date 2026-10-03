@@ -52,6 +52,10 @@
         <translation>Ouvrir l'onglet %1</translation>
     </message>
     <message>
+        <source>Change the app's theme colors</source>
+        <translation>Changer les couleurs du thème de l'application</translation>
+    </message>
+    <message>
         <source>Save reports as a web page or spreadsheet</source>
         <translation>Enregistrer les rapports en page web ou tableur</translation>
     </message>
@@ -1833,6 +1837,10 @@ Attention : ces membres se sont indiqués indisponibles ce jour-là :
     <message>
         <source>Admin password</source>
         <translation>Mot de passe Admin</translation>
+    </message>
+    <message>
+        <source>Ask an Admin for access to change the theme colors.</source>
+        <translation>Demandez à un Admin l'accès pour changer les couleurs du thème.</translation>
     </message>
     <message>
         <source>Choose how the app looks and its language.</source>
