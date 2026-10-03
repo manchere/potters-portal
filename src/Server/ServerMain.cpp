@@ -328,6 +328,17 @@ int main(int argc, char **argv)
         return QHttpServerResponse(responseBody);
     });
 
+    // Who the stored token belongs to: lets the app confirm a saved sign-in
+    // at launch (and refresh the profile) without asking for the password.
+    server.route("/api/auth/me", QHttpServerRequest::Method::Get,
+                 [&sessionController, &userController](const QHttpServerRequest &request) {
+        User currentUser;
+        if (!requireAuth(request, sessionController, userController, currentUser)) {
+            return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
+        }
+        return QHttpServerResponse(Json::userToJson(currentUser));
+    });
+
     server.route("/api/auth/logout", QHttpServerRequest::Method::Post,
                  [&sessionController](const QHttpServerRequest &request) {
         const QString token = bearerToken(request);

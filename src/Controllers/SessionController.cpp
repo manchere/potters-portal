@@ -9,7 +9,9 @@
 
 namespace
 {
-    constexpr int kSessionLifetimeDays = 30;
+    // Sliding: each authenticated request pushes the expiry this far out
+    // again, so a member who opens the app now and then stays signed in.
+    constexpr int kSessionLifetimeDays = 180;
 }
 
 SessionController::SessionController(QObject *parent)
@@ -25,8 +27,10 @@ int SessionController::userIdForToken(const QString &token) const
     Database::ensureConnected();
     QSqlQuery query;
     query.prepare(QStringLiteral(
-        "SELECT user_id FROM sessions WHERE token_hash = :token_hash AND expires_at > now()"));
+        "UPDATE sessions SET expires_at = :expires_at "
+        "WHERE token_hash = :token_hash AND expires_at > now() RETURNING user_id"));
     query.bindValue(QStringLiteral(":token_hash"), PasswordAuth::hashToken(token));
+    query.bindValue(QStringLiteral(":expires_at"), QDateTime::currentDateTimeUtc().addDays(kSessionLifetimeDays));
     if (!query.exec() || !query.next()) {
         m_lastError = query.lastError().text();
         return -1;
