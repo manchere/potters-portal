@@ -14,6 +14,7 @@
 #include "ActionBar.h"
 #include "MemberBadge.h"
 #include "CategoryEditDialog.h"
+#include "ElidedLabel.h"
 #include "Controllers/CategoryController.h"
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/TagController.h"
@@ -22,7 +23,7 @@
 #include "MemberEditDialog.h"
 #include "DutyTypeEditDialog.h"
 #include "TagEditDialog.h"
-#include "TeamEditDialog.h"
+#include "TeamEditDialog.h"
 #include "MessageDialog.h"
 
 AdminOverviewView::AdminOverviewView(
@@ -344,14 +345,36 @@ void AdminOverviewView::rebuildList()
             if (!search.isEmpty() && !tag.name().contains(search, Qt::CaseInsensitive)) {
                 continue;
             }
-            auto *item = new QListWidgetItem(tag.name(), m_list);
+            auto *item = new QListWidgetItem(m_list);
             item->setData(Qt::UserRole, tag.id());
             if (!tag.description().isEmpty()) {
                 item->setToolTip(tag.description());
             }
+
+            // The tag as a rounded pill in its own color (like the duty
+            // tags on the Schedule tab), its description beside it.
+            auto *row = new QWidget(m_list);
+            auto *rowLayout = new QHBoxLayout(row);
+            rowLayout->setContentsMargins(8, 4, 8, 4);
+            rowLayout->setSpacing(12);
             const QColor background(tag.color());
-            item->setBackground(background);
-            item->setForeground(background.lightness() < 140 ? QColor(Qt::white) : QColor(0x1f, 0x24, 0x30));
+            const QColor text = background.lightness() < 140 ? QColor(Qt::white) : QColor(0x1f, 0x24, 0x30);
+            auto *pill = new QLabel(tag.name(), row);
+            pill->setStyleSheet(QStringLiteral(
+                "QLabel { background: %1; color: %2; border-radius: 12px; padding: 4px 12px; font-weight: 600; }")
+                .arg(background.name(), text.name()));
+            pill->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+            rowLayout->addWidget(pill, 0, Qt::AlignVCenter);
+            if (!tag.description().isEmpty()) {
+                auto *description = new ElidedLabel(tag.description(), row);
+                description->setObjectName(QStringLiteral("mutedLabel"));
+                rowLayout->addWidget(description, 1, Qt::AlignVCenter);
+            } else {
+                rowLayout->addStretch(1);
+            }
+            row->ensurePolished();
+            item->setSizeHint(QSize(0, std::max(40, row->sizeHint().height())));
+            m_list->setItemWidget(item, row);
         }
     } else if (m_kind == Kind::Categories) {
         for (const Category &category : m_categories) {

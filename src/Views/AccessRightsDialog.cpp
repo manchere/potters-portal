@@ -15,11 +15,17 @@
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/TeamController.h"
 #include "Controllers/UserController.h"
+#include "SuggestLineEdit.h"
 
 namespace
 {
-    constexpr int kSubjectRole = Qt::UserRole;
-    constexpr int kSubjectIdRole = Qt::UserRole + 1;
+    // Each Who choice's key is kind * kKindStride + the record's id.
+    constexpr int kKindStride = 100000000;
+
+    int subjectKeyFor(AccessSubject subject, int id)
+    {
+        return static_cast<int>(subject) * kKindStride + (subject == AccessSubject::Everyone ? 0 : id);
+    }
 
     const QVector<AccessAction> kActions{
         AccessAction::View, AccessAction::Create, AccessAction::Update, AccessAction::Delete};
@@ -47,16 +53,41 @@ AccessRightsDialog::AccessRightsDialog(
     auto *heading = new QLabel(tr("Access Rights"), this);
     heading->setObjectName(QStringLiteral("pageTitle"));
     auto *intro = new QLabel(
-        tr("Choose who on the left, then tick what they can open and change. Members get everything their own, "
+        tr("Type who in the Who field, then tick what they can open and change. Members get everything their own, "
            "their team's and everyone's rules allow, plus a duty's rules while they have that duty on the "
            "upcoming Sunday. Admins can always do everything. Changes are saved as you tick."),
         this);
     intro->setObjectName(QStringLiteral("pageSubtitle"));
     intro->setWordWrap(true);
 
-    m_subjects = new QListWidget(this);
-    m_subjects->setFixedWidth(240);
-    connect(m_subjects, &QListWidget::currentRowChanged, this, &AccessRightsDialog::subjectChanged);
+    m_whoEdit = new SuggestLineEdit(this);
+    m_whoEdit->setPlaceholderText(tr("Type a member, team or duty"));
+    connect(m_whoEdit, &QLineEdit::textChanged, this, [this]() {
+        const int key = m_whoEdit->currentId();
+        if (key >= 0) {
+            selectSubject(key);
+        }
+    });
+    auto *setCaption = new QLabel(tr("Already set"), this);
+    setCaption->setObjectName(QStringLiteral("dutyCaption"));
+    m_setList = new QListWidget(this);
+    connect(m_setList, &QListWidget::currentRowChanged, this, [this](int row) {
+        if (QListWidgetItem *item = row >= 0 ? m_setList->item(row) : nullptr) {
+            m_whoEdit->setCurrentId(item->data(Qt::UserRole).toInt());
+        }
+    });
+    auto *whoColumn = new QVBoxLayout;
+    whoColumn->setSpacing(6);
+    auto *whoLabel = new QLabel(tr("Who"), this);
+    whoLabel->setStyleSheet(QStringLiteral("font-weight: 700;"));
+    whoColumn->addWidget(whoLabel);
+    whoColumn->addWidget(m_whoEdit);
+    whoColumn->addSpacing(6);
+    whoColumn->addWidget(setCaption);
+    whoColumn->addWidget(m_setList, 1);
+    auto *whoBox = new QWidget(this);
+    whoBox->setLayout(whoColumn);
+    whoBox->setFixedWidth(250);
 
     m_subjectTitle = new QLabel(this);
     m_subjectTitle->setStyleSheet(QStringLiteral("font-weight: 700;"));
@@ -118,7 +149,7 @@ AccessRightsDialog::AccessRightsDialog(
 
     auto *columns = new QHBoxLayout;
     columns->setSpacing(16);
-    columns->addWidget(m_subjects);
+    columns->addWidget(whoBox);
     columns->addLayout(right, 1);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
@@ -131,7 +162,9 @@ AccessRightsDialog::AccessRightsDialog(
     layout->addWidget(buttons);
     resize(860, 560);
 
-    buildSubjectList();
+    buildChoices();
+    rebuildSetList();
+    m_whoEdit->setCurrentId(subjectKeyFor(AccessSubject::Everyone, 0));
 }
 
 QString AccessRightsDialog::sectionName(Section section)
@@ -175,69 +208,54 @@ QString AccessRightsDialog::actionMeaning(Section section, AccessAction action)
     return QString();
 }
 
-void AccessRightsDialog::buildSubjectList()
+void AccessRightsDialog::buildChoices()
 {
-    auto addHeader = [this](const QString &text) {
-        auto *item = new QListWidgetItem(text, m_subjects);
-        item->setFlags(Qt::NoItemFlags);
-        QFont font = item->font();
-        font.setBold(true);
-        item->setFont(font);
-    };
-    auto addSubject = [this](const QString &text, AccessSubject subject, int id) {
-        auto *item = new QListWidgetItem(QStringLiteral("    ") + text, m_subjects);
-        item->setData(kSubjectRole, static_cast<int>(subject));
-        item->setData(kSubjectIdRole, id);
-    };
-
-    addHeader(tr("Everyone"));
-    addSubject(tr("Everyone (signed in or not)"), AccessSubject::Everyone, 0);
-    addHeader(tr("Members"));
+    m_choices.clear();
+    m_choices.append({subjectKeyFor(AccessSubject::Everyone, 0), tr("Everyone (signed in or not)")});
     for (const User &user : m_userController->allUsers()) {
-        if (!user.isAdmin()) {
-            addSubject(user.name(), AccessSubject::Member, user.id());
+        if (!user.isAdmin()) { // Admins can always do everything
+            m_choices.append({subjectKeyFor(AccessSubject::Member, user.id()), QStringLiteral("\U0001F464 ") + user.name()});
         }
     }
-    addHeader(tr("Teams"));
     for (const Team &team : m_teamController->allTeams()) {
-        addSubject(team.name(), AccessSubject::Team, team.id());
+        m_choices.append({subjectKeyFor(AccessSubject::Team, team.id()), QStringLiteral("\U0001F465 ") + team.name()});
     }
-    addHeader(tr("Duties"));
     for (const DutyType &dutyType : m_dutyTypeController->allDutyTypes()) {
-        addSubject(dutyType.iconAndName(), AccessSubject::Duty, dutyType.id());
+        m_choices.append({subjectKeyFor(AccessSubject::Duty, dutyType.id()), dutyType.iconAndName()});
     }
-    markSubjectsWithRules();
-    m_subjects->setCurrentRow(1);
+    m_whoEdit->setItems(m_choices);
 }
 
-void AccessRightsDialog::markSubjectsWithRules()
+void AccessRightsDialog::rebuildSetList()
 {
     const QSet<QString> withRules = m_accessController->subjectsWithRules();
-    for (int i = 0; i < m_subjects->count(); ++i) {
-        QListWidgetItem *item = m_subjects->item(i);
-        if (!item->data(kSubjectRole).isValid()) {
+    const int currentKey = subjectKeyFor(m_subject, m_subjectId);
+    m_setList->blockSignals(true);
+    m_setList->clear();
+    for (const auto &choice : std::as_const(m_choices)) {
+        const auto subject = static_cast<AccessSubject>(choice.first / kKindStride);
+        const int id = choice.first % kKindStride;
+        if (subject != AccessSubject::Everyone && !withRules.contains(subjectTag(subject, id))) {
             continue;
         }
-        const auto subject = static_cast<AccessSubject>(item->data(kSubjectRole).toInt());
-        const bool has = withRules.contains(subjectTag(subject, item->data(kSubjectIdRole).toInt()));
-        QString text = item->text();
-        text.replace(QStringLiteral("● "), QString());
-        if (has) {
-            text.insert(4, QStringLiteral("● "));
+        auto *item = new QListWidgetItem(choice.second, m_setList);
+        item->setData(Qt::UserRole, choice.first);
+        if (choice.first == currentKey) {
+            m_setList->setCurrentItem(item);
         }
-        item->setText(text);
     }
+    m_setList->blockSignals(false);
 }
 
-void AccessRightsDialog::subjectChanged()
+void AccessRightsDialog::selectSubject(int key)
 {
-    const QListWidgetItem *item = m_subjects->currentItem();
-    if (!item || !item->data(kSubjectRole).isValid()) {
-        return;
+    m_subject = static_cast<AccessSubject>(key / kKindStride);
+    m_subjectId = key % kKindStride;
+    for (const auto &choice : std::as_const(m_choices)) {
+        if (choice.first == key) {
+            m_subjectTitle->setText(choice.second);
+        }
     }
-    m_subject = static_cast<AccessSubject>(item->data(kSubjectRole).toInt());
-    m_subjectId = item->data(kSubjectIdRole).toInt();
-    m_subjectTitle->setText(item->text().trimmed().remove(QStringLiteral("● ")));
     switch (m_subject) {
     case AccessSubject::Everyone:
         m_subjectHint->setText(tr("Applies to anyone using the app, including people who haven't signed in."));
@@ -253,6 +271,16 @@ void AccessRightsDialog::subjectChanged()
                                   "and stops once that Sunday has passed."));
         break;
     }
+    // Keep the Already set list's highlight in step.
+    m_setList->blockSignals(true);
+    m_setList->clearSelection();
+    m_setList->setCurrentRow(-1);
+    for (int i = 0; i < m_setList->count(); ++i) {
+        if (m_setList->item(i)->data(Qt::UserRole).toInt() == key) {
+            m_setList->setCurrentRow(i);
+        }
+    }
+    m_setList->blockSignals(false);
     m_errorLabel->clear();
     loadRules();
 }
@@ -299,5 +327,5 @@ void AccessRightsDialog::checkboxToggled(Section section, AccessAction action, b
         return;
     }
     m_errorLabel->clear();
-    markSubjectsWithRules();
+    rebuildSetList();
 }

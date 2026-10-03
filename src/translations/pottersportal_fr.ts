@@ -8,10 +8,6 @@
         <translation>Droits d'accès</translation>
     </message>
     <message>
-        <source>Choose who on the left, then tick what they can open and change. Members get everything their own, their team's and everyone's rules allow, plus a duty's rules while they have that duty on the upcoming Sunday. Admins can always do everything. Changes are saved as you tick.</source>
-        <translation>Choisissez qui à gauche, puis cochez ce que cette personne peut ouvrir et modifier. Un membre obtient tout ce que permettent ses propres règles, celles de son équipe et celles de tout le monde, plus les règles d'une tâche tant qu'il a cette tâche le dimanche à venir. Les Admins peuvent toujours tout faire. Chaque case cochée est enregistrée aussitôt.</translation>
-    </message>
-    <message>
         <source>View</source>
         <translation>Voir</translation>
     </message>
@@ -108,24 +104,8 @@
         <translation>Supprimer des demandes</translation>
     </message>
     <message>
-        <source>Everyone</source>
-        <translation>Tout le monde</translation>
-    </message>
-    <message>
         <source>Everyone (signed in or not)</source>
         <translation>Tout le monde (connecté ou non)</translation>
-    </message>
-    <message>
-        <source>Members</source>
-        <translation>Membres</translation>
-    </message>
-    <message>
-        <source>Teams</source>
-        <translation>Équipes</translation>
-    </message>
-    <message>
-        <source>Duties</source>
-        <translation>Tâches</translation>
     </message>
     <message>
         <source>Applies to anyone using the app, including people who haven't signed in.</source>
@@ -150,6 +130,22 @@
     <message>
         <source>Not used in this section</source>
         <translation>Sans objet dans cette section</translation>
+    </message>
+    <message>
+        <source>Type who in the Who field, then tick what they can open and change. Members get everything their own, their team's and everyone's rules allow, plus a duty's rules while they have that duty on the upcoming Sunday. Admins can always do everything. Changes are saved as you tick.</source>
+        <translation>Saisissez qui dans le champ Qui, puis cochez ce que cette personne peut ouvrir et modifier. Un membre obtient tout ce que permettent ses propres règles, celles de son équipe et celles de tout le monde, plus les règles d'une tâche tant qu'il a cette tâche le dimanche à venir. Les Admins peuvent toujours tout faire. Chaque case cochée est enregistrée aussitôt.</translation>
+    </message>
+    <message>
+        <source>Type a member, team or duty</source>
+        <translation>Saisissez un membre, une équipe ou une tâche</translation>
+    </message>
+    <message>
+        <source>Already set</source>
+        <translation>Déjà définis</translation>
+    </message>
+    <message>
+        <source>Who</source>
+        <translation>Qui</translation>
     </message>
 </context>
 <context>
