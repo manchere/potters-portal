@@ -22,7 +22,8 @@ class UserController;
 // the Schedule tab's "+ Add Member" or the Taxonomy tab's "+ Add Member"), or
 // an existing one to edit (Taxonomy tab, double-click) -- password is
 // required when adding, optional when editing (blank keeps the current
-// one; see UserController::updateUser).
+// one; see UserController::updateUser). When there are no Members yet,
+// the dialog says it's creating the first one, who becomes the Admin.
 class MemberEditDialog : public FramelessDialog
 {
     Q_OBJECT
@@ -34,6 +35,9 @@ public:
         TeamController *teamController,
         QWidget *parent = nullptr);
 
+    // The Member as saved (with its id), once the dialog is accepted.
+    User savedUser() const { return m_savedUser; }
+
 private slots:
     void saveClicked();
     void updateBadgePreview();
@@ -43,6 +47,7 @@ private:
     bool validate();
 
     User m_existingUser;
+    User m_savedUser;
     UserController *m_userController = nullptr;
 
     QLabel *m_badgePreview = nullptr;

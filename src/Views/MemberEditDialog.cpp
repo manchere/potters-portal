@@ -28,10 +28,17 @@ MemberEditDialog::MemberEditDialog(
     , m_userController(userController)
 {
     const bool isNew = user.id() < 0;
-    const QString title = isNew ? tr("Add Member") : tr("Edit Member");
+    const bool isFirst = isNew && userController->allUsers().isEmpty();
+    const QString title = isFirst ? tr("Create the First Member") : isNew ? tr("Add Member") : tr("Edit Member");
     setWindowTitle(title);
     auto *heading = new QLabel(title, this);
     heading->setObjectName(QStringLiteral("pageTitle"));
+    QLabel *firstNote = nullptr;
+    if (isFirst) {
+        firstNote = new QLabel(
+            tr("There are no members yet. This member will be the Admin and can add everyone else."), this);
+        firstNote->setWordWrap(true);
+    }
 
     // The Member's circle as it will appear elsewhere, above the form.
     m_badgePreview = MemberBadge::make(user.name(), user.color(), 72, this);
@@ -69,7 +76,9 @@ MemberEditDialog::MemberEditDialog(
 
     m_passwordEdit = new QLineEdit(this);
     m_passwordEdit->setEchoMode(QLineEdit::Password);
-    m_passwordEdit->setPlaceholderText(isNew
+    m_passwordEdit->setPlaceholderText(isFirst
+        ? tr("Min. 8 characters -- unlocks Admin mode")
+        : isNew
         ? tr("Min. 8 characters -- share this with the member")
         : tr("Leave blank to keep the current password"));
     connect(m_passwordEdit, &QLineEdit::textChanged, this, [this]() { m_passwordError->clear(); });
@@ -90,12 +99,16 @@ MemberEditDialog::MemberEditDialog(
     form->addRow(QString(), m_showPasswordCheck);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-    buttons->button(QDialogButtonBox::Save)->setText(isNew ? tr("Add Member") : tr("Save Changes"));
+    buttons->button(QDialogButtonBox::Save)->setText(
+        isFirst ? tr("Create Admin") : isNew ? tr("Add Member") : tr("Save Changes"));
     connect(buttons, &QDialogButtonBox::accepted, this, &MemberEditDialog::saveClicked);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
     auto *layout = contentLayout();
     layout->addWidget(heading);
+    if (firstNote) {
+        layout->addWidget(firstNote);
+    }
     layout->addLayout(badgeRow);
     layout->addLayout(form);
     layout->addWidget(buttons);
@@ -167,5 +180,6 @@ void MemberEditDialog::saveClicked()
         m_phoneError->setText(m_userController->lastError());
         return;
     }
+    m_savedUser = user;
     accept();
 }

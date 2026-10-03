@@ -140,7 +140,10 @@ bool UserController::addUser(User &user)
     QSqlQuery query;
     query.prepare(QStringLiteral(
         "INSERT INTO users (name, phone, password_hash, password_salt, is_admin, color, team_id) "
-        "VALUES (:name, :phone, :password_hash, :password_salt, :is_admin, :color, :team_id) RETURNING id"));
+        "VALUES (:name, :phone, :password_hash, :password_salt, "
+        // The very first Member becomes the Admin, so a fresh (or
+        // cleared) database always gets one.
+        ":is_admin OR NOT EXISTS (SELECT 1 FROM users), :color, :team_id) RETURNING id, is_admin"));
     query.bindValue(QStringLiteral(":name"), user.name());
     query.bindValue(QStringLiteral(":phone"), user.phone());
     query.bindValue(QStringLiteral(":password_hash"), user.passwordHash());
@@ -153,6 +156,7 @@ bool UserController::addUser(User &user)
         return false;
     }
     user.setId(query.value(0).toInt());
+    user.setIsAdmin(query.value(1).toBool());
     emit usersChanged();
     return true;
 }

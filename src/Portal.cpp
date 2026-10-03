@@ -43,6 +43,8 @@ int main(int argc, char **argv)
 	// MainWindow::adminButtonClicked).
 	MainWindow window;
 	window.show();
+	// A fresh or cleared database has no Members, so nobody could sign in.
+	window.promptForFirstMember();
 
 	return app.exec();
 }

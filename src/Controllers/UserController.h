@@ -48,6 +48,8 @@ public slots:
     // PasswordAuth) before calling this -- the controller only persists
     // them, it doesn't hash.
     // phone is normalized before saving, on both add and update.
+    // The first Member ever added is made an Admin whatever user.isAdmin()
+    // says; user carries the id and Admin flag that were saved.
     bool addUser(User &user);
     // Updates profile fields and password only -- never is_admin, so a
     // stale User object can't silently grant or revoke Admin. Use

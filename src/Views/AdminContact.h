@@ -6,4 +6,4 @@
 // password?" link emails this address, and ChangePasswordDialog sends the
 // new password here (members have phone numbers, not email addresses).
 // Hardcoded for now.
-inline const QString kAdminContactEmail = QStringLiteral("manucheremeh1995@gmail.com");
+inline const QString kAdminContactEmail = QStringLiteral("support@pottershouse.fr");

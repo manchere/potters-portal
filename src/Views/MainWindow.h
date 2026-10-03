@@ -49,6 +49,11 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
 
+    // With no Members at all, nobody can sign in, so this asks for the
+    // first one (MemberEditDialog), who becomes the Admin, and signs them
+    // in. Does nothing once a Member exists. Returns whether one was made.
+    bool promptForFirstMember();
+
 protected:
     void changeEvent(QEvent *event) override;
 

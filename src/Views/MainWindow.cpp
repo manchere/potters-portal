@@ -16,6 +16,7 @@
 #include "ItemListView.h"
 #include "ChangePasswordDialog.h"
 #include "LoginDialog.h"
+#include "MemberEditDialog.h"
 #include "ReportsView.h"
 #include "SettingsView.h"
 #include "SongsView.h"
@@ -218,6 +219,10 @@ void MainWindow::adminButtonClicked()
     if (m_currentUser.id() >= 0) {
         // Already signed in -- clicking the unlocked icon signs out.
         m_currentUser = User();
+    } else if (promptForFirstMember()) {
+        return; // signed in as the new Admin
+    } else if (m_userController.allUsers().isEmpty()) {
+        return; // no Members to sign in as, and none made
     } else {
         LoginDialog dialog(&m_userController, this);
         if (dialog.exec() != QDialog::Accepted) {
@@ -226,6 +231,20 @@ void MainWindow::adminButtonClicked()
         m_currentUser = dialog.loggedInUser();
     }
     applyAccess();
+}
+
+bool MainWindow::promptForFirstMember()
+{
+    if (!m_userController.allUsers().isEmpty()) {
+        return false;
+    }
+    MemberEditDialog dialog(User(), &m_userController, &m_teamController, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+    m_currentUser = dialog.savedUser();
+    applyAccess();
+    return true;
 }
 
 void MainWindow::applyAccess()
