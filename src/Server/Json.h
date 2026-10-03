@@ -3,12 +3,15 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
+#include "Models/AccessRights.h"
 #include "Models/Duty.h"
 #include "Models/AvailabilityMark.h"
 #include "Models/Category.h"
 #include "Models/Item.h"
 #include "Models/NonAvailabilityRequest.h"
 #include "Models/DutyType.h"
+#include "Models/Feedback.h"
+#include "Models/ScheduleReportRow.h"
 #include "Models/Song.h"
 #include "Models/Tag.h"
 #include "Models/User.h"
@@ -38,4 +41,16 @@ namespace Json
     QJsonObject availabilityMarkToJson(const AvailabilityMark &mark);
 
     QJsonObject nonAvailabilityRequestToJson(const NonAvailabilityRequest &request);
+
+    QJsonObject dutyTypeToJson(const DutyType &dutyType);
+
+    QJsonObject songToJson(const Song &song);
+    Song songFromJson(const QJsonObject &json);
+
+    QJsonObject feedbackToJson(const Feedback &feedback);
+
+    QJsonObject reportRowToJson(const ScheduleReportRow &row);
+
+    // {"view": bool, "create": bool, "update": bool, "delete": bool}
+    QJsonObject sectionAccessToJson(const SectionAccess &access);
 }

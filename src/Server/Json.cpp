@@ -114,4 +114,79 @@ namespace Json
         return json;
     }
 
+    QJsonObject dutyTypeToJson(const DutyType &dutyType)
+    {
+        QJsonObject json;
+        json[QStringLiteral("id")] = dutyType.id();
+        json[QStringLiteral("name")] = dutyType.name();
+        json[QStringLiteral("icon")] = dutyType.icon();
+        return json;
+    }
+
+    QJsonObject songToJson(const Song &song)
+    {
+        QJsonObject json;
+        json[QStringLiteral("id")] = song.id();
+        json[QStringLiteral("title")] = song.title();
+        json[QStringLiteral("artist")] = song.artist();
+        json[QStringLiteral("song_key")] = song.songKey();
+        json[QStringLiteral("link")] = song.link();
+        json[QStringLiteral("lyrics")] = song.lyrics();
+        return json;
+    }
+
+    Song songFromJson(const QJsonObject &json)
+    {
+        Song song;
+        song.setId(json.value(QStringLiteral("id")).toInt(-1));
+        song.setTitle(json.value(QStringLiteral("title")).toString().trimmed());
+        song.setArtist(json.value(QStringLiteral("artist")).toString().trimmed());
+        song.setSongKey(json.value(QStringLiteral("song_key")).toString().trimmed());
+        song.setLink(json.value(QStringLiteral("link")).toString().trimmed());
+        song.setLyrics(json.value(QStringLiteral("lyrics")).toString());
+        return song;
+    }
+
+    QJsonObject feedbackToJson(const Feedback &feedback)
+    {
+        QJsonObject json;
+        json[QStringLiteral("id")] = feedback.id();
+        json[QStringLiteral("kind")] = Feedback::kindKey(feedback.kind());
+        json[QStringLiteral("member_id")] = feedback.memberId() > 0 ? QJsonValue(feedback.memberId()) : QJsonValue();
+        json[QStringLiteral("subject")] = feedback.subject();
+        json[QStringLiteral("details")] = feedback.details();
+        json[QStringLiteral("done")] = feedback.isDone();
+        json[QStringLiteral("created_at")] = feedback.createdAt().isValid()
+            ? QJsonValue(feedback.createdAt().toString(Qt::ISODate))
+            : QJsonValue();
+        return json;
+    }
+
+    QJsonObject reportRowToJson(const ScheduleReportRow &row)
+    {
+        QJsonObject json;
+        json[QStringLiteral("duty_id")] = row.dutyId;
+        json[QStringLiteral("service_date")] = row.serviceDate.toString(Qt::ISODate);
+        json[QStringLiteral("duty_type_name")] = row.dutyTypeName;
+        json[QStringLiteral("duty_type_icon")] = row.dutyTypeIcon;
+        json[QStringLiteral("member_id")] = row.memberId > 0 ? QJsonValue(row.memberId) : QJsonValue();
+        json[QStringLiteral("member_name")] = row.memberId > 0 ? QJsonValue(row.memberName) : QJsonValue();
+        json[QStringLiteral("support_member_id")] = row.supportMemberId > 0 ? QJsonValue(row.supportMemberId) : QJsonValue();
+        json[QStringLiteral("support_member_name")] = row.supportMemberId > 0 ? QJsonValue(row.supportMemberName) : QJsonValue();
+        json[QStringLiteral("notes")] = row.notes;
+        // Only the status; the member's reason stays private.
+        json[QStringLiteral("request_status")] = row.requestStatus.isEmpty() ? QJsonValue() : QJsonValue(row.requestStatus);
+        json[QStringLiteral("member_marked_unavailable")] = row.memberMarkedUnavailable;
+        return json;
+    }
+
+    QJsonObject sectionAccessToJson(const SectionAccess &access)
+    {
+        QJsonObject json;
+        json[QStringLiteral("view")] = access.view;
+        json[QStringLiteral("create")] = access.create;
+        json[QStringLiteral("update")] = access.update;
+        json[QStringLiteral("delete")] = access.remove;
+        return json;
+    }
 }

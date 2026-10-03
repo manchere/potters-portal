@@ -10,15 +10,21 @@
 #include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QTcpServer>
+#include <QUrlQuery>
+
+#include <optional>
 
 #include "Auth/PasswordAuth.h"
+#include "Controllers/AccessController.h"
 #include "Controllers/DutyController.h"
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/AvailabilityController.h"
 #include "Controllers/CategoryController.h"
+#include "Controllers/FeedbackController.h"
 #include "Controllers/ItemController.h"
 #include "Controllers/NonAvailabilityRequestController.h"
 #include "Controllers/SessionController.h"
+#include "Controllers/SongController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
 #include "Database/Database.h"
@@ -54,6 +60,41 @@ static QByteArray decodeImageBase64(const QString &imageBase64, QString &mime)
     return QByteArray::fromBase64(payload.toLatin1());
 }
 
+// The Sunday whose duties count towards someone's access rights -- today if
+// it's Sunday, else the next one (same as the desktop's MainWindow).
+static QDate upcomingSunday()
+{
+    const QDate today = QDate::currentDate();
+    return today.addDays(7 - today.dayOfWeek());
+}
+
+// A duty with who serves and who backs up (FR-7.4) and their color badges,
+// so the app can show a line-up without looking members up itself.
+static QJsonObject dutyWithPeople(const Duty &duty, const DutyType &dutyType, const UserController &users)
+{
+    QJsonObject json = Json::dutyToJson(duty, dutyType);
+    const User member = duty.memberId() > 0 ? users.userById(duty.memberId()) : User();
+    const User support = duty.supportMemberId() > 0 ? users.userById(duty.supportMemberId()) : User();
+    json[QStringLiteral("member_name")] = member.id() >= 0 ? QJsonValue(member.name()) : QJsonValue();
+    json[QStringLiteral("member_color")] = member.id() >= 0 ? QJsonValue(member.color()) : QJsonValue();
+    json[QStringLiteral("support_member_name")] = support.id() >= 0 ? QJsonValue(support.name()) : QJsonValue();
+    json[QStringLiteral("support_member_color")] = support.id() >= 0 ? QJsonValue(support.color()) : QJsonValue();
+    return json;
+}
+
+// A duty from a POST/PUT body. Ids that are missing or null come out as -1
+// ("nobody"), as the controllers expect.
+static Duty dutyFromJson(const QJsonObject &json)
+{
+    Duty duty;
+    duty.setDutyTypeId(json.value(QStringLiteral("duty_type_id")).toInt(-1));
+    duty.setServiceDate(QDate::fromString(json.value(QStringLiteral("service_date")).toString(), Qt::ISODate));
+    duty.setMemberId(json.value(QStringLiteral("member_id")).toInt(-1));
+    duty.setSupportMemberId(json.value(QStringLiteral("support_member_id")).toInt(-1));
+    duty.setNotes(json.value(QStringLiteral("notes")).toString().trimmed());
+    return duty;
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -78,9 +119,40 @@ int main(int argc, char **argv)
     DutyTypeController dutyTypeController;
     AvailabilityController availabilityController;
     NonAvailabilityRequestController requestController;
+    AccessController accessController;
+    SongController songController;
+    FeedbackController feedbackController;
     QNetworkAccessManager networkManager;
 
     QHttpServer server;
+
+    // Every route that follows Settings > Access Rights starts with this:
+    // signs the caller in from their token and checks they may do `action`
+    // in `section`. Returns the error to send back, or nothing if allowed
+    // (outUser is then the signed-in member).
+    const auto denied = [&sessionController, &userController, &accessController](
+                            const QHttpServerRequest &request, Section section, AccessAction action,
+                            User &outUser) -> std::optional<QHttpServerResponse> {
+        if (!requireAuth(request, sessionController, userController, outUser)) {
+            return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
+        }
+        if (!accessController.rightsFor(outUser, upcomingSunday()).section(section).allows(action)) {
+            return errorResponse(QStringLiteral("you don't have access to do this"), StatusCode::Forbidden);
+        }
+        return std::nullopt;
+    };
+    // Schedule changes have no access rule: Admins only, as on the desktop.
+    const auto deniedUnlessAdmin = [&sessionController, &userController](
+                                       const QHttpServerRequest &request) -> std::optional<QHttpServerResponse> {
+        User user;
+        if (!requireAuth(request, sessionController, userController, user)) {
+            return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
+        }
+        if (!user.isAdmin()) {
+            return errorResponse(QStringLiteral("only an Admin can change the schedule"), StatusCode::Forbidden);
+        }
+        return std::nullopt;
+    };
 
     // --- CORS ---------------------------------------------------------------
     // Lets the web version of the mobile app (served from another address)
@@ -147,7 +219,11 @@ int main(int argc, char **argv)
         return QHttpServerResponse(Json::itemToJson(item));
     });
 
-    server.route("/api/items", QHttpServerRequest::Method::Post, [&itemController](const QHttpServerRequest &request) {
+    server.route("/api/items", QHttpServerRequest::Method::Post, [&itemController, &denied](const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Inventory, AccessAction::Create, currentUser)) {
+            return std::move(*error);
+        }
         const QJsonDocument doc = QJsonDocument::fromJson(request.body());
         if (!doc.isObject()) {
             return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
@@ -162,7 +238,11 @@ int main(int argc, char **argv)
         return QHttpServerResponse(Json::itemToJson(item), StatusCode::Created);
     });
 
-    server.route("/api/items/<arg>", QHttpServerRequest::Method::Put, [&itemController](int id, const QHttpServerRequest &request) {
+    server.route("/api/items/<arg>", QHttpServerRequest::Method::Put, [&itemController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Inventory, AccessAction::Update, currentUser)) {
+            return std::move(*error);
+        }
         const QJsonDocument doc = QJsonDocument::fromJson(request.body());
         if (!doc.isObject()) {
             return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
@@ -178,14 +258,24 @@ int main(int argc, char **argv)
         return QHttpServerResponse(Json::itemToJson(item));
     });
 
-    server.route("/api/items/<arg>", QHttpServerRequest::Method::Delete, [&itemController](int id) {
+    server.route("/api/items/<arg>", QHttpServerRequest::Method::Delete, [&itemController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Inventory, AccessAction::Delete, currentUser)) {
+            return std::move(*error);
+        }
         if (!itemController.removeItem(id)) {
             return errorResponse(itemController.lastError(), StatusCode::InternalServerError);
         }
         return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
     });
 
-    server.route("/api/items/<arg>/image", QHttpServerRequest::Method::Post, [&itemController](int id, const QHttpServerRequest &request) {
+    // A photo comes with a new item or replaces one, so either right will do.
+    server.route("/api/items/<arg>/image", QHttpServerRequest::Method::Post, [&itemController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Inventory, AccessAction::Create, currentUser);
+            error && denied(request, Section::Inventory, AccessAction::Update, currentUser)) {
+            return std::move(*error);
+        }
         if (itemController.itemById(id).id() < 0) {
             return errorResponse(QStringLiteral("item not found"), StatusCode::NotFound);
         }
@@ -213,7 +303,11 @@ int main(int argc, char **argv)
         return QHttpServerResponse(mime.toUtf8(), data);
     });
 
-    server.route("/api/items/<arg>/status", QHttpServerRequest::Method::Patch, [&itemController](int id, const QHttpServerRequest &request) {
+    server.route("/api/items/<arg>/status", QHttpServerRequest::Method::Patch, [&itemController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Inventory, AccessAction::Update, currentUser)) {
+            return std::move(*error);
+        }
         const QJsonDocument doc = QJsonDocument::fromJson(request.body());
         if (!doc.isObject() || !doc.object().contains(QStringLiteral("status"))) {
             return errorResponse(QStringLiteral("expected {\"status\": \"...\"}"), StatusCode::BadRequest);
@@ -360,12 +454,15 @@ int main(int argc, char **argv)
         }
         QJsonArray duties;
         for (const Duty &duty : dutyController.dutiesForMember(currentUser.id())) {
-            QJsonObject json = Json::dutyToJson(duty, dutyTypeController.dutyTypeById(duty.dutyTypeId()));
+            QJsonObject json = dutyWithPeople(duty, dutyTypeController.dutyTypeById(duty.dutyTypeId()), userController);
             // FR-4.2: flag when this duty's date collides with a mark
             // the member already made on their general calendar, so the
             // mobile client can prompt them to file a formal request.
             json[QStringLiteral("conflicts_with_calendar")] =
                 availabilityController.isMarked(currentUser.id(), duty.serviceDate());
+            // Which of serving / backing up this member is.
+            json[QStringLiteral("role")] = duty.memberId() == currentUser.id() ? QStringLiteral("serving")
+                                                                               : QStringLiteral("backup");
             const NonAvailabilityRequest existing =
                 requestController.requestForDutyAndUser(duty.id(), currentUser.id());
             json[QStringLiteral("non_availability_request")] = existing.id() >= 0
@@ -463,16 +560,327 @@ int main(int argc, char **argv)
     });
 
     server.route("/api/non-availability-requests/me", QHttpServerRequest::Method::Get,
-                 [&sessionController, &userController, &requestController](const QHttpServerRequest &request) {
+                 [&sessionController, &userController, &requestController, &dutyController,
+                  &dutyTypeController](const QHttpServerRequest &request) {
         User currentUser;
         if (!requireAuth(request, sessionController, userController, currentUser)) {
             return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
         }
         QJsonArray requests;
         for (const NonAvailabilityRequest &req : requestController.listForUser(currentUser.id())) {
-            requests.append(Json::nonAvailabilityRequestToJson(req));
+            QJsonObject json = Json::nonAvailabilityRequestToJson(req);
+            // Which duty it's about, so the list can say "Singing, Sun 4 Oct".
+            const Duty duty = dutyController.dutyById(req.dutyId());
+            if (duty.id() >= 0) {
+                const DutyType dutyType = dutyTypeController.dutyTypeById(duty.dutyTypeId());
+                json[QStringLiteral("duty_type_name")] = dutyType.name();
+                json[QStringLiteral("duty_type_icon")] = dutyType.icon();
+                json[QStringLiteral("service_date")] = duty.serviceDate().toString(Qt::ISODate);
+            }
+            requests.append(json);
         }
         return QHttpServerResponse(requests);
+    });
+
+    // --- Access rights ---------------------------------------------------------
+    // What the signed-in member may do, per section, so the app shows only
+    // the screens and buttons they can use. The routes check again anyway.
+    server.route("/api/access/me", QHttpServerRequest::Method::Get,
+                 [&sessionController, &userController, &accessController](const QHttpServerRequest &request) {
+        User currentUser;
+        if (!requireAuth(request, sessionController, userController, currentUser)) {
+            return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
+        }
+        const AccessRights rights = accessController.rightsFor(currentUser, upcomingSunday());
+        QJsonObject sections;
+        for (Section section : allSections()) {
+            sections[sectionKey(section)] = Json::sectionAccessToJson(rights.section(section));
+        }
+        return QHttpServerResponse(QJsonObject{
+            {QStringLiteral("is_admin"), currentUser.isAdmin()},
+            {QStringLiteral("can_manage_schedule"), currentUser.isAdmin()},
+            {QStringLiteral("sections"), sections},
+        });
+    });
+
+    // --- Schedule (everyone can see it; only Admins change it) -----------------
+    server.route("/api/schedule/<arg>", QHttpServerRequest::Method::Get,
+                 [&sessionController, &userController, &dutyController, &dutyTypeController]
+                 (const QString &dateStr, const QHttpServerRequest &request) {
+        User currentUser;
+        if (!requireAuth(request, sessionController, userController, currentUser)) {
+            return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
+        }
+        const QDate date = QDate::fromString(dateStr, Qt::ISODate);
+        if (!date.isValid()) {
+            return errorResponse(QStringLiteral("invalid date"), StatusCode::BadRequest);
+        }
+        QJsonArray duties;
+        for (const Duty &duty : dutyController.dutiesForDate(date)) {
+            duties.append(dutyWithPeople(duty, dutyTypeController.dutyTypeById(duty.dutyTypeId()), userController));
+        }
+        return QHttpServerResponse(QJsonObject{
+            {QStringLiteral("date"), date.toString(Qt::ISODate)},
+            // Past Sundays are read-only for everyone (DutyController).
+            {QStringLiteral("editable"), DutyController::isEditableDate(date)},
+            {QStringLiteral("duties"), duties},
+        });
+    });
+
+    // The pickers for adding a duty: duty types and members (names and
+    // colors only -- no emails).
+    server.route("/api/duty-types", QHttpServerRequest::Method::Get,
+                 [&sessionController, &userController, &dutyTypeController](const QHttpServerRequest &request) {
+        User currentUser;
+        if (!requireAuth(request, sessionController, userController, currentUser)) {
+            return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
+        }
+        QJsonArray dutyTypes;
+        for (const DutyType &dutyType : dutyTypeController.allDutyTypes()) {
+            dutyTypes.append(Json::dutyTypeToJson(dutyType));
+        }
+        return QHttpServerResponse(dutyTypes);
+    });
+
+    server.route("/api/members", QHttpServerRequest::Method::Get,
+                 [&sessionController, &userController](const QHttpServerRequest &request) {
+        User currentUser;
+        if (!requireAuth(request, sessionController, userController, currentUser)) {
+            return errorResponse(QStringLiteral("authentication required"), StatusCode::Unauthorized);
+        }
+        QJsonArray members;
+        for (const User &user : userController.allUsers()) {
+            members.append(QJsonObject{
+                {QStringLiteral("id"), user.id()},
+                {QStringLiteral("name"), user.name()},
+                {QStringLiteral("color"), user.color()},
+            });
+        }
+        return QHttpServerResponse(members);
+    });
+
+    server.route("/api/duties", QHttpServerRequest::Method::Post,
+                 [&dutyController, &dutyTypeController, &userController, &deniedUnlessAdmin](const QHttpServerRequest &request) {
+        if (auto error = deniedUnlessAdmin(request)) {
+            return std::move(*error);
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
+        if (!doc.isObject()) {
+            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
+        }
+        Duty duty = dutyFromJson(doc.object());
+        if (!duty.serviceDate().isValid() || duty.serviceDate().dayOfWeek() != Qt::Sunday) {
+            return errorResponse(QStringLiteral("service_date must be a Sunday"), StatusCode::BadRequest);
+        }
+        const DutyType dutyType = dutyTypeController.dutyTypeById(duty.dutyTypeId());
+        if (dutyType.id() < 0) {
+            return errorResponse(QStringLiteral("pick a duty"), StatusCode::BadRequest);
+        }
+        if (!dutyController.addDuty(duty)) {
+            return errorResponse(dutyController.lastError(), StatusCode::BadRequest);
+        }
+        return QHttpServerResponse(dutyWithPeople(duty, dutyType, userController), StatusCode::Created);
+    });
+
+    // Changes who serves, the backup and the notes; the duty and its Sunday
+    // stay as they are.
+    server.route("/api/duties/<arg>", QHttpServerRequest::Method::Put,
+                 [&dutyController, &dutyTypeController, &userController, &deniedUnlessAdmin]
+                 (int id, const QHttpServerRequest &request) {
+        if (auto error = deniedUnlessAdmin(request)) {
+            return std::move(*error);
+        }
+        Duty duty = dutyController.dutyById(id);
+        if (duty.id() < 0) {
+            return errorResponse(QStringLiteral("duty not found"), StatusCode::NotFound);
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
+        if (!doc.isObject()) {
+            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
+        }
+        const Duty changes = dutyFromJson(doc.object());
+        duty.setMemberId(changes.memberId());
+        duty.setSupportMemberId(changes.supportMemberId());
+        duty.setNotes(changes.notes());
+        if (!dutyController.updateDuty(duty)) {
+            return errorResponse(dutyController.lastError(), StatusCode::BadRequest);
+        }
+        return QHttpServerResponse(dutyWithPeople(duty, dutyTypeController.dutyTypeById(duty.dutyTypeId()), userController));
+    });
+
+    server.route("/api/duties/<arg>", QHttpServerRequest::Method::Delete,
+                 [&dutyController, &deniedUnlessAdmin](int id, const QHttpServerRequest &request) {
+        if (auto error = deniedUnlessAdmin(request)) {
+            return std::move(*error);
+        }
+        if (!dutyController.removeDuty(id)) {
+            return errorResponse(dutyController.lastError(), StatusCode::BadRequest);
+        }
+        return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
+    });
+
+    // --- Reports ("who did what", like the desktop Reports tab) ---------------
+    // ?from=YYYY-MM-DD&to=YYYY-MM-DD; newest Sunday first.
+    server.route("/api/reports/schedule", QHttpServerRequest::Method::Get,
+                 [&dutyController, &denied](const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Reports, AccessAction::View, currentUser)) {
+            return std::move(*error);
+        }
+        const QUrlQuery query(request.url());
+        QDate from = QDate::fromString(query.queryItemValue(QStringLiteral("from")), Qt::ISODate);
+        QDate to = QDate::fromString(query.queryItemValue(QStringLiteral("to")), Qt::ISODate);
+        if (!from.isValid() || !to.isValid()) {
+            return errorResponse(QStringLiteral("expected ?from=YYYY-MM-DD&to=YYYY-MM-DD"), StatusCode::BadRequest);
+        }
+        if (from > to) {
+            std::swap(from, to);
+        }
+        QJsonArray rows;
+        for (const ScheduleReportRow &row : dutyController.scheduleReport(from, to)) {
+            rows.append(Json::reportRowToJson(row));
+        }
+        return QHttpServerResponse(rows);
+    });
+
+    // --- Songs ---------------------------------------------------------------
+    server.route("/api/songs", QHttpServerRequest::Method::Get,
+                 [&songController, &denied](const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Songs, AccessAction::View, currentUser)) {
+            return std::move(*error);
+        }
+        QJsonArray songs;
+        for (const Song &song : songController.allSongs()) {
+            songs.append(Json::songToJson(song));
+        }
+        return QHttpServerResponse(songs);
+    });
+
+    server.route("/api/songs", QHttpServerRequest::Method::Post,
+                 [&songController, &denied](const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Songs, AccessAction::Create, currentUser)) {
+            return std::move(*error);
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
+        if (!doc.isObject()) {
+            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
+        }
+        Song song = Json::songFromJson(doc.object());
+        if (song.title().isEmpty()) {
+            return errorResponse(QStringLiteral("title is required"), StatusCode::BadRequest);
+        }
+        if (!songController.addSong(song)) {
+            return errorResponse(songController.lastError(), StatusCode::InternalServerError);
+        }
+        return QHttpServerResponse(Json::songToJson(song), StatusCode::Created);
+    });
+
+    server.route("/api/songs/<arg>", QHttpServerRequest::Method::Put,
+                 [&songController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Songs, AccessAction::Update, currentUser)) {
+            return std::move(*error);
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
+        if (!doc.isObject()) {
+            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
+        }
+        Song song = Json::songFromJson(doc.object());
+        song.setId(id);
+        if (song.title().isEmpty()) {
+            return errorResponse(QStringLiteral("title is required"), StatusCode::BadRequest);
+        }
+        if (!songController.updateSong(song)) {
+            return errorResponse(songController.lastError(), StatusCode::InternalServerError);
+        }
+        return QHttpServerResponse(Json::songToJson(song));
+    });
+
+    server.route("/api/songs/<arg>", QHttpServerRequest::Method::Delete,
+                 [&songController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Songs, AccessAction::Delete, currentUser)) {
+            return std::move(*error);
+        }
+        if (!songController.removeSong(id)) {
+            return errorResponse(songController.lastError(), StatusCode::InternalServerError);
+        }
+        return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
+    });
+
+    // --- Feedback --------------------------------------------------------------
+    // Sending needs Feedback "create"; reading everyone's requests needs
+    // "update" or "delete", as on the desktop Feedback tab.
+    server.route("/api/feedback", QHttpServerRequest::Method::Post,
+                 [&feedbackController, &denied](const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Feedback, AccessAction::Create, currentUser)) {
+            return std::move(*error);
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
+        if (!doc.isObject()) {
+            return errorResponse(QStringLiteral("expected a JSON object"), StatusCode::BadRequest);
+        }
+        const QJsonObject body = doc.object();
+        Feedback feedback;
+        feedback.setKind(Feedback::kindFromKey(body.value(QStringLiteral("kind")).toString()));
+        feedback.setMemberId(currentUser.id());
+        feedback.setSubject(body.value(QStringLiteral("subject")).toString().trimmed());
+        feedback.setDetails(body.value(QStringLiteral("details")).toString().trimmed());
+        if (feedback.subject().isEmpty()) {
+            return errorResponse(QStringLiteral("a subject is required"), StatusCode::BadRequest);
+        }
+        if (!feedbackController.addFeedback(feedback)) {
+            return errorResponse(feedbackController.lastError(), StatusCode::InternalServerError);
+        }
+        return QHttpServerResponse(Json::feedbackToJson(feedback), StatusCode::Created);
+    });
+
+    server.route("/api/feedback", QHttpServerRequest::Method::Get,
+                 [&feedbackController, &userController, &denied](const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Feedback, AccessAction::Update, currentUser);
+            error && denied(request, Section::Feedback, AccessAction::Delete, currentUser)) {
+            return std::move(*error);
+        }
+        QJsonArray list;
+        for (const Feedback &feedback : feedbackController.allFeedback()) {
+            QJsonObject json = Json::feedbackToJson(feedback);
+            const User member = feedback.memberId() > 0 ? userController.userById(feedback.memberId()) : User();
+            json[QStringLiteral("member_name")] = member.id() >= 0 ? QJsonValue(member.name()) : QJsonValue();
+            list.append(json);
+        }
+        return QHttpServerResponse(list);
+    });
+
+    server.route("/api/feedback/<arg>", QHttpServerRequest::Method::Patch,
+                 [&feedbackController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Feedback, AccessAction::Update, currentUser)) {
+            return std::move(*error);
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(request.body());
+        if (!doc.isObject() || !doc.object().contains(QStringLiteral("done"))) {
+            return errorResponse(QStringLiteral("expected {\"done\": true|false}"), StatusCode::BadRequest);
+        }
+        if (!feedbackController.setDone(id, doc.object().value(QStringLiteral("done")).toBool())) {
+            return errorResponse(feedbackController.lastError(), StatusCode::InternalServerError);
+        }
+        return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
+    });
+
+    server.route("/api/feedback/<arg>", QHttpServerRequest::Method::Delete,
+                 [&feedbackController, &denied](int id, const QHttpServerRequest &request) {
+        User currentUser;
+        if (auto error = denied(request, Section::Feedback, AccessAction::Delete, currentUser)) {
+            return std::move(*error);
+        }
+        if (!feedbackController.removeFeedback(id)) {
+            return errorResponse(feedbackController.lastError(), StatusCode::InternalServerError);
+        }
+        return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
     });
 
     auto *tcpServer = new QTcpServer(&app);
