@@ -1337,6 +1337,21 @@ Notez dès maintenant le nouveau mot de passe.</translation>
     </message>
 </context>
 <context>
+    <name>NonAvailabilityRequestController</name>
+    <message>
+        <source>This request no longer exists. Its duty may have been deleted.</source>
+        <translation>Cette demande n'existe plus. Sa tâche a peut-être été supprimée.</translation>
+    </message>
+    <message>
+        <source>This request has already been decided.</source>
+        <translation>Une réponse a déjà été donnée à cette demande.</translation>
+    </message>
+    <message>
+        <source>This Sunday has passed, so its schedule can't be changed.</source>
+        <translation type="unfinished">Ce dimanche est passé, son planning ne peut donc plus être modifié.</translation>
+    </message>
+</context>
+<context>
     <name>Portal</name>
     <message>
         <source>DATABASE_URL is not set. Set it to a Postgres connection string (e.g. postgresql://user:password@host/dbname?sslmode=require) and restart.</source>
@@ -1659,6 +1674,102 @@ Attention : ces membres se sont indiqués indisponibles ce jour-là :
     <message>
         <source>Pick a Sunday to see who's serving, and assign duties for it. Double-click a member to see their part in that Sunday.</source>
         <translation>Choisissez un dimanche pour voir qui sert et attribuer les tâches. Double-cliquez sur un membre pour voir son rôle ce dimanche-là.</translation>
+    </message>
+    <message>
+        <source>Absence Requests</source>
+        <translation>Demandes d'absence</translation>
+    </message>
+    <message>
+        <source>🙋 %1 asked to be absent · approved</source>
+        <translation>🙋 %1 a demandé à être absent · acceptée</translation>
+    </message>
+    <message>
+        <source>⏳ %1 asked to be absent · waiting for your answer</source>
+        <translation>⏳ %1 a demandé à être absent · en attente de votre réponse</translation>
+    </message>
+    <message>
+        <source>Reason: %1</source>
+        <translation>Motif : %1</translation>
+    </message>
+    <message>
+        <source>Absence Requests (%1)</source>
+        <translation>Demandes d'absence (%1)</translation>
+    </message>
+    <message>
+        <source>%1 asked to be absent</source>
+        <translation>%1 a demandé à être absent</translation>
+    </message>
+    <message>
+        <source>serving</source>
+        <translation>sert</translation>
+    </message>
+    <message>
+        <source>backup</source>
+        <translation>remplaçant</translation>
+    </message>
+    <message>
+        <source>no longer on this duty</source>
+        <translation>ne fait plus partie de cette tâche</translation>
+    </message>
+    <message>
+        <source>Sent %1</source>
+        <translation>Envoyée le %1</translation>
+    </message>
+    <message>
+        <source>Approve</source>
+        <translation>Accepter</translation>
+    </message>
+    <message>
+        <source>Take them off this duty; their backup serves instead</source>
+        <translation>Retirer cette personne de la tâche ; son remplaçant sert à sa place</translation>
+    </message>
+    <message>
+        <source>Deny</source>
+        <translation>Refuser</translation>
+    </message>
+    <message>
+        <source>Keep them on this duty</source>
+        <translation>Garder cette personne sur la tâche</translation>
+    </message>
+    <message>
+        <source>Show Sunday</source>
+        <translation>Voir le dimanche</translation>
+    </message>
+    <message>
+        <source>%1 will be taken off %2 on %3. Their backup, %4, will serve instead.</source>
+        <translation>%1 sera retiré(e) de %2 le %3. Son remplaçant, %4, servira à sa place.</translation>
+    </message>
+    <message>
+        <source>%1 will be taken off %2 on %3. There's no backup, so the duty will be left for you to fill.</source>
+        <translation>%1 sera retiré(e) de %2 le %3. Il n'y a pas de remplaçant : la tâche restera à pourvoir.</translation>
+    </message>
+    <message>
+        <source>%1 will no longer be the backup for %2 on %3.</source>
+        <translation>%1 ne sera plus remplaçant pour %2 le %3.</translation>
+    </message>
+    <message>
+        <source>%1 is no longer on %2 on %3, so the schedule won't change.</source>
+        <translation>%1 ne fait plus partie de %2 le %3, le planning ne changera donc pas.</translation>
+    </message>
+    <message>
+        <source>They'll see in the app that their request was approved.</source>
+        <translation>La personne verra dans l'application que sa demande a été acceptée.</translation>
+    </message>
+    <message>
+        <source>Approve Absence</source>
+        <translation>Accepter l'absence</translation>
+    </message>
+    <message>
+        <source>Nobody is serving %1 on %2 now. Pick someone for it?</source>
+        <translation>Personne ne sert pour %1 le %2 maintenant. Choisir quelqu'un ?</translation>
+    </message>
+    <message>
+        <source>Deny %1's request to be absent from %2 on %3? They stay on the duty and will see the answer in the app.</source>
+        <translation>Refuser la demande d'absence de %1 pour %2 le %3 ? La personne reste sur la tâche et verra la réponse dans l'application.</translation>
+    </message>
+    <message>
+        <source>Deny Absence</source>
+        <translation>Refuser l'absence</translation>
     </message>
 </context>
 <context>

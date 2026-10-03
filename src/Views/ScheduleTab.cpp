@@ -16,9 +16,11 @@
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSet>
 #include <QShortcut>
 #include <QStyle>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -31,6 +33,7 @@
 #include "MemberBadge.h"
 #include "Controllers/DutyController.h"
 #include "Controllers/DutyTypeController.h"
+#include "Controllers/NonAvailabilityRequestController.h"
 #include "Controllers/UserController.h"
 #include "MemberStatsDialog.h"
 #include "Models/Duty.h"
@@ -72,12 +75,14 @@ ScheduleTab::ScheduleTab(
     UserController *userController,
     DutyTypeController *dutyTypeController,
     TeamController *teamController,
+    NonAvailabilityRequestController *requestController,
     QWidget *parent)
     : QWidget(parent)
     , m_dutyController(dutyController)
     , m_userController(userController)
     , m_dutyTypeController(dutyTypeController)
     , m_teamController(teamController)
+    , m_requestController(requestController)
 {
     auto *title = new QLabel(tr("Schedule"), this);
     title->setObjectName(QStringLiteral("pageTitle"));
@@ -153,7 +158,36 @@ ScheduleTab::ScheduleTab(
     m_pastNotice->setObjectName(QStringLiteral("accentLabel"));
     m_pastNotice->setWordWrap(true);
     m_pastNotice->hide();
-    setAdminMode(false);
+
+    // Absence requests from the mobile app (Admin only; hidden while there
+    // are none). The cards scroll once there are more than a few.
+    auto *requestsContent = new QWidget(this);
+    m_requestsLayout = new QVBoxLayout(requestsContent);
+    m_requestsLayout->setContentsMargins(0, 0, 0, 0);
+    m_requestsLayout->setSpacing(8);
+    auto *requestsScroll = new QScrollArea(this);
+    requestsScroll->setWidget(requestsContent);
+    requestsScroll->setWidgetResizable(true);
+    requestsScroll->setFrameShape(QFrame::NoFrame);
+    requestsScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    requestsScroll->setMaximumHeight(240);
+    auto *requestsBoxLayout = new QVBoxLayout;
+    requestsBoxLayout->addWidget(requestsScroll);
+    m_requestsBox = new QGroupBox(tr("Absence Requests"), this);
+    m_requestsBox->setLayout(requestsBoxLayout);
+    m_requestsBox->hide();
+
+    // Members send requests through the API server, which doesn't tell
+    // this process, so look for new ones every so often.
+    m_requestsTimer = new QTimer(this);
+    m_requestsTimer->setInterval(30 * 1000);
+    connect(m_requestsTimer, &QTimer::timeout, this, [this] {
+        if (isVisible()) {
+            reloadRequests();
+        }
+    });
+
+    setAdminMode(false, -1);
 
     auto *resultsLayout = new QVBoxLayout;
     resultsLayout->addWidget(m_pastNotice);
@@ -180,10 +214,15 @@ ScheduleTab::ScheduleTab(
     sundayLayout->addWidget(m_sundayList);
     sundayBox->setLayout(sundayLayout);
 
+    auto *rightColumn = new QVBoxLayout;
+    rightColumn->setSpacing(12);
+    rightColumn->addWidget(m_requestsBox);
+    rightColumn->addWidget(resultsBox, 1);
+
     auto *columns = new QHBoxLayout;
     columns->setSpacing(16);
     columns->addWidget(sundayBox);
-    columns->addWidget(resultsBox, 1);
+    columns->addLayout(rightColumn, 1);
 
     auto *content = new QVBoxLayout;
     content->setSpacing(12);
@@ -412,7 +451,51 @@ QWidget *ScheduleTab::buildDutyContent(const Duty &duty, QWidget *parent)
     layout->addWidget(buildDutyCell(duty, content));
     layout->addWidget(buildBackupLine(duty, content), 1);
     m_dutyContents.append(content);
-    return content;
+
+    QWidget *notes = buildAbsenceNotes(duty, parent);
+    if (!notes) {
+        return content;
+    }
+    // The notes go under the duty and backup, whichever way those are laid
+    // out (setRowsStacked only flips content's own layout).
+    auto *wrapper = new QWidget(parent);
+    auto *wrapperLayout = new QVBoxLayout(wrapper);
+    wrapperLayout->setContentsMargins(0, 0, 0, 0);
+    wrapperLayout->setSpacing(3);
+    content->setParent(wrapper);
+    notes->setParent(wrapper);
+    wrapperLayout->addWidget(content);
+    wrapperLayout->addWidget(notes);
+    return wrapper;
+}
+
+QWidget *ScheduleTab::buildAbsenceNotes(const Duty &duty, QWidget *parent)
+{
+    if (!m_isAdmin) {
+        return nullptr;
+    }
+    QWidget *notes = nullptr;
+    QVBoxLayout *layout = nullptr;
+    for (const NonAvailabilityRequest &request : m_requestsByDuty.value(duty.id())) {
+        if (request.status() == RequestStatus::Denied) {
+            continue;
+        }
+        if (!notes) {
+            notes = new QWidget(parent);
+            layout = new QVBoxLayout(notes);
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->setSpacing(1);
+        }
+        const QString name = m_userController->userById(request.userId()).name();
+        const bool approved = request.status() == RequestStatus::Approved;
+        auto *label = new ElidedLabel(approved
+            ? tr("🙋 %1 asked to be absent · approved").arg(name)
+            : tr("⏳ %1 asked to be absent · waiting for your answer").arg(name), notes);
+        label->setObjectName(approved ? QStringLiteral("absenceApproved") : QStringLiteral("absencePending"));
+        label->setToolTip(tr("Reason: %1").arg(request.message()));
+        layout->addWidget(label);
+    }
+    return notes;
 }
 
 // One member with all their duties on this Sunday: badge and name (with
@@ -458,15 +541,22 @@ QWidget *ScheduleTab::buildMemberRow(const User &member, const QVector<Duty> &du
     return row;
 }
 
-void ScheduleTab::setAdminMode(bool isAdmin)
+void ScheduleTab::setAdminMode(bool isAdmin, int adminId)
 {
     m_isAdmin = isAdmin;
+    m_adminId = isAdmin ? adminId : -1;
     m_assignButton->setVisible(isAdmin);
     m_editButton->setVisible(isAdmin);
     m_deleteButton->setVisible(isAdmin);
     m_copyButton->setVisible(isAdmin);
     m_pasteButton->setVisible(isAdmin);
     m_copiedLabel->setVisible(isAdmin);
+    if (isAdmin) {
+        m_requestsTimer->start();
+    } else {
+        m_requestsTimer->stop();
+    }
+    reloadRequests();
     updateActionState();
     // Rows carry per-duty Edit buttons only an Admin sees.
     if (m_selectedDate.isValid()) {
@@ -767,6 +857,13 @@ void ScheduleTab::rebuildResults()
     m_selectedMemberId = -1;
     updateActionState();
 
+    m_requestsByDuty.clear();
+    if (m_isAdmin) {
+        for (const NonAvailabilityRequest &request : m_requestController->listForDate(m_selectedDate)) {
+            m_requestsByDuty[request.dutyId()].append(request);
+        }
+    }
+
     const QVector<Duty> duties = m_dutyController->dutiesForDate(m_selectedDate);
     if (duties.isEmpty()) {
         auto *item = new QListWidgetItem(m_resultsList);
@@ -1060,4 +1157,194 @@ void ScheduleTab::refresh()
     populateSundayList();
     selectSunday(previouslySelected);
     updateCopyPasteState();
+    reloadRequests();
+}
+
+void ScheduleTab::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    reloadRequests();
+}
+
+void ScheduleTab::reloadRequests()
+{
+    const QVector<NonAvailabilityRequest> pending = m_isAdmin
+        ? m_requestController->listPending() : QVector<NonAvailabilityRequest>();
+    const auto ids = [](const QVector<NonAvailabilityRequest> &requests) {
+        QVector<int> result;
+        for (const NonAvailabilityRequest &request : requests) {
+            result.append(request.id());
+        }
+        return result;
+    };
+    const bool changed = ids(pending) != ids(m_pendingRequests);
+    m_pendingRequests = pending;
+    const bool wantVisible = m_isAdmin && !pending.isEmpty();
+    if (!changed && m_requestsBox->isVisibleTo(this) == wantVisible) {
+        return;
+    }
+    rebuildRequestsPanel();
+    // A new request may be against the Sunday on screen.
+    if (changed && m_isAdmin && m_selectedDate.isValid()) {
+        rebuildResults();
+    }
+}
+
+void ScheduleTab::rebuildRequestsPanel()
+{
+    // deleteLater: this can run from inside a card's own Approve/Deny click.
+    while (QLayoutItem *item = m_requestsLayout->takeAt(0)) {
+        if (QWidget *widget = item->widget()) {
+            widget->hide();
+            widget->deleteLater();
+        }
+        delete item;
+    }
+    m_requestsBox->setVisible(m_isAdmin && !m_pendingRequests.isEmpty());
+    m_requestsBox->setTitle(tr("Absence Requests (%1)").arg(m_pendingRequests.size()));
+    for (const NonAvailabilityRequest &request : std::as_const(m_pendingRequests)) {
+        m_requestsLayout->addWidget(buildRequestCard(request));
+    }
+    m_requestsLayout->addStretch();
+}
+
+// Who asked, for which duty and Sunday, their reason and when they sent
+// it, with Approve / Deny and a way to open that Sunday.
+QWidget *ScheduleTab::buildRequestCard(const NonAvailabilityRequest &request)
+{
+    const User member = m_userController->userById(request.userId());
+    const Duty duty = m_dutyController->dutyById(request.dutyId());
+    const QString dutyName = m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).iconAndName();
+
+    auto *card = new QFrame;
+    card->setObjectName(QStringLiteral("requestCard"));
+    auto *layout = new QHBoxLayout(card);
+    layout->setContentsMargins(10, 8, 10, 8);
+    layout->setSpacing(12);
+    layout->addWidget(MemberBadge::make(member.name(), member.color(), 32, card), 0, Qt::AlignTop);
+
+    auto *text = new QVBoxLayout;
+    text->setSpacing(2);
+    auto *who = new QLabel(tr("%1 asked to be absent").arg(member.name()), card);
+    who->setObjectName(QStringLiteral("dutyMemberName"));
+    text->addWidget(who);
+    QString role;
+    if (duty.memberId() == request.userId()) {
+        role = tr("serving");
+    } else if (duty.supportMemberId() == request.userId()) {
+        role = tr("backup");
+    } else {
+        role = tr("no longer on this duty");
+    }
+    auto *what = new QLabel(QStringLiteral("%1 (%2) · %3").arg(dutyName, role, formatSunday(duty.serviceDate())), card);
+    what->setObjectName(QStringLiteral("accentLabel"));
+    text->addWidget(what);
+    auto *reason = new QLabel(QStringLiteral("“%1”").arg(request.message()), card);
+    reason->setWordWrap(true);
+    reason->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    text->addWidget(reason);
+    if (request.createdAt().isValid()) {
+        auto *sent = new QLabel(tr("Sent %1").arg(
+            QLocale().toString(request.createdAt().toLocalTime(), QStringLiteral("ddd d MMM, HH:mm"))), card);
+        sent->setObjectName(QStringLiteral("dutyCaption"));
+        text->addWidget(sent);
+    }
+    layout->addLayout(text, 1);
+
+    const int requestId = request.id();
+    const QDate date = duty.serviceDate();
+    auto *buttons = new QVBoxLayout;
+    buttons->setSpacing(6);
+    auto *approve = new QPushButton(tr("Approve"), card);
+    approve->setToolTip(tr("Take them off this duty; their backup serves instead"));
+    connect(approve, &QPushButton::clicked, this, [this, requestId] { approveRequest(requestId); });
+    auto *deny = new QPushButton(tr("Deny"), card);
+    deny->setObjectName(QStringLiteral("dangerButton"));
+    deny->setToolTip(tr("Keep them on this duty"));
+    connect(deny, &QPushButton::clicked, this, [this, requestId] { denyRequest(requestId); });
+    auto *show = new QToolButton(card);
+    show->setObjectName(QStringLiteral("dutyEditButton"));
+    show->setText(tr("Show Sunday"));
+    show->setCursor(Qt::PointingHandCursor);
+    connect(show, &QToolButton::clicked, this, [this, date] { selectSunday(date); });
+    buttons->addWidget(approve);
+    buttons->addWidget(deny);
+    buttons->addWidget(show);
+    buttons->addStretch();
+    layout->addLayout(buttons);
+    return card;
+}
+
+void ScheduleTab::approveRequest(int requestId)
+{
+    if (!m_isAdmin) {
+        return;
+    }
+    const auto it = std::find_if(m_pendingRequests.cbegin(), m_pendingRequests.cend(),
+        [requestId](const NonAvailabilityRequest &request) { return request.id() == requestId; });
+    if (it == m_pendingRequests.cend()) {
+        return;
+    }
+    const NonAvailabilityRequest request = *it;
+    const Duty duty = m_dutyController->dutyById(request.dutyId());
+    const QString name = m_userController->userById(request.userId()).name();
+    const QString dutyName = m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).name();
+    const QString date = formatSunday(duty.serviceDate());
+
+    QString effect;
+    if (duty.memberId() == request.userId()) {
+        const User backup = duty.supportMemberId() > 0 ? m_userController->userById(duty.supportMemberId()) : User();
+        effect = backup.id() >= 0
+            ? tr("%1 will be taken off %2 on %3. Their backup, %4, will serve instead.")
+                  .arg(name, dutyName, date, backup.name())
+            : tr("%1 will be taken off %2 on %3. There's no backup, so the duty will be left for you to fill.")
+                  .arg(name, dutyName, date);
+    } else if (duty.supportMemberId() == request.userId()) {
+        effect = tr("%1 will no longer be the backup for %2 on %3.").arg(name, dutyName, date);
+    } else {
+        effect = tr("%1 is no longer on %2 on %3, so the schedule won't change.").arg(name, dutyName, date);
+    }
+    effect += QStringLiteral("\n\n") + tr("They'll see in the app that their request was approved.");
+    if (MessageDialog::question(this, tr("Approve Absence"), effect) != QMessageBox::Yes) {
+        return;
+    }
+    // Emits requestsChanged, which refreshes this tab (the card goes away
+    // and the duty row shows the change).
+    if (!m_requestController->approve(requestId, m_adminId)) {
+        MessageDialog::critical(this, tr("Approve Absence"), m_requestController->lastError());
+        reloadRequests();
+        return;
+    }
+
+    const Duty after = m_dutyController->dutyById(duty.id());
+    if (after.id() >= 0 && after.memberId() <= 0
+        && MessageDialog::question(this, tr("Approve Absence"),
+               tr("Nobody is serving %1 on %2 now. Pick someone for it?").arg(dutyName, date)) == QMessageBox::Yes) {
+        selectSunday(after.serviceDate());
+        editDuty(after.id());
+    }
+}
+
+void ScheduleTab::denyRequest(int requestId)
+{
+    if (!m_isAdmin) {
+        return;
+    }
+    const auto it = std::find_if(m_pendingRequests.cbegin(), m_pendingRequests.cend(),
+        [requestId](const NonAvailabilityRequest &request) { return request.id() == requestId; });
+    if (it == m_pendingRequests.cend()) {
+        return;
+    }
+    const Duty duty = m_dutyController->dutyById(it->dutyId());
+    const QString name = m_userController->userById(it->userId()).name();
+    const QString question = tr("Deny %1's request to be absent from %2 on %3? They stay on the duty and "
+                                "will see the answer in the app.")
+        .arg(name, m_dutyTypeController->dutyTypeById(duty.dutyTypeId()).name(), formatSunday(duty.serviceDate()));
+    if (MessageDialog::question(this, tr("Deny Absence"), question) != QMessageBox::Yes) {
+        return;
+    }
+    if (!m_requestController->deny(requestId, m_adminId)) {
+        MessageDialog::critical(this, tr("Deny Absence"), m_requestController->lastError());
+        reloadRequests();
+    }
 }

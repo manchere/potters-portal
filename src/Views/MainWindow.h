@@ -6,6 +6,7 @@
 #include "Controllers/DutyController.h"
 #include "Controllers/CategoryController.h"
 #include "Controllers/ItemController.h"
+#include "Controllers/NonAvailabilityRequestController.h"
 #include "Controllers/DutyTypeController.h"
 #include "Controllers/FeedbackController.h"
 #include "Controllers/TeamController.h"
@@ -78,6 +79,7 @@ private:
     SongController m_songController;
     FeedbackController m_feedbackController;
     AccessController m_accessController;
+    NonAvailabilityRequestController m_requestController;
 
     ItemListView *m_itemListView = nullptr;
     AdminOverviewView *m_adminOverviewView = nullptr;

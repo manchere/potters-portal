@@ -46,6 +46,9 @@ public:
     QDateTime decidedAt() const { return m_decidedAt; }
     void setDecidedAt(const QDateTime &decidedAt) { m_decidedAt = decidedAt; }
 
+    QDateTime createdAt() const { return m_createdAt; }
+    void setCreatedAt(const QDateTime &createdAt) { m_createdAt = createdAt; }
+
 private:
     int m_id = -1;
     int m_dutyId = -1;
@@ -54,4 +57,5 @@ private:
     RequestStatus m_status = RequestStatus::Pending;
     int m_decidedBy = -1;
     QDateTime m_decidedAt;
+    QDateTime m_createdAt;
 };

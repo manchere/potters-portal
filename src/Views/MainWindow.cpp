@@ -120,7 +120,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_adminOverviewView = new AdminOverviewView(
         &m_tagController, &m_categoryController, &m_dutyTypeController, &m_userController, &m_teamController, this);
     m_scheduleTab = new ScheduleTab(
-        &m_dutyController, &m_userController, &m_dutyTypeController, &m_teamController, this);
+        &m_dutyController, &m_userController, &m_dutyTypeController, &m_teamController, &m_requestController, this);
     m_songsView = new SongsView(&m_songController, this);
     m_feedbackView = new FeedbackView(&m_feedbackController, &m_userController, this);
     m_reportsView = new ReportsView(&m_dutyController, &m_userController, &m_dutyTypeController, &m_teamController, this);
@@ -197,6 +197,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_dutyController, &DutyController::dutiesChanged, m_scheduleTab, &ScheduleTab::refresh);
     connect(&m_userController, &UserController::usersChanged, m_scheduleTab, &ScheduleTab::refresh);
     connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_scheduleTab, &ScheduleTab::refresh);
+    // Approving an absence request changes its duty, so everything that
+    // follows the duties follows the requests too.
+    connect(&m_requestController, &NonAvailabilityRequestController::requestsChanged, m_scheduleTab, &ScheduleTab::refresh);
+    connect(&m_requestController, &NonAvailabilityRequestController::requestsChanged, m_reportsView, &ReportsView::refresh);
+    connect(&m_requestController, &NonAvailabilityRequestController::requestsChanged, m_adminOverviewView, &AdminOverviewView::refresh);
+    connect(&m_requestController, &NonAvailabilityRequestController::requestsChanged, this, &MainWindow::applyAccess);
 
     connect(&m_dutyController, &DutyController::dutiesChanged, m_reportsView, &ReportsView::refresh);
     connect(&m_userController, &UserController::usersChanged, m_reportsView, &ReportsView::refresh);
@@ -235,7 +241,7 @@ void MainWindow::applyAccess()
     const AccessRights rights = m_accessController.rightsFor(m_currentUser, upcomingSunday);
 
     m_titleBar->setSignedIn(m_currentUser.id() >= 0 ? m_currentUser.name() : QString(), isAdmin);
-    m_scheduleTab->setAdminMode(isAdmin);
+    m_scheduleTab->setAdminMode(isAdmin, isAdmin ? m_currentUser.id() : -1);
     m_reportsView->setCanSave(rights.section(Section::Reports).create);
     m_songsView->setAccess(rights.section(Section::Songs));
     m_itemListView->setAccess(rights.section(Section::Inventory));

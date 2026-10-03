@@ -523,6 +523,23 @@ QToolButton#dutyEditButton {
 QToolButton#dutyEditButton:hover {
     background: {{subtleHover}};
 }
+/* Absence requests (Admin only, see ScheduleTab::buildRequestCard and
+   buildAbsenceNotes). */
+QFrame#requestCard {
+    background: {{surfaceAlt}};
+    border: 1px solid {{border}};
+    border-radius: 8px;
+}
+QLabel#absenceApproved {
+    color: {{error}};
+    font-size: 9pt;
+    font-weight: 600;
+}
+QLabel#absencePending {
+    color: {{accentText}};
+    font-size: 9pt;
+    font-style: italic;
+}
 
 /* --- Inline field validation errors (below the offending field) -------- */
 QLabel#fieldError {

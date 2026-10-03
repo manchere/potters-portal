@@ -83,13 +83,22 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
 
 ## 6. Admin — Non-Availability Approval
 
-> Not currently implemented: the desktop approval screen was removed, so
-> requests submitted from mobile stay pending.
+> On the desktop Schedule tab, visible to Admins only: an "Absence
+> Requests" panel above the duties lists pending requests for upcoming
+> Sundays, and checks for new ones every 30 seconds.
 
 - **FR-5.1** An Admin shall be able to view all pending non-availability
   requests.
 - **FR-5.2** An Admin shall be able to approve or deny a non-availability
   request.
+- **FR-5.3** Approving a request shall take the Member off that duty: if
+  they were serving, their backup (if any) serves instead, otherwise the
+  duty is left unfilled and the Admin is offered to fill it; if they were
+  the backup, the backup slot is emptied. Denying leaves the schedule
+  unchanged.
+- **FR-5.4** The Schedule tab shall show, to Admins only, under each duty
+  who asked to be absent from it (approved or still pending), with their
+  reason on hover.
 
 ## 7. Admin — Duty Management (CRUD)
 

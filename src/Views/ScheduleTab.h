@@ -7,13 +7,19 @@
 #include <QVector>
 #include <QWidget>
 
+#include "Models/NonAvailabilityRequest.h"
+
+class QGroupBox;
 class QLabel;
 class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
 class QPushButton;
+class QTimer;
 class QToolButton;
+class QVBoxLayout;
 class DutyController;
+class NonAvailabilityRequestController;
 class UserController;
 class DutyTypeController;
 class TeamController;
@@ -39,6 +45,14 @@ class QCheckBox;
 // "Copy Schedule" / "Paste Schedule" (or Ctrl+C / Ctrl+V) copy one
 // Sunday's whole schedule onto another -- e.g. reuse last month's
 // Communion Sunday line-up -- via DutyController::copySchedule.
+//
+// For an Admin only: an "Absence Requests" panel lists the pending
+// requests members sent from the mobile app (FR-5.1), with Approve / Deny
+// (FR-5.2). Approving takes the member off that duty (their backup serves
+// instead, if there is one); either way the member sees the outcome in the
+// app. Duty rows note who asked to be absent from them. The mobile app
+// writes to the database through the API server, not through this
+// process, so the panel re-checks on a timer.
 class ScheduleTab : public QWidget
 {
     Q_OBJECT
@@ -49,6 +63,7 @@ public:
         UserController *userController,
         DutyTypeController *dutyTypeController,
         TeamController *teamController,
+        NonAvailabilityRequestController *requestController,
         QWidget *parent = nullptr);
 
 public slots:
@@ -57,8 +72,9 @@ public slots:
     // Shows/hides the Assign Duty / Edit / Delete buttons --
     // scheduling and profile creation are Admin-only actions, and there's
     // no login gate blocking the rest of the app, so these simply don't
-    // appear until an Admin unlocks via the title bar's lock icon.
-    void setAdminMode(bool isAdmin);
+    // appear until an Admin unlocks via the title bar's lock icon. adminId
+    // is the signed-in Admin, recorded on the absence requests they decide.
+    void setAdminMode(bool isAdmin, int adminId);
 
     // Recolors the Sunday rows for the current theme (see
     // applySundayItemStyle); called after the theme is switched.
@@ -73,6 +89,9 @@ private slots:
     void memberDoubleClicked(QListWidgetItem *item);
     void copyScheduleClicked();
     void pasteScheduleClicked();
+    // Re-reads the pending absence requests; rebuilds the panel only when
+    // they changed, so a timer tick doesn't disturb the Admin.
+    void reloadRequests();
 
 private:
     void rebuildResults();
@@ -117,6 +136,14 @@ private:
     QToolButton *buildEditButton(int dutyId, QWidget *parent);
     // Opens Edit Duty for one duty and saves it.
     void editDuty(int dutyId);
+    // Absence requests panel: one card per pending request.
+    void rebuildRequestsPanel();
+    QWidget *buildRequestCard(const NonAvailabilityRequest &request);
+    // "Grace asked to be absent" under a duty, for its pending and
+    // approved requests (denied ones change nothing).
+    QWidget *buildAbsenceNotes(const Duty &duty, QWidget *parent);
+    void approveRequest(int requestId);
+    void denyRequest(int requestId);
     // Duties only ever happen on Sundays -- rounds forward to the
     // Sunday of date's week (or date itself, if it's already Sunday).
     static QDate nearestSunday(const QDate &date);
@@ -132,11 +159,14 @@ private:
     void editMemberOnSchedule(int memberId);
     // Refits the name columns when the list is resized.
     bool eventFilter(QObject *watched, QEvent *event) override;
+    // Picks up requests sent while another page was open.
+    void showEvent(QShowEvent *event) override;
 
     DutyController *m_dutyController = nullptr;
     UserController *m_userController = nullptr;
     DutyTypeController *m_dutyTypeController = nullptr;
     TeamController *m_teamController = nullptr;
+    NonAvailabilityRequestController *m_requestController = nullptr;
 
     QLineEdit *m_sundaySearch = nullptr;
     QLabel *m_noSundayMatchLabel = nullptr;
@@ -150,8 +180,17 @@ private:
     QPushButton *m_pasteButton = nullptr;
     QLabel *m_copiedLabel = nullptr;
     QLabel *m_pastNotice = nullptr;
+    QGroupBox *m_requestsBox = nullptr;
+    QVBoxLayout *m_requestsLayout = nullptr;
+    QTimer *m_requestsTimer = nullptr;
 
     bool m_isAdmin = false;
+    int m_adminId = -1;
+    // Pending requests now shown in the panel.
+    QVector<NonAvailabilityRequest> m_pendingRequests;
+    // Requests against the selected Sunday's duties, by duty id (Admin
+    // only; filled in rebuildResults).
+    QHash<int, QVector<NonAvailabilityRequest>> m_requestsByDuty;
     QDate m_selectedDate;
     QSet<QDate> m_datesWithDuties;
     // Lower-cased text the search box matches against, one entry per
