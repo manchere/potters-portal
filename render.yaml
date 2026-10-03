@@ -1,0 +1,20 @@
+# Render Blueprint: hosts PottersPortalServer (see Dockerfile) on Render's
+# free plan. In Render: New > Blueprint, pick this repository, then fill in
+# the secret values it asks for.
+services:
+  - type: web
+    name: potters-portal-api
+    runtime: docker
+    plan: free
+    # Closest Render region to the Neon database (AWS eu-west-2, London).
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # The same Postgres connection string the desktop app uses.
+      - key: DATABASE_URL
+        sync: false
+      # Groq key for photo auto-fill; can be left empty.
+      - key: GROQ_API_KEY
+        sync: false
