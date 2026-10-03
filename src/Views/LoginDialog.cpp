@@ -73,6 +73,10 @@ LoginDialog::LoginDialog(UserController *userController, QWidget *parent)
     layout->addWidget(m_errorLabel);
     layout->addWidget(buttons);
     layout->addWidget(forgotLink);
+    // Roomier sides than the other dialogs: it's small, and the fields
+    // looked cramped against the edges.
+    layout->setContentsMargins(36, 24, 36, 24);
+    setMinimumWidth(420);
 }
 
 void LoginDialog::toggleShowPassword(bool show)

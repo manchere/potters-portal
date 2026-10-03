@@ -552,8 +552,8 @@ QToolButton#viewToggleButton {
     background: {{subtle}};
     color: {{mutedText}};
     border: 1px solid {{border}};
-    padding: 6px 12px;
-    font-size: 11pt;
+    padding: 4px 10px;
+    font-size: 9pt;
 }
 QToolButton#viewToggleButton[position="first"] {
     border-top-left-radius: 8px;
