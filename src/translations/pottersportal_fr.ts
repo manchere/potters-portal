@@ -624,6 +624,37 @@ Notez dès maintenant le nouveau mot de passe.</translation>
     </message>
 </context>
 <context>
+    <name>DatabaseSetupDialog</name>
+    <message>
+        <source>Connect to the Database</source>
+        <translation>Connexion à la base de données</translation>
+    </message>
+    <message>
+        <source>Potters Portal keeps its data in an online database. Paste the connection string your Admin gave you -- it looks like postgresql://user:password@host/neondb?sslmode=require. It's saved on this computer for your Windows account, so you only need to do this once.</source>
+        <translation>Potters Portal conserve ses données dans une base de données en ligne. Collez la chaîne de connexion fournie par votre Admin -- elle ressemble à postgresql://user:password@host/neondb?sslmode=require. Elle est enregistrée sur cet ordinateur pour votre compte Windows : il suffit de le faire une fois.</translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation>Afficher</translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>Se connecter</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>Quitter</translation>
+    </message>
+    <message>
+        <source>That doesn't look like a connection string -- it should start with postgresql://</source>
+        <translation>Cela ne ressemble pas à une chaîne de connexion -- elle doit commencer par postgresql://</translation>
+    </message>
+    <message>
+        <source>Couldn't connect: %1</source>
+        <translation>Connexion impossible : %1</translation>
+    </message>
+</context>
+<context>
     <name>DutyController</name>
     <message>
         <source>This Sunday has passed, so its schedule can't be changed.</source>
@@ -1349,17 +1380,6 @@ Notez dès maintenant le nouveau mot de passe.</translation>
     <message>
         <source>This Sunday has passed, so its schedule can't be changed.</source>
         <translation type="unfinished">Ce dimanche est passé, son planning ne peut donc plus être modifié.</translation>
-    </message>
-</context>
-<context>
-    <name>Portal</name>
-    <message>
-        <source>DATABASE_URL is not set. Set it to a Postgres connection string (e.g. postgresql://user:password@host/dbname?sslmode=require) and restart.</source>
-        <translation>DATABASE_URL n'est pas défini. Indiquez une chaîne de connexion Postgres (par ex. postgresql://user:password@host/dbname?sslmode=require) puis redémarrez.</translation>
-    </message>
-    <message>
-        <source>Database Connection</source>
-        <translation>Connexion à la base de données</translation>
     </message>
 </context>
 <context>

@@ -2,13 +2,13 @@
 
 #include <QApplication>
 #include <QCoreApplication>
-#include <QMessageBox>
+#include <QSettings>
 
 #include "Database/Database.h"
 #include "Language.h"
 #include "Style.h"
+#include "Views/DatabaseSetupDialog.h"
 #include "Views/MainWindow.h"
-#include "Views/MessageDialog.h"
 
 int main(int argc, char **argv)
 {
@@ -16,18 +16,26 @@ int main(int argc, char **argv)
 	installLanguage(savedLanguage());
 	applyTheme(savedTheme());
 
-	const QString databaseUrl = qEnvironmentVariable("DATABASE_URL");
+	// Where the database is: DATABASE_URL if set (developers, servers),
+	// otherwise the connection saved on this computer. If neither works --
+	// a fresh install, or the saved one stopped working -- ask for it, and
+	// save one that connects (installed copies never carry it).
+	QSettings settings(QStringLiteral("PottersPortal"), QStringLiteral("PottersPortal"));
+	const QString envUrl = qEnvironmentVariable("DATABASE_URL");
+	const QString savedUrl = settings.value(QStringLiteral("databaseUrl")).toString();
+	QString databaseUrl = envUrl.isEmpty() ? savedUrl : envUrl;
 	QString connectError;
-	if (databaseUrl.isEmpty()) {
-		connectError = QCoreApplication::translate("Portal",
-			"DATABASE_URL is not set. Set it to a Postgres connection string "
-			"(e.g. postgresql://user:password@host/dbname?sslmode=require) and restart.");
-	} else if (!Database::connect(databaseUrl, &connectError)) {
-		// connectError is filled in by Database::connect on failure.
-	}
-
-	if (!connectError.isEmpty()) {
-		MessageDialog::warning(nullptr, QCoreApplication::translate("Portal", "Database Connection"), connectError);
+	bool connected = !databaseUrl.isEmpty() && Database::connect(databaseUrl, &connectError);
+	while (!connected) {
+		DatabaseSetupDialog dialog(connectError, databaseUrl);
+		if (dialog.exec() != QDialog::Accepted) {
+			return 0; // Quit
+		}
+		databaseUrl = dialog.connectionUrl();
+		connected = true; // the dialog only accepts once it has connected
+		if (envUrl.isEmpty() || databaseUrl != envUrl) {
+			settings.setValue(QStringLiteral("databaseUrl"), databaseUrl);
+		}
 	}
 
 	// No login gate at startup -- the app is usable read-only right away.

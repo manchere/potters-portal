@@ -59,6 +59,7 @@ add_executable (PottersPortal
   "Views/MainWindow.h" "Views/MainWindow.cpp"
   "Views/FramelessDialog.h" "Views/FramelessDialog.cpp"
   "Views/MessageDialog.h" "Views/MessageDialog.cpp"
+  "Views/DatabaseSetupDialog.h" "Views/DatabaseSetupDialog.cpp"
   "Views/MemberStatsDialog.h" "Views/MemberStatsDialog.cpp"
   "Views/ItemFormWidget.h" "Views/ItemFormWidget.cpp"
   "Views/ItemListView.h" "Views/ItemListView.cpp"
