@@ -31,6 +31,7 @@
 #include "Models/MemberColors.h"
 #include "AuthMiddleware.h"
 #include "Json.h"
+#include "LiveUpdates.h"
 #include "Vision/GroqVisionClient.h"
 
 using StatusCode = QHttpServerResponder::StatusCode;
@@ -125,6 +126,7 @@ int main(int argc, char **argv)
     QNetworkAccessManager networkManager;
 
     QHttpServer server;
+    LiveUpdates liveUpdates(server, sessionController);
 
     // Every route that follows Settings > Access Rights starts with this:
     // signs the caller in from their token and checks they may do `action`

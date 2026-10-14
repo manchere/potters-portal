@@ -113,6 +113,7 @@ add_executable (PottersPortalServer
   ${CORE_SOURCES}
   "Server/Json.h" "Server/Json.cpp"
   "Server/AuthMiddleware.h" "Server/AuthMiddleware.cpp"
+  "Server/LiveUpdates.h" "Server/LiveUpdates.cpp"
   "Server/ServerMain.cpp"
 )
 target_include_directories(PottersPortalServer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -126,14 +127,15 @@ endif()
 
 # Find Qt6 Widgets + Sql (Postgres access via the QPSQL driver) + HttpServer +
 # Network (outbound HTTPS call to Groq for the photo auto-fill feature, used
-# by both the desktop app directly and the REST server's /api/vision route)
+# by both the desktop app directly and the REST server's /api/vision route) +
+# WebSockets (the server's /api/live updates)
 if (POTTERS_SERVER_ONLY)
-  find_package(Qt6 COMPONENTS Sql HttpServer Network REQUIRED)
+  find_package(Qt6 COMPONENTS Sql HttpServer Network WebSockets REQUIRED)
 else()
-  find_package(Qt6 COMPONENTS Widgets Sql HttpServer Network LinguistTools REQUIRED)
+  find_package(Qt6 COMPONENTS Widgets Sql HttpServer Network WebSockets LinguistTools REQUIRED)
   target_link_libraries(PottersPortal PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network)
 endif()
-target_link_libraries(PottersPortalServer PRIVATE Qt6::Sql Qt6::HttpServer Qt6::Network)
+target_link_libraries(PottersPortalServer PRIVATE Qt6::Sql Qt6::HttpServer Qt6::Network Qt6::WebSockets)
 
 if (NOT POTTERS_SERVER_ONLY)
 

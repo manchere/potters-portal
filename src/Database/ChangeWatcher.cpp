@@ -7,7 +7,6 @@
 #include <QSqlQuery>
 #include <QtDebug>
 
-#include <algorithm>
 #include <utility>
 
 #include "Database.h"
@@ -97,12 +96,13 @@ void ChangeWatcher::onNotification(const QString &name, QSqlDriver::Notification
     if (name != kChannel) {
         return;
     }
-    const QJsonObject change = QJsonDocument::fromJson(payload.toString().toUtf8()).object();
-    m_lastId = std::max(m_lastId, change.value(QStringLiteral("id")).toInteger());
-    if (source == QSqlDriver::SelfSource) {
+    if (source == QSqlDriver::SelfSource && !m_reportOwnChanges) {
         return;
     }
-    queue(change.value(QStringLiteral("table")).toString());
+    // m_lastId is left to the poll: transactions can commit out of id
+    // order, so a notified id doesn't mean every smaller one is visible.
+    const QJsonObject change = QJsonDocument::fromJson(payload.toString().toUtf8()).object();
+    queue(change.value(QStringLiteral("id")).toInteger(), change.value(QStringLiteral("table")).toString());
 }
 
 void ChangeWatcher::catchUp()
@@ -120,19 +120,22 @@ void ChangeWatcher::catchUp()
     if (!query.exec()) {
         return; // try again next tick
     }
+    m_queuedIds.removeIf([this](qint64 id) { return id <= m_previousLastId; });
+    m_previousLastId = m_lastId;
     while (query.next()) {
         m_lastId = query.value(0).toLongLong();
-        if (query.value(2).toInt() != m_ownPid) {
-            queue(query.value(1).toString());
+        if (m_reportOwnChanges || query.value(2).toInt() != m_ownPid) {
+            queue(m_lastId, query.value(1).toString());
         }
     }
 }
 
-void ChangeWatcher::queue(const QString &table)
+void ChangeWatcher::queue(qint64 id, const QString &table)
 {
-    if (table.isEmpty()) {
+    if (table.isEmpty() || m_queuedIds.contains(id)) {
         return;
     }
+    m_queuedIds.insert(id);
     m_pending.insert(table);
     if (!m_flushTimer.isActive()) {
         m_flushTimer.start();

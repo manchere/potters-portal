@@ -16,9 +16,10 @@
 //     an idle compute and closes the socket) and covers pooled connection
 //     strings, where LISTEN doesn't deliver anything.
 //
-// Changes this process made itself are skipped -- the controllers already
-// emitted their own *Changed signals for those. Bursts (e.g. AI Fill adding
-// a whole Sunday) come out as one tablesChanged.
+// Changes this process made itself are skipped unless setReportOwnChanges
+// (the desktop's controllers already emitted their own *Changed signals for
+// those; the API server passes its own on to other clients). Bursts (e.g.
+// AI Fill adding a whole Sunday) come out as one tablesChanged.
 class ChangeWatcher : public QObject
 {
     Q_OBJECT
@@ -35,6 +36,8 @@ public:
     // catches up straight away.
     void setPolling(bool on);
 
+    void setReportOwnChanges(bool on) { m_reportOwnChanges = on; }
+
 signals:
     // Table names, as in change_log.table_name (e.g. "duties", "songs").
     void tablesChanged(const QSet<QString> &tables);
@@ -45,15 +48,22 @@ private:
     // change_log rows newer than the last one seen.
     void catchUp();
     void ensureSubscribed();
-    void queue(const QString &table);
+    // Each change can arrive twice -- notified, then read by the poll, in
+    // either order -- so queue each change_log id only once.
+    void queue(qint64 id, const QString &table);
 
     bool m_started = false;
     // False when change_log doesn't exist (migration not applied); the
     // watcher then does nothing.
     bool m_available = true;
+    bool m_reportOwnChanges = false;
     qint64 m_lastId = 0;
     int m_ownPid = 0;
     QSet<QString> m_pending;
+    // Ids already queued. Ids up to the previous poll's m_lastId are
+    // dropped each poll; a late notification can't be older than that.
+    QSet<qint64> m_queuedIds;
+    qint64 m_previousLastId = 0;
     QTimer m_pollTimer;
     QTimer m_flushTimer;
 };

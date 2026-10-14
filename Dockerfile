@@ -1,8 +1,7 @@
 # PottersPortalServer (the REST API the mobile/web app talks to) as a Linux
 # container, for hosting it online (e.g. Render). Debian 13 ships Qt 6.8,
-# the first version with the QHttpServer::bind() the server uses. Qt
-# HttpServer's CMake package needs Qt WebSockets, so its -dev is installed
-# too or find_package() fails.
+# the first version with the QHttpServer::bind() the server uses and the
+# WebSocket upgrades behind /api/live (Qt WebSockets).
 #
 # Settings come from environment variables at run time:
 #   DATABASE_URL  Postgres connection string (required)
@@ -26,7 +25,7 @@ RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPOTTERS_SERVER_ONL
 FROM debian:trixie-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      libqt6httpserver6 libqt6sql6-psql ca-certificates \
+      libqt6httpserver6 libqt6websockets6 libqt6sql6-psql ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --system --no-create-home portal
 COPY --from=build /src/build/src/PottersPortalServer /usr/local/bin/PottersPortalServer
