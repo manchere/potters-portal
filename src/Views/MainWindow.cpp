@@ -211,7 +211,54 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_dutyTypeController, &DutyTypeController::dutyTypesChanged, m_reportsView, &ReportsView::refresh);
     connect(&m_teamController, &TeamController::teamsChanged, m_reportsView, &ReportsView::refresh);
 
+    connect(&m_changeWatcher, &ChangeWatcher::tablesChanged, this, &MainWindow::remoteTablesChanged);
+    m_changeWatcher.start();
+
     applyAccess();
+}
+
+void MainWindow::remoteTablesChanged(const QSet<QString> &tables)
+{
+    // Re-emit the controllers' own signals so the wiring above refreshes
+    // the same views as a change made here would.
+    if (tables.contains(QStringLiteral("items")) || tables.contains(QStringLiteral("item_tags"))) {
+        emit m_itemController.itemsChanged();
+    }
+    if (tables.contains(QStringLiteral("tags"))) {
+        emit m_tagController.tagsChanged();
+    }
+    if (tables.contains(QStringLiteral("categories"))) {
+        emit m_categoryController.categoriesChanged();
+    }
+    if (tables.contains(QStringLiteral("users"))) {
+        emit m_userController.usersChanged();
+    }
+    if (tables.contains(QStringLiteral("teams"))) {
+        emit m_teamController.teamsChanged();
+    }
+    if (tables.contains(QStringLiteral("duty_types"))) {
+        emit m_dutyTypeController.dutyTypesChanged();
+    }
+    if (tables.contains(QStringLiteral("duties"))) {
+        emit m_dutyController.dutiesChanged();
+    }
+    if (tables.contains(QStringLiteral("non_availability_requests"))) {
+        emit m_requestController.requestsChanged();
+    }
+    if (tables.contains(QStringLiteral("access_rules"))) {
+        emit m_accessController.rulesChanged();
+    }
+    // Away Sundays show on the schedule and in the report notes.
+    if (tables.contains(QStringLiteral("availability_marks"))) {
+        m_scheduleTab->refresh();
+        m_reportsView->refresh();
+    }
+    if (tables.contains(QStringLiteral("songs"))) {
+        m_songsView->refresh();
+    }
+    if (tables.contains(QStringLiteral("feedback"))) {
+        m_feedbackView->refresh();
+    }
 }
 
 void MainWindow::adminButtonClicked()
@@ -355,5 +402,8 @@ void MainWindow::changeEvent(QEvent *event)
     QMainWindow::changeEvent(event);
     if (event->type() == QEvent::WindowStateChange && m_titleBar) {
         m_titleBar->setMaximized(isMaximized());
+        // No need to keep the database awake for a minimized window; it
+        // catches up when restored.
+        m_changeWatcher.setPolling(!isMinimized());
     }
 }

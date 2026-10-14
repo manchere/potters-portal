@@ -13,6 +13,7 @@ set(CMAKE_AUTORCC OFF)
 # desktop app (Qt Widgets) and the REST API server (QHttpServer) below.
 set(CORE_SOURCES
   "Database/Database.h" "Database/Database.cpp"
+  "Database/ChangeWatcher.h" "Database/ChangeWatcher.cpp"
   "Models/Item.h" "Models/Item.cpp"
   "Models/Tag.h" "Models/Tag.cpp"
   "Models/Category.h" "Models/Category.cpp"

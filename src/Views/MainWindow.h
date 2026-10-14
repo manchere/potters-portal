@@ -13,6 +13,7 @@
 #include "Controllers/SongController.h"
 #include "Controllers/TagController.h"
 #include "Controllers/UserController.h"
+#include "Database/ChangeWatcher.h"
 #include "Models/User.h"
 #include "Language.h"
 #include "Style.h"
@@ -69,6 +70,9 @@ private slots:
     void themeChosen(Theme theme);
     // Saves the language and offers to restart into it.
     void languageChosen(Language language);
+    // Another app (a member on mobile, another desktop) changed these
+    // tables: refresh whatever shows them.
+    void remoteTablesChanged(const QSet<QString> &tables);
 
 private:
     // Default-constructed (id() < 0, isAdmin() false) means signed out.
@@ -85,6 +89,7 @@ private:
     FeedbackController m_feedbackController;
     AccessController m_accessController;
     NonAvailabilityRequestController m_requestController;
+    ChangeWatcher m_changeWatcher;
 
     ItemListView *m_itemListView = nullptr;
     AdminOverviewView *m_adminOverviewView = nullptr;

@@ -177,16 +177,6 @@ ScheduleTab::ScheduleTab(
     m_requestsBox->setLayout(requestsBoxLayout);
     m_requestsBox->hide();
 
-    // Members send requests through the API server, which doesn't tell
-    // this process, so look for new ones every so often.
-    m_requestsTimer = new QTimer(this);
-    m_requestsTimer->setInterval(30 * 1000);
-    connect(m_requestsTimer, &QTimer::timeout, this, [this] {
-        if (isVisible()) {
-            reloadRequests();
-        }
-    });
-
     setAdminMode(false, -1);
 
     auto *resultsLayout = new QVBoxLayout;
@@ -551,11 +541,6 @@ void ScheduleTab::setAdminMode(bool isAdmin, int adminId)
     m_copyButton->setVisible(isAdmin);
     m_pasteButton->setVisible(isAdmin);
     m_copiedLabel->setVisible(isAdmin);
-    if (isAdmin) {
-        m_requestsTimer->start();
-    } else {
-        m_requestsTimer->stop();
-    }
     reloadRequests();
     updateActionState();
     // Rows carry per-duty Edit buttons only an Admin sees.

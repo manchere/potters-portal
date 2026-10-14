@@ -15,7 +15,6 @@ class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
 class QPushButton;
-class QTimer;
 class QToolButton;
 class QVBoxLayout;
 class DutyController;
@@ -182,7 +181,6 @@ private:
     QLabel *m_pastNotice = nullptr;
     QGroupBox *m_requestsBox = nullptr;
     QVBoxLayout *m_requestsLayout = nullptr;
-    QTimer *m_requestsTimer = nullptr;
 
     bool m_isAdmin = false;
     int m_adminId = -1;
