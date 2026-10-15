@@ -10,6 +10,9 @@ class QDateEdit;
 class QLabel;
 class QListWidget;
 class QPushButton;
+class QStackedWidget;
+class QToolButton;
+class QVBoxLayout;
 class QTextBrowser;
 class DutyController;
 class DutyTypeController;
@@ -25,6 +28,10 @@ class MemberPickerField;
 //     small tag appears next to a name only when that person had asked
 //     for time off or marked themselves away that day;
 //   - all Sundays in range: each Sunday's line-up in turn, newest first.
+// A Board / Table toggle picks how it's shown: the board is the Schedule
+// tab's month grid (Views/ScheduleBoard), read-only -- a row per Sunday,
+// a column per duty; the table is the printable report Save writes. The
+// choice is remembered.
 // "Save Report..." writes the current report as HTML (printable from any
 // browser) or CSV (for a spreadsheet).
 //
@@ -57,6 +64,7 @@ private slots:
     void selectionChanged();
     void presetClicked(int months);
     void saveClicked();
+    void setBoardView(bool board);
 
 private:
     // Fills the one filter field with every member, duty type and team.
@@ -65,6 +73,8 @@ private:
     // teams (see the encoding in ReportsView.cpp).
     void selectedFilters(QVector<int> *memberIds, QVector<int> *dutyTypeIds, QVector<int> *teamIds) const;
     void populateSundayList();
+    // Fills the board page with a read-only grid of the Sundays shown.
+    void rebuildBoards();
     // darkColors is for the on-screen view in the dark themes only; saved
     // files always use the light colors so they print well.
     QString rangeHtml(bool darkColors) const;
@@ -97,6 +107,10 @@ private:
     MemberPickerField *m_filterField = nullptr;
     QListWidget *m_sundayList = nullptr;
     QTextBrowser *m_reportView = nullptr;
+    QStackedWidget *m_viewStack = nullptr;
+    QVBoxLayout *m_boardsLayout = nullptr;
+    QToolButton *m_boardViewButton = nullptr;
+    QToolButton *m_tableViewButton = nullptr;
     QPushButton *m_saveButton = nullptr;
     bool m_canSave = false;
     QLabel *m_statusLabel = nullptr;

@@ -43,6 +43,7 @@ set(CORE_SOURCES
   "Controllers/AvailabilityController.h" "Controllers/AvailabilityController.cpp"
   "Controllers/NonAvailabilityRequestController.h" "Controllers/NonAvailabilityRequestController.cpp"
   "Vision/GroqVisionClient.h" "Vision/GroqVisionClient.cpp" "Vision/GroqApiKey.h"
+  "Scheduling/AiScheduleFiller.h" "Scheduling/AiScheduleFiller.cpp"
 )
 
 # POTTERS_SERVER_ONLY builds just the REST API server -- no Widgets or
@@ -83,6 +84,8 @@ add_executable (PottersPortal
   "Views/AdminContact.h"
   "Mail/SmtpMail.h" "Mail/SmtpMail.cpp"
   "Views/ScheduleTab.h" "Views/ScheduleTab.cpp"
+  "Views/ScheduleBoard.h" "Views/ScheduleBoard.cpp"
+  "Views/AiFillDialog.h" "Views/AiFillDialog.cpp"
   "Views/AssignDutyDialog.h" "Views/AssignDutyDialog.cpp"
   "Views/AddToScheduleDialog.h" "Views/AddToScheduleDialog.cpp"
   "Views/MemberEditDialog.h" "Views/MemberEditDialog.cpp"

@@ -2,6 +2,8 @@
 
 #include <QDate>
 #include <QObject>
+#include <QHash>
+#include <QSet>
 #include <QStringList>
 #include <QVector>
 
@@ -39,6 +41,11 @@ public:
     // -- surfaced after pasting a schedule so the Admin can swap them out.
     QStringList membersMarkedUnavailable(const QDate &date) const;
 
+    // Who marked each date from fromDate to toDate unavailable on their
+    // general calendar (member ids by date), whether or not they're on its
+    // schedule -- so the schedule board can tag them.
+    QHash<QDate, QSet<int>> membersAwayBetween(const QDate &fromDate, const QDate &toDate) const;
+
     // Every duty from fromDate to toDate inclusive, newest Sunday
     // first (then by duty type name), with duty type/member names and request /
     // availability flags resolved -- for the desktop Reports tab. Filters
@@ -63,6 +70,11 @@ public slots:
     bool addDuty(Duty &duty);
     bool updateDuty(const Duty &duty);
     bool removeDuty(int id);
+
+    // Deletes every duty on date in one go, along with any
+    // non-availability requests filed against them (ON DELETE CASCADE).
+    // removed (may be null) reports how many duties went.
+    bool removeSchedule(const QDate &date, int *removed);
 
     // Copies every duty on fromDate (duty type, member, support member,
     // notes) onto toDate, in one transaction. With replaceExisting, toDate's

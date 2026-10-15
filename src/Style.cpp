@@ -541,6 +541,104 @@ QLabel#absencePending {
     font-style: italic;
 }
 
+/* Schedule board: a rota grid, a row per Sunday and a column per duty
+   type, members dragged on and off (see Views/ScheduleBoard).
+   [dropHover="true"] is set while a drag is over; [highlighted="true"]
+   marks the Sunday picked in the list. */
+QLabel#boardColumnTitle {
+    color: {{strongText}};
+    font-weight: 700;
+    padding: 4px 2px;
+}
+QLabel#boardMonthTitle {
+    color: {{strongText}};
+    font-size: 13pt;
+    font-weight: 700;
+    padding-top: 10px;
+}
+QToolButton#boardDateButton {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: {{text}};
+    font-weight: 600;
+    text-align: left;
+    padding: 4px 6px;
+}
+QToolButton#boardDateButton:hover {
+    background: {{hover}};
+}
+QToolButton#boardDateButton[highlighted="true"] {
+    background: {{selection}};
+    color: {{selectionText}};
+}
+QFrame#boardCell {
+    background: {{surface}};
+    border: 1px solid {{border}};
+    border-radius: 8px;
+}
+QFrame#boardCell[highlighted="true"] {
+    border-color: {{focus}};
+}
+QFrame#boardCell[dropHover="true"] {
+    border: 2px solid {{focus}};
+    background: {{selection}};
+}
+QFrame#boardChipSmall {
+    background: transparent;
+    border: none;
+}
+QFrame#boardChip {
+    background: {{surface}};
+    border: 1px solid {{border}};
+    border-radius: 8px;
+}
+QFrame#boardSlot {
+    border: 1px solid transparent;
+    border-radius: 9px;
+}
+QFrame#boardEmptySlot {
+    border: 1px dashed {{dashedBorder}};
+    border-radius: 8px;
+}
+QFrame#boardSlot[dropHover="true"], QFrame#boardEmptySlot[dropHover="true"] {
+    border: 1px solid {{focus}};
+    background: {{selection}};
+}
+QLabel#boardHint {
+    color: {{faintText}};
+    font-size: 8pt;
+}
+QLabel#boardTag {
+    background: {{accentBg}};
+    color: {{accentText}};
+    border-radius: 6px;
+    padding: 1px 6px;
+    font-size: 8pt;
+    font-weight: 600;
+}
+QToolButton#boardChipRemove {
+    background: transparent;
+    border: none;
+    color: {{faintText}};
+    font-size: 12pt;
+    padding: 0px 4px;
+}
+QToolButton#boardChipRemove:hover {
+    color: {{error}};
+}
+QFrame#boardPalette {
+    background: {{surfaceAlt}};
+    border: 1px solid {{border}};
+    border-radius: 10px;
+}
+QFrame#boardPalette[dropHover="true"] {
+    border: 2px dashed {{error}};
+}
+QWidget#boardPaletteList, QWidget#boardSurface {
+    background: transparent;
+}
+
 /* --- Inline field validation errors (below the offending field) -------- */
 QLabel#fieldError {
     color: {{error}};

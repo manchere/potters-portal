@@ -10,9 +10,14 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
+#include <QHash>
 #include <QMap>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QSettings>
+#include <QStackedWidget>
+#include <QToolButton>
 #include <QStandardPaths>
 #include <QTextBrowser>
 #include <QTextStream>
@@ -28,6 +33,7 @@
 #include "Controllers/TeamController.h"
 #include "Style.h"
 #include "MessageDialog.h"
+#include "ScheduleBoard.h"
 
 namespace
 {
@@ -39,6 +45,12 @@ namespace
     // Marks the "All Sundays in range" entry in the Sunday list (Sunday rows store
     // their QDate instead).
     const QString kSummaryKey = QStringLiteral("summary");
+
+    // Where the Board / Table choice is remembered (same QSettings location
+    // as the theme, see Style.cpp).
+    const char *kSettingsOrg = "PottersPortal";
+    const char *kSettingsApp = "PottersPortal";
+    const char *kBoardViewKey = "reportBoardView";
 
     QString formatSunday(const QDate &date)
     {
@@ -208,8 +220,51 @@ ReportsView::ReportsView(DutyController *dutyController, UserController *userCon
     m_statusLabel = new QLabel(this);
     m_statusLabel->setObjectName(QStringLiteral("mutedLabel"));
     auto *reportBox = new QGroupBox(tr("Report"), this);
+    // Board / Table toggle, like the Schedule tab's List / Month.
+    m_boardViewButton = new QToolButton(this);
+    m_boardViewButton->setObjectName(QStringLiteral("viewToggleButton"));
+    m_boardViewButton->setProperty("position", QStringLiteral("first"));
+    m_boardViewButton->setText(tr("Board"));
+    m_boardViewButton->setCheckable(true);
+    m_boardViewButton->setToolTip(tr("A card per duty, laid out like the Schedule tab's board"));
+    connect(m_boardViewButton, &QToolButton::clicked, this, [this] { setBoardView(true); });
+    m_tableViewButton = new QToolButton(this);
+    m_tableViewButton->setObjectName(QStringLiteral("viewToggleButton"));
+    m_tableViewButton->setProperty("position", QStringLiteral("last"));
+    m_tableViewButton->setText(tr("Table"));
+    m_tableViewButton->setCheckable(true);
+    m_tableViewButton->setToolTip(tr("The printable report, as Save Report writes it"));
+    connect(m_tableViewButton, &QToolButton::clicked, this, [this] { setBoardView(false); });
+    auto *viewRow = new QHBoxLayout;
+    viewRow->setSpacing(0);
+    viewRow->addWidget(m_boardViewButton);
+    viewRow->addWidget(m_tableViewButton);
+    viewRow->addStretch();
+
+    auto *boardsContent = new QWidget;
+    boardsContent->setObjectName(QStringLiteral("boardSurface"));
+    m_boardsLayout = new QVBoxLayout(boardsContent);
+    m_boardsLayout->setContentsMargins(0, 0, 4, 0);
+    m_boardsLayout->setSpacing(8);
+    auto *boardsScroll = new QScrollArea(this);
+    boardsScroll->setWidget(boardsContent);
+    boardsScroll->setWidgetResizable(true);
+    boardsScroll->setFrameShape(QFrame::NoFrame);
+    // A wide grid (many duties) scrolls sideways.
+    boardsScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    m_viewStack = new QStackedWidget(this);
+    m_viewStack->addWidget(boardsScroll);
+    m_viewStack->addWidget(m_reportView);
+    const QSettings settings(QString::fromLatin1(kSettingsOrg), QString::fromLatin1(kSettingsApp));
+    const bool board = settings.value(QString::fromLatin1(kBoardViewKey), true).toBool();
+    m_viewStack->setCurrentIndex(board ? 0 : 1);
+    m_boardViewButton->setChecked(board);
+    m_tableViewButton->setChecked(!board);
+
     auto *reportLayout = new QVBoxLayout(reportBox);
-    reportLayout->addWidget(m_reportView, 1);
+    reportLayout->addLayout(viewRow);
+    reportLayout->addWidget(m_viewStack, 1);
     reportLayout->addWidget(m_statusLabel);
 
     // Quick date ranges sit in the action bar too, under their own heading.
@@ -405,7 +460,11 @@ QString ReportsView::filterDescription() const
 
 void ReportsView::selectionChanged()
 {
-    m_reportView->setHtml(currentReportHtml(isDarkTheme(currentTheme())));
+    if (m_viewStack->currentIndex() == 0) {
+        rebuildBoards();
+    } else {
+        m_reportView->setHtml(currentReportHtml(isDarkTheme(currentTheme())));
+    }
 
     const int sundays = m_sundayList->count() - 1;
     m_statusLabel->setText(sundays == 0
@@ -541,4 +600,78 @@ void ReportsView::saveClicked()
     }
     file.close();
     m_statusLabel->setText(tr("Saved to %1").arg(QDir::toNativeSeparators(path)));
+}
+
+void ReportsView::setBoardView(bool board)
+{
+    m_boardViewButton->setChecked(board);
+    m_tableViewButton->setChecked(!board);
+    QSettings settings(QString::fromLatin1(kSettingsOrg), QString::fromLatin1(kSettingsApp));
+    settings.setValue(QString::fromLatin1(kBoardViewKey), board);
+    if (m_viewStack->currentIndex() != (board ? 0 : 1)) {
+        m_viewStack->setCurrentIndex(board ? 0 : 1);
+        selectionChanged();
+    }
+}
+
+void ReportsView::rebuildBoards()
+{
+    while (QLayoutItem *item = m_boardsLayout->takeAt(0)) {
+        if (QWidget *widget = item->widget()) {
+            widget->hide();
+            widget->deleteLater();
+        }
+        delete item;
+    }
+
+    const QVector<ScheduleReportRow> rows = visibleRows();
+    if (rows.isEmpty()) {
+        auto *empty = new QLabel(tr("No Sunday schedules in this date range. Try a wider range from Quick range on the right."));
+        empty->setObjectName(QStringLiteral("mutedLabel"));
+        empty->setWordWrap(true);
+        m_boardsLayout->addWidget(empty);
+        m_boardsLayout->addStretch();
+        return;
+    }
+
+    QHash<int, QString> colors;
+    for (const User &user : m_userController->allUsers()) {
+        colors.insert(user.id(), user.color());
+    }
+
+    QVector<QDate> dates;
+    QVector<BoardDuty> duties;
+    for (const ScheduleReportRow &row : rows) {
+        if (!dates.contains(row.serviceDate)) {
+            dates.append(row.serviceDate);
+        }
+        BoardDuty duty;
+        duty.dutyId = row.dutyId;
+        duty.dutyTypeName = row.dutyTypeName;
+        duty.dutyTypeIcon = row.dutyTypeIcon;
+        duty.memberId = row.memberId;
+        duty.memberName = row.memberName;
+        duty.memberColor = colors.value(row.memberId);
+        duty.supportMemberId = row.supportMemberId;
+        duty.supportMemberName = row.supportMemberName;
+        duty.supportMemberColor = colors.value(row.supportMemberId);
+        duty.notes = row.notes;
+        duty.memberTag = availabilityNote(row);
+        duty.serviceDate = row.serviceDate;
+        duties.append(duty);
+    }
+
+    // One grid like the Schedule tab's month view: a row per Sunday (oldest
+    // first, under month headings), a column per duty.
+    std::sort(dates.begin(), dates.end());
+    if (dates.last() > QDate::currentDate()) {
+        auto *ahead = new QLabel(tr("Sundays still ahead show the current plan."));
+        ahead->setObjectName(QStringLiteral("accentLabel"));
+        m_boardsLayout->addWidget(ahead);
+    }
+    auto *board = new ScheduleBoard;
+    board->setObjectName(QStringLiteral("boardSurface"));
+    board->setSchedule(dates, {}, duties);
+    m_boardsLayout->addWidget(board);
+    m_boardsLayout->addStretch();
 }

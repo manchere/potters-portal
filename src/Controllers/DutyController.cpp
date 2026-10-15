@@ -224,6 +224,49 @@ QStringList DutyController::membersMarkedUnavailable(const QDate &date) const
     return names;
 }
 
+QHash<QDate, QSet<int>> DutyController::membersAwayBetween(const QDate &fromDate, const QDate &toDate) const
+{
+    QHash<QDate, QSet<int>> away;
+    Database::ensureConnected();
+    QSqlQuery query;
+    query.prepare(QStringLiteral(
+        "SELECT date, user_id FROM availability_marks WHERE date BETWEEN :from_date AND :to_date"));
+    query.bindValue(QStringLiteral(":from_date"), fromDate);
+    query.bindValue(QStringLiteral(":to_date"), toDate);
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return away;
+    }
+    while (query.next()) {
+        away[query.value(0).toDate()].insert(query.value(1).toInt());
+    }
+    return away;
+}
+
+bool DutyController::removeSchedule(const QDate &date, int *removed)
+{
+    if (removed) {
+        *removed = 0;
+    }
+    if (!isEditableDate(date)) {
+        m_lastError = tr(kPastScheduleError);
+        return false;
+    }
+    Database::ensureConnected();
+    QSqlQuery query;
+    query.prepare(QStringLiteral("DELETE FROM duties WHERE service_date = :service_date"));
+    query.bindValue(QStringLiteral(":service_date"), date);
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return false;
+    }
+    if (removed) {
+        *removed = query.numRowsAffected();
+    }
+    emit dutiesChanged();
+    return true;
+}
+
 bool DutyController::copySchedule(
     const QDate &fromDate, const QDate &toDate, bool replaceExisting, int *copied, int *skipped)
 {

@@ -44,6 +44,26 @@ bool AvailabilityController::isMarked(int userId, const QDate &date) const
     return query.next();
 }
 
+QVector<AvailabilityMark> AvailabilityController::marksBetween(const QDate &fromDate, const QDate &toDate) const
+{
+    QVector<AvailabilityMark> marks;
+    Database::ensureConnected();
+    QSqlQuery query;
+    query.prepare(QStringLiteral(
+        "SELECT id, user_id, date FROM availability_marks WHERE date BETWEEN :from_date AND :to_date ORDER BY date"));
+    query.bindValue(QStringLiteral(":from_date"), fromDate);
+    query.bindValue(QStringLiteral(":to_date"), toDate);
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return marks;
+    }
+    while (query.next()) {
+        marks.append(AvailabilityMark(
+            query.value(0).toInt(), query.value(1).toInt(), query.value(2).toDate()));
+    }
+    return marks;
+}
+
 bool AvailabilityController::markUnavailable(int userId, const QDate &date)
 {
     Database::ensureConnected();

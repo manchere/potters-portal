@@ -160,6 +160,15 @@ app (`mobile/`, primarily Member workflows), sharing the C++ REST backend.
   skipped) or **replace them** (deleting the existing duties and any
   time-off requests filed against them). After pasting, the Admin is told
   which pasted Members marked themselves unavailable that day (FR-3.1).
+- **FR-8.8** An Admin shall be able to "Fill with AI": pick how many
+  upcoming Sundays (and which duty types), optionally add notes for the
+  AI, and get a suggested Member (and backup) for every duty type not yet
+  on each of those Sundays — existing duties are never changed. Suggestions
+  favour Members who have done that duty recently and share the work out;
+  a Member who marked a Sunday unavailable (FR-3.1) is never suggested for
+  it. The Admin reviews the suggestions, unticks any they don't want, and
+  only then are they saved. Available on the desktop Schedule tab and the
+  mobile Schedule › Sunday view (Admins only).
 
 ## 9a. Desktop UI — Reports Tab
 

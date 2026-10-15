@@ -15,6 +15,8 @@ class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
 class QPushButton;
+class QScrollArea;
+class QStackedWidget;
 class QToolButton;
 class QVBoxLayout;
 class DutyController;
@@ -25,6 +27,8 @@ class TeamController;
 class Duty;
 class User;
 class QCheckBox;
+class ScheduleBoard;
+class MemberPalette;
 
 // Leftmost tab (SCHEDULING_FUNCTIONAL_REQUIREMENTS.md FR-6/FR-7/FR-8): pick
 // a Sunday from a scrollable list (e.g. "Sun 6 Sep 2026"), see every
@@ -40,6 +44,14 @@ class QCheckBox;
 // A Sunday that has passed is read-only: nothing on it can be assigned,
 // edited, deleted, or pasted over (DutyController enforces the same), though
 // it can still be copied onto an upcoming Sunday.
+//
+// A List / Month toggle switches the Duties panel between the rows below
+// and a month grid like a rota sheet: a row per Sunday, a column per duty
+// type (see Views/ScheduleBoard), with a members list beside it that an
+// Admin drags from to fill several Sundays at once. Members can be dragged
+// between cells and slots, across Sundays too (swapping with whoever is
+// there), and back to the list to take them off. "Delete Schedule"
+// clears the selected Sunday. The choice of view is remembered.
 //
 // "Copy Schedule" / "Paste Schedule" (or Ctrl+C / Ctrl+V) copy one
 // Sunday's whole schedule onto another -- e.g. reuse last month's
@@ -88,12 +100,28 @@ private slots:
     void memberDoubleClicked(QListWidgetItem *item);
     void copyScheduleClicked();
     void pasteScheduleClicked();
+    void deleteScheduleClicked();
+    // "Fill with AI": AI suggestions for the coming Sundays' empty
+    // duties (AiFillDialog), saved once the Admin accepts them.
+    void aiFillClicked();
+    // Shows the board (true) or the list (false), and remembers it.
+    void setBoardView(bool board);
+    // What a drop on the board means (see ScheduleBoard's signals).
+    void boardAddRequested(const QDate &date, int dutyTypeId, int memberId, int fromDutyId, int fromSlot);
+    void boardSlotDropRequested(int dutyId, int slot, int memberId, int fromDutyId, int fromSlot);
+    void boardRemoveRequested(int dutyId, int slot);
     // Re-reads the pending absence requests; rebuilds the panel only when
     // they changed, so a timer tick doesn't disturb the Admin.
     void reloadRequests();
 
 private:
     void rebuildResults();
+    // Fills the board (the month m_boardMonth) and the members list.
+    void rebuildBoard();
+    // Moves the board a number of months on (or back, when negative).
+    void showBoardMonth(int monthsFromShown);
+    // After a board change: reports an error, or reloads the Sunday.
+    void finishBoardChange(bool ok, const QString &title);
     void populateSundayList();
     // Hides Sunday rows that don't match the search box. Every word typed
     // must appear in the date or in one single duty on that Sunday
@@ -175,8 +203,22 @@ private:
     QPushButton *m_assignButton = nullptr;
     QPushButton *m_editButton = nullptr;
     QPushButton *m_deleteButton = nullptr;
+    QPushButton *m_deleteScheduleButton = nullptr;
+    QToolButton *m_listViewButton = nullptr;
+    QToolButton *m_boardViewButton = nullptr;
+    QStackedWidget *m_viewStack = nullptr;
+    ScheduleBoard *m_board = nullptr;
+    QScrollArea *m_boardScroll = nullptr;
+    MemberPalette *m_palette = nullptr;
+    QLabel *m_monthLabel = nullptr;
+    // First day of the month the board shows (follows the selected Sunday,
+    // or the month arrows), and of the one it last showed -- the same one
+    // keeps its scroll position when rebuilt after a drop.
+    QDate m_boardMonth;
+    QDate m_boardShownMonth;
     QPushButton *m_copyButton = nullptr;
     QPushButton *m_pasteButton = nullptr;
+    QPushButton *m_aiFillButton = nullptr;
     QLabel *m_copiedLabel = nullptr;
     QLabel *m_pastNotice = nullptr;
     QGroupBox *m_requestsBox = nullptr;

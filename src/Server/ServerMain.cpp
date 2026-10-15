@@ -12,6 +12,7 @@
 #include <QTcpServer>
 #include <QUrlQuery>
 
+#include <algorithm>
 #include <optional>
 
 #include "Auth/PasswordAuth.h"
@@ -32,6 +33,7 @@
 #include "AuthMiddleware.h"
 #include "Json.h"
 #include "LiveUpdates.h"
+#include "Scheduling/AiScheduleFiller.h"
 #include "Vision/GroqVisionClient.h"
 
 using StatusCode = QHttpServerResponder::StatusCode;
@@ -724,6 +726,55 @@ int main(int argc, char **argv)
             return errorResponse(dutyController.lastError(), StatusCode::BadRequest);
         }
         return QHttpServerResponse(QJsonObject{{QStringLiteral("ok"), true}});
+    });
+
+    // "Fill with AI": proposes who serves on the empty duties of the next
+    // few Sundays (Scheduling/AiScheduleFiller). Saves nothing -- the app
+    // shows the proposals and POSTs /api/duties for the ones the Admin keeps.
+    // Body: {"sundays": 4, "duty_type_ids": [..] (optional, all if empty),
+    //        "instructions": "..." (optional)}.
+    server.route("/api/schedule/ai-fill", QHttpServerRequest::Method::Post,
+                 [&networkManager, &dutyController, &dutyTypeController, &userController, &availabilityController,
+                  &deniedUnlessAdmin](const QHttpServerRequest &request) {
+        if (auto error = deniedUnlessAdmin(request)) {
+            return std::move(*error);
+        }
+        const QJsonObject body = QJsonDocument::fromJson(request.body()).object();
+        const int count = std::clamp(body.value(QStringLiteral("sundays")).toInt(4), 1, 12);
+        QVector<int> dutyTypeIds;
+        for (const QJsonValue &id : body.value(QStringLiteral("duty_type_ids")).toArray()) {
+            dutyTypeIds.append(id.toInt(-1));
+        }
+        const AiSchedule::Result result = AiSchedule::propose(
+            networkManager, dutyController, dutyTypeController, userController, availabilityController,
+            AiSchedule::upcomingSundays(count), dutyTypeIds, body.value(QStringLiteral("instructions")).toString());
+        if (!result.error.isEmpty()) {
+            return errorResponse(result.error, StatusCode::BadGateway);
+        }
+
+        // Shaped like dutyWithPeople's duties (minus the id), so the app
+        // can show them with the same rows.
+        QJsonArray proposals;
+        for (const AiSchedule::Proposal &proposal : result.proposals) {
+            const Duty duty(-1, proposal.dutyTypeId, proposal.date, proposal.memberId, proposal.supportMemberId, QString());
+            QJsonObject json = dutyWithPeople(duty, dutyTypeController.dutyTypeById(proposal.dutyTypeId), userController);
+            json.remove(QStringLiteral("id"));
+            proposals.append(json);
+        }
+        QJsonArray unfilled;
+        for (const AiSchedule::Slot &slot : result.unfilled) {
+            const DutyType dutyType = dutyTypeController.dutyTypeById(slot.dutyTypeId);
+            unfilled.append(QJsonObject{
+                {QStringLiteral("service_date"), slot.date.toString(Qt::ISODate)},
+                {QStringLiteral("duty_type_id"), slot.dutyTypeId},
+                {QStringLiteral("duty_type_name"), dutyType.name()},
+                {QStringLiteral("duty_type_icon"), dutyType.icon()},
+            });
+        }
+        return QHttpServerResponse(QJsonObject{
+            {QStringLiteral("proposals"), proposals},
+            {QStringLiteral("unfilled"), unfilled},
+        });
     });
 
     // --- Reports ("who did what", like the desktop Reports tab) ---------------

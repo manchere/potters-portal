@@ -22,6 +22,11 @@ public:
     // unavailable on their general calendar.
     bool isMarked(int userId, const QDate &date) const;
 
+    // Every member's marks from fromDate to toDate inclusive, in one query
+    // -- for the AI schedule filler (Scheduling/AiScheduleFiller), which
+    // must never put someone on a Sunday they marked.
+    QVector<AvailabilityMark> marksBetween(const QDate &fromDate, const QDate &toDate) const;
+
     QString lastError() const { return m_lastError; }
 
 public slots:

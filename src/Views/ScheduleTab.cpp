@@ -17,8 +17,11 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QSet>
+#include <QSettings>
 #include <QShortcut>
+#include <QStackedWidget>
 #include <QStyle>
 #include <QTimer>
 #include <QToolButton>
@@ -27,6 +30,7 @@
 #include "AssignDutyDialog.h"
 #include "ActionBar.h"
 #include "AddToScheduleDialog.h"
+#include "AiFillDialog.h"
 #include "ElidedLabel.h"
 #include "MemberSundayDialog.h"
 #include "Controllers/TeamController.h"
@@ -38,13 +42,21 @@
 #include "MemberStatsDialog.h"
 #include "Models/Duty.h"
 #include "Models/DutyType.h"
-#include "Models/User.h"
+#include "Models/User.h"
+
 #include "MessageDialog.h"
+#include "ScheduleBoard.h"
 
 namespace
 {
     // Upcoming Sundays run through the end of October next year (past
     // ones are listed only when they had a schedule).
+    // Where the List / Board choice is remembered (same QSettings location
+    // as the theme, see Style.cpp).
+    const char *kSettingsOrg = "PottersPortal";
+    const char *kSettingsApp = "PottersPortal";
+    const char *kBoardViewKey = "scheduleBoardView";
+
     QDate sundayListEnd(const QDate &today)
     {
         return QDate(today.year() + 1, 10, 31);
@@ -103,6 +115,10 @@ ScheduleTab::ScheduleTab(
     m_pasteButton->setObjectName(QStringLiteral("secondaryButton"));
     m_pasteButton->setToolTip(tr("Paste the copied duties onto this Sunday (Ctrl+V)"));
     connect(m_pasteButton, &QPushButton::clicked, this, &ScheduleTab::pasteScheduleClicked);
+    m_aiFillButton = new QPushButton(tr("Fill with AI"), this);
+    m_aiFillButton->setObjectName(QStringLiteral("secondaryButton"));
+    m_aiFillButton->setToolTip(tr("Let AI suggest who serves on the empty duties of the coming Sundays"));
+    connect(m_aiFillButton, &QPushButton::clicked, this, &ScheduleTab::aiFillClicked);
     m_copiedLabel = new QLabel(this);
     m_copiedLabel->setObjectName(QStringLiteral("accentLabel"));
 
@@ -143,6 +159,86 @@ ScheduleTab::ScheduleTab(
     m_deleteButton = new QPushButton(tr("Delete"), this);
     m_deleteButton->setObjectName(QStringLiteral("dangerButton"));
     connect(m_deleteButton, &QPushButton::clicked, this, &ScheduleTab::deleteClicked);
+    m_deleteScheduleButton = new QPushButton(tr("Delete Schedule"), this);
+    m_deleteScheduleButton->setObjectName(QStringLiteral("dangerButton"));
+    m_deleteScheduleButton->setToolTip(tr("Delete every duty on this Sunday"));
+    connect(m_deleteScheduleButton, &QPushButton::clicked, this, &ScheduleTab::deleteScheduleClicked);
+
+    // List / Board toggle, like the Items page's List / Cards.
+    m_listViewButton = new QToolButton(this);
+    m_listViewButton->setObjectName(QStringLiteral("viewToggleButton"));
+    m_listViewButton->setProperty("position", QStringLiteral("first"));
+    m_listViewButton->setText(tr("List"));
+    m_listViewButton->setCheckable(true);
+    m_listViewButton->setToolTip(tr("One row per duty"));
+    connect(m_listViewButton, &QToolButton::clicked, this, [this] { setBoardView(false); });
+    m_boardViewButton = new QToolButton(this);
+    m_boardViewButton->setObjectName(QStringLiteral("viewToggleButton"));
+    m_boardViewButton->setProperty("position", QStringLiteral("last"));
+    m_boardViewButton->setText(tr("Month"));
+    m_boardViewButton->setCheckable(true);
+    m_boardViewButton->setToolTip(tr("The whole month as a grid: a row per Sunday, a column per duty. "
+                                      "Drag members in to fill several Sundays at once."));
+    connect(m_boardViewButton, &QToolButton::clicked, this, [this] { setBoardView(true); });
+
+    m_board = new ScheduleBoard(this);
+    m_board->setObjectName(QStringLiteral("boardSurface"));
+    connect(m_board, &ScheduleBoard::addRequested, this, &ScheduleTab::boardAddRequested);
+    connect(m_board, &ScheduleBoard::slotDropRequested, this, &ScheduleTab::boardSlotDropRequested);
+    connect(m_board, &ScheduleBoard::removeRequested, this, &ScheduleTab::boardRemoveRequested);
+    m_boardScroll = new QScrollArea(this);
+    m_boardScroll->setWidget(m_board);
+    m_boardScroll->setWidgetResizable(true);
+    m_boardScroll->setFrameShape(QFrame::NoFrame);
+    m_boardScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_palette = new MemberPalette(this);
+    connect(m_palette, &MemberPalette::removeRequested, this, &ScheduleTab::boardRemoveRequested);
+
+    auto *listPage = new QWidget(this);
+    auto *listPageLayout = new QVBoxLayout(listPage);
+    listPageLayout->setContentsMargins(0, 0, 0, 0);
+    listPageLayout->addWidget(m_resultsList);
+    connect(m_board, &ScheduleBoard::dateActivated, this, [this](const QDate &date) { selectSunday(date); });
+
+    // "‹ September 2026 ›" above the grid.
+    auto *previousMonth = new QToolButton(this);
+    previousMonth->setObjectName(QStringLiteral("dutyEditButton"));
+    previousMonth->setText(QStringLiteral("‹"));
+    previousMonth->setToolTip(tr("Previous month"));
+    connect(previousMonth, &QToolButton::clicked, this, [this] { showBoardMonth(-1); });
+    auto *nextMonth = new QToolButton(this);
+    nextMonth->setObjectName(QStringLiteral("dutyEditButton"));
+    nextMonth->setText(QStringLiteral("›"));
+    nextMonth->setToolTip(tr("Next month"));
+    connect(nextMonth, &QToolButton::clicked, this, [this] { showBoardMonth(1); });
+    m_monthLabel = new QLabel(this);
+    m_monthLabel->setObjectName(QStringLiteral("boardMonthTitle"));
+    auto *monthHint = new QLabel(tr("Fill several Sundays at once: drag members into any upcoming Sunday's cells. "
+                                    "Click a date to pick that Sunday."), this);
+    monthHint->setObjectName(QStringLiteral("mutedLabel"));
+    monthHint->setWordWrap(true);
+    auto *monthRow = new QHBoxLayout;
+    monthRow->setSpacing(8);
+    monthRow->addWidget(previousMonth);
+    monthRow->addWidget(m_monthLabel);
+    monthRow->addWidget(nextMonth);
+    monthRow->addSpacing(12);
+    monthRow->addWidget(monthHint, 1);
+
+    m_boardScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    auto *boardColumns = new QHBoxLayout;
+    boardColumns->setSpacing(12);
+    boardColumns->addWidget(m_palette);
+    boardColumns->addWidget(m_boardScroll, 1);
+    auto *boardPage = new QWidget(this);
+    auto *boardPageLayout = new QVBoxLayout(boardPage);
+    boardPageLayout->setContentsMargins(0, 0, 0, 0);
+    boardPageLayout->setSpacing(8);
+    boardPageLayout->addLayout(monthRow);
+    boardPageLayout->addLayout(boardColumns, 1);
+    m_viewStack = new QStackedWidget(this);
+    m_viewStack->addWidget(listPage);
+    m_viewStack->addWidget(boardPage);
 
     auto *actionBar = new ActionBar(this);
     actionBar->addWidget(m_assignButton);
@@ -151,8 +247,11 @@ ScheduleTab::ScheduleTab(
     actionBar->addWidget(m_copyButton);
     actionBar->addWidget(m_pasteButton);
     actionBar->addWidget(m_copiedLabel);
+    actionBar->addSeparator();
+    actionBar->addWidget(m_aiFillButton);
     actionBar->addStretch();
     actionBar->addWidget(m_deleteButton);
+    actionBar->addWidget(m_deleteScheduleButton);
 
     m_pastNotice = new QLabel(tr("This Sunday has passed, so its schedule is read-only."), this);
     m_pastNotice->setObjectName(QStringLiteral("accentLabel"));
@@ -180,9 +279,16 @@ ScheduleTab::ScheduleTab(
     setAdminMode(false, -1);
 
     auto *resultsLayout = new QVBoxLayout;
+    auto *viewRow = new QHBoxLayout;
+    viewRow->setSpacing(0);
+    viewRow->addWidget(m_listViewButton);
+    viewRow->addWidget(m_boardViewButton);
+    viewRow->addSpacing(16);
+    viewRow->addWidget(m_combineCheck);
+    viewRow->addStretch();
     resultsLayout->addWidget(m_pastNotice);
-    resultsLayout->addWidget(m_combineCheck);
-    resultsLayout->addWidget(m_resultsList);
+    resultsLayout->addLayout(viewRow);
+    resultsLayout->addWidget(m_viewStack, 1);
     auto *resultsBox = new QGroupBox(tr("Duties"), this);
     resultsBox->setLayout(resultsLayout);
 
@@ -226,6 +332,9 @@ ScheduleTab::ScheduleTab(
     layout->setSpacing(16);
     layout->addLayout(content, 1);
     layout->addWidget(actionBar);
+
+    const QSettings settings(QString::fromLatin1(kSettingsOrg), QString::fromLatin1(kSettingsApp));
+    setBoardView(settings.value(QString::fromLatin1(kBoardViewKey), false).toBool());
 
     populateSundayList();
     selectSunday(nearestSunday(QDate::currentDate()));
@@ -536,10 +645,10 @@ void ScheduleTab::setAdminMode(bool isAdmin, int adminId)
     m_isAdmin = isAdmin;
     m_adminId = isAdmin ? adminId : -1;
     m_assignButton->setVisible(isAdmin);
-    m_editButton->setVisible(isAdmin);
-    m_deleteButton->setVisible(isAdmin);
+    m_deleteScheduleButton->setVisible(isAdmin);
     m_copyButton->setVisible(isAdmin);
     m_pasteButton->setVisible(isAdmin);
+    m_aiFillButton->setVisible(isAdmin);
     m_copiedLabel->setVisible(isAdmin);
     reloadRequests();
     updateActionState();
@@ -558,9 +667,14 @@ void ScheduleTab::updateActionState()
 {
     const bool editable = m_isAdmin && selectedSundayEditable();
     const bool hasDuty = m_selectedDutyId >= 0;
+    // Edit / Delete act on a selected row; the board edits by dragging.
+    const bool boardView = m_viewStack && m_viewStack->currentIndex() == 1;
+    m_editButton->setVisible(m_isAdmin && !boardView);
+    m_deleteButton->setVisible(m_isAdmin && !boardView);
     m_assignButton->setEnabled(editable);
     m_editButton->setEnabled(editable && hasDuty);
     m_deleteButton->setEnabled(editable && hasDuty);
+    m_deleteScheduleButton->setEnabled(editable && m_datesWithDuties.contains(m_selectedDate));
     // On a combined row they act on the member's whole place this Sunday.
     const bool memberRow = m_selectedMemberId > 0;
     m_editButton->setText(memberRow ? tr("Edit Member") : tr("Edit"));
@@ -826,7 +940,11 @@ void ScheduleTab::sundaySelectionChanged(QListWidgetItem *current, QListWidgetIt
         return;
     }
     applySundayItemStyle(current, true);
-    m_selectedDate = current->data(Qt::UserRole).toDate();
+    const QDate date = current->data(Qt::UserRole).toDate();
+    if (date != m_selectedDate) {
+        m_boardMonth = QDate(date.year(), date.month(), 1);
+    }
+    m_selectedDate = date;
     rebuildResults();
     updateActionState();
 }
@@ -847,6 +965,10 @@ void ScheduleTab::rebuildResults()
         for (const NonAvailabilityRequest &request : m_requestController->listForDate(m_selectedDate)) {
             m_requestsByDuty[request.dutyId()].append(request);
         }
+    }
+    if (m_viewStack && m_viewStack->currentIndex() == 1) {
+        rebuildBoard();
+        return;
     }
 
     const QVector<Duty> duties = m_dutyController->dutiesForDate(m_selectedDate);
@@ -1332,4 +1454,344 @@ void ScheduleTab::denyRequest(int requestId)
         MessageDialog::critical(this, tr("Deny Absence"), m_requestController->lastError());
         reloadRequests();
     }
+}
+
+void ScheduleTab::setBoardView(bool board)
+{
+    m_listViewButton->setChecked(!board);
+    m_boardViewButton->setChecked(board);
+    m_combineCheck->setVisible(!board);
+    QSettings settings(QString::fromLatin1(kSettingsOrg), QString::fromLatin1(kSettingsApp));
+    settings.setValue(QString::fromLatin1(kBoardViewKey), board);
+    if (m_viewStack->currentIndex() == (board ? 1 : 0)) {
+        return;
+    }
+    m_viewStack->setCurrentIndex(board ? 1 : 0);
+    if (m_selectedDate.isValid()) {
+        rebuildResults();
+    }
+    updateActionState();
+}
+
+void ScheduleTab::rebuildBoard()
+{
+    // The month on show: every Sunday in it, as rows.
+    if (!m_boardMonth.isValid()) {
+        m_boardMonth = QDate(m_selectedDate.year(), m_selectedDate.month(), 1);
+    }
+    QVector<QDate> sundays;
+    for (QDate sunday = nearestSunday(m_boardMonth); sunday.month() == m_boardMonth.month(); sunday = sunday.addDays(7)) {
+        sundays.append(sunday);
+    }
+    m_monthLabel->setText(QLocale().toString(m_boardMonth, QStringLiteral("MMMM yyyy")));
+
+    const int scrollPosition = m_boardShownMonth == m_boardMonth ? m_boardScroll->verticalScrollBar()->value() : 0;
+    const int scrollPositionX = m_boardShownMonth == m_boardMonth ? m_boardScroll->horizontalScrollBar()->value() : 0;
+    m_boardShownMonth = m_boardMonth;
+
+    QHash<int, User> users;
+    for (const User &user : m_userController->allUsers()) {
+        users.insert(user.id(), user);
+    }
+    QHash<int, DutyType> dutyTypes;
+    const QVector<DutyType> allDutyTypes = m_dutyTypeController->allDutyTypes();
+    for (const DutyType &dutyType : allDutyTypes) {
+        dutyTypes.insert(dutyType.id(), dutyType);
+    }
+    const QHash<QDate, QSet<int>> away = m_dutyController->membersAwayBetween(sundays.first(), sundays.last());
+
+    QVector<BoardDuty> boardDuties;
+    QHash<int, int> dutyCounts;
+    for (const QDate &sunday : std::as_const(sundays)) {
+        // Absence requests (Admin only) for this Sunday's duties.
+        QHash<int, QVector<NonAvailabilityRequest>> requestsByDuty;
+        if (m_isAdmin) {
+            for (const NonAvailabilityRequest &request : m_requestController->listForDate(sunday)) {
+                requestsByDuty[request.dutyId()].append(request);
+            }
+        }
+        const QSet<int> awayThatDay = away.value(sunday);
+        for (const Duty &duty : m_dutyController->dutiesForDate(sunday)) {
+            const DutyType dutyType = dutyTypes.value(duty.dutyTypeId());
+            BoardDuty item;
+            item.dutyId = duty.id();
+            item.serviceDate = sunday;
+            item.dutyTypeId = duty.dutyTypeId();
+            item.dutyTypeName = dutyType.name();
+            item.dutyTypeIcon = dutyType.icon();
+            item.notes = duty.notes();
+            // An absence request (reason on hover) outranks a general
+            // "away" mark.
+            const auto tagFor = [&](int userId, QString *tag, QString *toolTip) {
+                for (const NonAvailabilityRequest &request : requestsByDuty.value(duty.id())) {
+                    if (request.userId() == userId && request.status() != RequestStatus::Denied) {
+                        const bool approved = request.status() == RequestStatus::Approved;
+                        *tag = approved ? tr("Absence approved") : tr("Asked to be absent");
+                        *toolTip = tr("Reason: %1").arg(request.message());
+                        return;
+                    }
+                }
+                if (awayThatDay.contains(userId)) {
+                    *tag = tr("Away");
+                    *toolTip = tr("%1 marked this Sunday as a day they won't be there.").arg(users.value(userId).name());
+                }
+            };
+            if (users.contains(duty.memberId())) {
+                const User member = users.value(duty.memberId());
+                item.memberId = member.id();
+                item.memberName = member.name();
+                item.memberColor = member.color();
+                tagFor(member.id(), &item.memberTag, &item.memberTagToolTip);
+                ++dutyCounts[member.id()];
+            }
+            if (users.contains(duty.supportMemberId())) {
+                const User backup = users.value(duty.supportMemberId());
+                item.supportMemberId = backup.id();
+                item.supportMemberName = backup.name();
+                item.supportMemberColor = backup.color();
+                tagFor(backup.id(), &item.supportTag, &item.supportTagToolTip);
+                ++dutyCounts[backup.id()];
+            }
+            boardDuties.append(item);
+        }
+    }
+
+    // Upcoming Sundays take drags; passed ones stay as they were.
+    const bool editable = m_isAdmin && DutyController::isEditableDate(sundays.last());
+    m_board->setEditable(m_isAdmin, QDate::currentDate());
+    m_board->setHighlightedDate(m_selectedDate);
+    m_board->setSchedule(sundays, allDutyTypes, boardDuties);
+
+    m_palette->setVisible(editable);
+    if (editable) {
+        QVector<MemberPalette::Entry> members;
+        for (const User &user : std::as_const(users)) {
+            const int count = dutyCounts.value(user.id());
+            members.append({user.id(), user.name(), user.color(),
+                            count > 0 ? tr("%n this month", nullptr, count) : tr("Not on yet this month")});
+        }
+        std::sort(members.begin(), members.end(), [](const MemberPalette::Entry &a, const MemberPalette::Entry &b) {
+            return a.name.compare(b.name, Qt::CaseInsensitive) < 0;
+        });
+        m_palette->setMembers(members);
+    }
+
+    // The grid is laid out on the next pass, so restore the scroll then.
+    QTimer::singleShot(0, this, [this, scrollPosition, scrollPositionX] {
+        m_boardScroll->verticalScrollBar()->setValue(scrollPosition);
+        m_boardScroll->horizontalScrollBar()->setValue(scrollPositionX);
+    });
+}
+
+void ScheduleTab::showBoardMonth(int monthsFromShown)
+{
+    m_boardMonth = m_boardMonth.addMonths(monthsFromShown);
+    rebuildBoard();
+}
+
+namespace
+{
+    int slotMember(const Duty &duty, int slot)
+    {
+        return slot == ScheduleDrag::Backup ? duty.supportMemberId() : duty.memberId();
+    }
+
+    void setSlotMember(Duty &duty, int slot, int memberId)
+    {
+        if (slot == ScheduleDrag::Backup) {
+            duty.setSupportMemberId(memberId);
+        } else {
+            duty.setMemberId(memberId);
+        }
+    }
+
+    bool servesAsOwnBackup(const Duty &duty)
+    {
+        return duty.memberId() > 0 && duty.memberId() == duty.supportMemberId();
+    }
+}
+
+void ScheduleTab::boardAddRequested(const QDate &date, int dutyTypeId, int memberId, int fromDutyId, int fromSlot)
+{
+    if (!m_isAdmin || !DutyController::isEditableDate(date)) {
+        return;
+    }
+    const QString title = tr("Assign Duty");
+    const QVector<Duty> duties = m_dutyController->dutiesForDate(date);
+    const bool alreadyServing = std::any_of(duties.cbegin(), duties.cend(), [dutyTypeId, memberId](const Duty &duty) {
+        return duty.dutyTypeId() == dutyTypeId && duty.memberId() == memberId;
+    });
+    if (alreadyServing) {
+        MessageDialog::information(this, title, tr("%1 already has %2 on this Sunday.")
+            .arg(m_userController->userById(memberId).name(), m_dutyTypeController->dutyTypeById(dutyTypeId).name()));
+        return;
+    }
+
+    Duty source = fromDutyId > 0 ? m_dutyController->dutyById(fromDutyId) : Duty();
+    bool ok = true;
+    if (source.id() > 0 && fromSlot == ScheduleDrag::Serving) {
+        // Dragged off another duty: the whole duty moves (to this duty and
+        // Sunday), backup and notes with it.
+        source.setDutyTypeId(dutyTypeId);
+        source.setServiceDate(date);
+        ok = m_dutyController->updateDuty(source);
+    } else {
+        // Fills a duty of this type that has nobody serving, if there is
+        // one, rather than adding another.
+        const auto unfilled = std::find_if(duties.cbegin(), duties.cend(), [dutyTypeId, memberId](const Duty &duty) {
+            return duty.dutyTypeId() == dutyTypeId && duty.memberId() <= 0 && duty.supportMemberId() != memberId;
+        });
+        if (unfilled != duties.cend()) {
+            Duty filled = *unfilled;
+            filled.setMemberId(memberId);
+            ok = m_dutyController->updateDuty(filled);
+        } else {
+            Duty duty;
+            duty.setDutyTypeId(dutyTypeId);
+            duty.setServiceDate(date);
+            duty.setMemberId(memberId);
+            ok = m_dutyController->addDuty(duty);
+        }
+        // Dragged out of a backup slot: they're no longer the backup there.
+        if (ok && source.id() > 0 && fromSlot == ScheduleDrag::Backup) {
+            source.setSupportMemberId(-1);
+            ok = m_dutyController->updateDuty(source);
+        }
+    }
+    finishBoardChange(ok, title);
+}
+
+void ScheduleTab::boardSlotDropRequested(int dutyId, int slot, int memberId, int fromDutyId, int fromSlot)
+{
+    if (!m_isAdmin || (fromDutyId == dutyId && fromSlot == slot)) {
+        return;
+    }
+    const QString title = tr("Edit Duty");
+    Duty target = m_dutyController->dutyById(dutyId);
+    if (target.id() < 0) {
+        return;
+    }
+    const auto ownBackup = [this, &title](int id) {
+        MessageDialog::information(this, title,
+            tr("%1 can't be their own backup.").arg(m_userController->userById(id).name()));
+    };
+
+    // Within one duty: serving and backup trade places.
+    if (fromDutyId == dutyId) {
+        const int serving = target.memberId();
+        target.setMemberId(target.supportMemberId());
+        target.setSupportMemberId(serving);
+        finishBoardChange(m_dutyController->updateDuty(target), title);
+        return;
+    }
+
+    // Whoever was in the slot swaps into the one the member came from (or,
+    // from the members list, just steps aside).
+    const int displaced = slotMember(target, slot);
+    setSlotMember(target, slot, memberId);
+    if (servesAsOwnBackup(target)) {
+        ownBackup(memberId);
+        return;
+    }
+    Duty source = fromDutyId > 0 ? m_dutyController->dutyById(fromDutyId) : Duty();
+    if (source.id() > 0) {
+        setSlotMember(source, fromSlot, displaced);
+        if (servesAsOwnBackup(source)) {
+            ownBackup(displaced);
+            return;
+        }
+    }
+    bool ok = m_dutyController->updateDuty(target);
+    if (ok && source.id() > 0) {
+        // A duty left with nobody at all on it goes.
+        ok = source.memberId() <= 0 && source.supportMemberId() <= 0
+            ? m_dutyController->removeDuty(source.id())
+            : m_dutyController->updateDuty(source);
+    }
+    finishBoardChange(ok, title);
+}
+
+void ScheduleTab::boardRemoveRequested(int dutyId, int slot)
+{
+    if (!m_isAdmin) {
+        return;
+    }
+    Duty duty = m_dutyController->dutyById(dutyId);
+    if (duty.id() < 0) {
+        return;
+    }
+    bool ok = true;
+    if (slot == ScheduleDrag::Backup) {
+        duty.setSupportMemberId(-1);
+        ok = m_dutyController->updateDuty(duty);
+    } else if (duty.supportMemberId() > 0) {
+        // Taking the serving member off: their backup serves instead, as
+        // when an absence is approved.
+        duty.setMemberId(duty.supportMemberId());
+        duty.setSupportMemberId(-1);
+        ok = m_dutyController->updateDuty(duty);
+    } else {
+        ok = m_dutyController->removeDuty(duty.id());
+    }
+    finishBoardChange(ok, tr("Remove Member"));
+}
+
+void ScheduleTab::finishBoardChange(bool ok, const QString &title)
+{
+    if (!ok) {
+        MessageDialog::critical(this, title, m_dutyController->lastError());
+    }
+    populateSundayList();
+    selectSunday(m_selectedDate);
+}
+
+void ScheduleTab::deleteScheduleClicked()
+{
+    if (!m_isAdmin || !selectedSundayEditable() || !m_datesWithDuties.contains(m_selectedDate)) {
+        return;
+    }
+    const int count = m_dutyController->dutiesForDate(m_selectedDate).size();
+    const QString question = tr("Delete all %1 duties on %2? Any time-off requests members sent for them are "
+                                "deleted too. This can't be undone.")
+        .arg(count).arg(formatSunday(m_selectedDate));
+    if (MessageDialog::question(this, tr("Delete Schedule"), question) != QMessageBox::Yes) {
+        return;
+    }
+    if (!m_dutyController->removeSchedule(m_selectedDate, nullptr)) {
+        MessageDialog::critical(this, tr("Delete Schedule"), m_dutyController->lastError());
+    }
+    if (m_copiedDate == m_selectedDate) {
+        m_copiedDate = QDate();
+    }
+    populateSundayList();
+    selectSunday(m_selectedDate);
+}
+
+void ScheduleTab::aiFillClicked()
+{
+    if (!m_isAdmin) {
+        return;
+    }
+    AiFillDialog dialog(m_dutyController, m_dutyTypeController, m_userController, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    const QVector<Duty> duties = dialog.duties();
+    int added = 0;
+    QString failure;
+    for (Duty duty : duties) {
+        if (m_dutyController->addDuty(duty)) {
+            ++added;
+        } else if (failure.isEmpty()) {
+            failure = m_dutyController->lastError();
+        }
+    }
+    populateSundayList();
+    selectSunday(duties.isEmpty() ? m_selectedDate : duties.first().serviceDate());
+
+    QString summary = tr("Added %n duty(s) to the schedule.", nullptr, added);
+    if (!failure.isEmpty()) {
+        summary += tr("\n\n%n couldn't be added: %1", nullptr, duties.size() - added).arg(failure);
+    }
+    MessageDialog::information(this, tr("Fill with AI"), summary);
 }
